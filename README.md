@@ -16,7 +16,9 @@ To run the psi4 plugin v2rdm_casscf:
 *  Make a fresh makefile for your plugin
 
   > cd v2rdm_casscf
+  
   > psi4 --new-plugin-makefile
+  
   > vi Makefile
 
 * search for BINOBJ; delete everything BELOW that line
