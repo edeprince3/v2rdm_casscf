@@ -64,9 +64,25 @@ INPUT OPTIONS
 
     The positivity conditions enforced in the computation.  Allowed values include DQG, DQ, DG, D, DQGT1, DQGT2, and DQGT1T2.  The default value is DQG.
 
-* **CONSTRAIN_D3** (bool):
+* **E_CONVERGENCE** (double):
 
-    Do constrain the 3-RDM to be positive?  Default no.
+    The convergence in the primal/dual energy gap.  Default 1e-4.
+
+* **R_CONVERGENCE** (double):
+
+    The convergence in the primal and dual errors. Default 1e-3.
+
+* **MAXITER** (int):
+
+    The maximum number of outer iterations.  Default 10000.
+
+* **MOLDEN_WRITE** (bool):
+
+    Do write a MOLDEN output file?  If so, the filename will end in .molden, and the prefix is determined by |globals__writer_file_label| (if set), or else by the name of the output file plus the name of the current molecule.  Default false.
+
+* **WRITER_FILE_LABEL** (string):
+
+    Base filename for text files written by PSI, such as the MOLDEN output file, the Hessian file, the internal coordinate file, etc. Use the add_str_i function to make this string case sensitive.  Default "v2rdm_casscf".
 
 KNOWN ISSUES
 ---
