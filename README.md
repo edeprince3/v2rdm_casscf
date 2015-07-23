@@ -11,8 +11,7 @@ INSTALLATION
 
 To run the psi4 plugin v2rdm_casscf:
 
-* Download and install psi4public from github.com:
-https://github.com/psi4/psi4public.  Install psi4 as described on http://www.psicode.org/.
+* Download psi4public from github.com: https://github.com/psi4/psi4public, and follow the installation instructions given here: http://www.psicode.org/.
 
 *  Make a fresh makefile for your plugin
 
