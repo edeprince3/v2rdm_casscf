@@ -4,7 +4,7 @@ A variational 2-RDM-driven CASSCF plugin to Psi4
 OVERVIEW
 ---
 
-This plugin to Psi4[1] performs variational two-electron reduced-density-matrix (2-RDM)-driven complete active space self consistent field (CASSCF) computations.  In principle, because  variational 2-RDM (v-2RDM) methods scales only polynomially with system size, v-2RDM-driven CASSCF computations can be performed using active spaces that are larger than can be used within conventional configuration-interaction-driven CASSCF methods.  For more information regarding the performance of the method, see Refs. 2-3.
+This plugin to Psi4[1] performs variational two-electron reduced-density-matrix (2-RDM)-driven complete active space self consistent field (CASSCF) computations.  In principle, because  variational 2-RDM (v-2RDM) methods scale only polynomially with system size, v-2RDM-driven CASSCF computations can be performed using active spaces that are larger than can be used within conventional configuration-interaction-driven CASSCF methods.  For more information regarding the performance of the method, see Refs. 2-3.
 
 INSTALLATION
 ---
