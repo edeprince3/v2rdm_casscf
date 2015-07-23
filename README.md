@@ -25,7 +25,7 @@ https://github.com/psi4/psi4public.  You can obtain the source using git:
 
 * search for BINOBJ
 * delete everything BELOW that line
-* add what is below to the Makefile
+* add what is below to the Makefile:
 
     F90       = gfortran-mp-4.8
     
