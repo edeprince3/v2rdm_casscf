@@ -21,46 +21,35 @@ https://github.com/psi4/psi4public.  You can obtain the source using git:
 *  Make a fresh makefile for your plugin
 
   > psi4 --new-plugin-makefile
+  
   > vi Makefile
 
-* search for BINOBJ
-* delete everything BELOW that line
-* add what is below to the Makefile:
+* search for BINOBJ; delete everything BELOW that line
+* add what is below (with the appropriate fortran compiler and flags) to the Makefile:
 
-    F90       = gfortran-mp-4.8
-    
-    F90SRC    = $(notdir $(wildcard *.F90))
-    
-    F90BINOBJ = $(F90SRC:%.F90=%.o)
-    
-    F90FLAGS  = -O2 -fPIC
-    
-    LDFLAGS  += -L/opt/local/lib/gcc48/ -lgfortran
+```
+F90       = gfortran-mp-4.8
+F90SRC    = $(notdir $(wildcard *.F90))
+F90BINOBJ = $(F90SRC:%.F90=%.o)
+F90FLAGS  = -O2 -fPIC
+LDFLAGS  += -L/opt/local/lib/gcc48/ -lgfortran
 
-    fortran:
-    
-        $(F90) $(F90FLAGS) jacobi_data.F90 -c
-        
-        $(F90) $(F90FLAGS) jacobi_maxind_mod.F90 jacobi_data.o -c
-        
-        $(F90) $(F90FLAGS) jacobi_mod.F90 jacobi_data.o jacobi_maxind_mod.o -c
-        
-        $(F90) $(F90FLAGS) jacobi_interface.F90 jacobi_mod.o jacobi_data.o jacobi_maxind_mod.o -c
-        
-        rm *.mod
+fortran:
+    $(F90) $(F90FLAGS) jacobi_data.F90 -c
+    $(F90) $(F90FLAGS) jacobi_maxind_mod.F90 jacobi_data.o -c
+    $(F90) $(F90FLAGS) jacobi_mod.F90 jacobi_data.o jacobi_maxind_mod.o -c
+    $(F90) $(F90FLAGS) jacobi_interface.F90 jacobi_mod.o jacobi_data.o jacobi_maxind_mod.o -c
+    rm *.mod
 
-    %.o: %.F90
-    
-        $(F90) $(F90FLAGS) -c $<
+%.o: %.F90
+    $(F90) $(F90FLAGS) -c $<
 
-    %.o: %.cc
-    
-        $(CXX) $(CXXDEFS) $(CXXFLAGS) $(INCLUDES) -c $<
+%.o: %.cc
+    $(CXX) $(CXXDEFS) $(CXXFLAGS) $(INCLUDES) -c $<
 
-    $(PSITARGET): $(BINOBJ) $(F90BINOBJ)
-    
-        $(CXX) $(LDFLAGS) -o $@ $^ $(CXXDEFS) $(PSIPLUGIN)
+$(PSITARGET): $(BINOBJ) $(F90BINOBJ)
+    $(CXX) $(LDFLAGS) -o $@ $^ $(CXXDEFS) $(PSIPLUGIN)
 
-    clean:
-    
-        rm -f $(F90BINOBJ) $(BINOBJ) $(PSITARGET) *.d *.pyc *.test output.dat psi.timer.dat
+clean:
+    rm -f $(F90BINOBJ) $(BINOBJ) $(PSITARGET) *.d *.pyc *.test output.dat psi.timer.dat
+```
