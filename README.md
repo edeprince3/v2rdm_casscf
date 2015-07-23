@@ -1,4 +1,4 @@
-# v2rdm-casscf
+# v2rdm_casscf
 A variational 2-RDM-driven CASSCF plugin to Psi4
 
 OVERVIEW
