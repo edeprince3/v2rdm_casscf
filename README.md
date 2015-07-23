@@ -53,3 +53,17 @@ $(PSITARGET): $(BINOBJ) $(F90BINOBJ)
 clean:
     rm -f $(F90BINOBJ) $(BINOBJ) $(PSITARGET) *.d *.pyc *.test output.dat psi.timer.dat
 ```
+
+* Compile the plugin
+
+> make
+
+INPUT OPTIONS
+---
+* **POSITIVITY** (string):
+
+    The positivity conditions enforced in the computation.  Allowed values include DQG, DQ, DG, D, DQGT1, DQGT2, and DQGT1T2.  The default value is DQG.
+
+* **CONSTRAIN_D3** (bool):
+
+    Do constrain the 3-RDM to be positive?  Default no.
