@@ -1,4 +1,4 @@
-if you want to link to fortra functions, do the following.
+if you want to link to fortran functions, do the following.
 
 1.  Make a fresh makefile for your plugin (probably not necessary)
     psi4 --new-plugin-makefile
