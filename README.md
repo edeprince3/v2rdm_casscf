@@ -75,6 +75,14 @@ INPUT OPTIONS
 * **MAXITER** (int):
 
     The maximum number of outer iterations.  Default 10000.
+    
+* **FROZEN_DOCC** (array):
+    
+    The number of frozen doubly-occupied orbitals per irrep.  Combined with **FROZEN_UOCC**, these arrays define the active space.
+
+* **FROZEN_UOCC** (array):
+    
+    The number of frozen unoccupied orbitals per irrep. Combined with **FROZEN_DOCC**, these arrays define the active space.
 
 * **MOLDEN_WRITE** (bool):
 
