@@ -59,8 +59,6 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
-        /*- The amount of information printed to the output file -*/
-        options.add_int("PRINT", 1);
         /*- The multiplicity.  This option will override the multiplicity 
             from the molecule group -*/
         options.add_int("MULTIPLICITY", 1);
@@ -72,8 +70,6 @@ int read_options(std::string name, Options& options)
         options.add_bool("SPIN_ADAPT_G2", false);
         /*- Do spin adapt Q2 condition? -*/
         options.add_bool("SPIN_ADAPT_Q2", false);
-        /*- Do spin adapt D2? -*/
-        //options.add_bool("SPIN_ADAPT_D2", false);
         /*- Do constrain spin squared? -*/
         options.add_bool("CONSTRAIN_SPIN", true);
         /*- convergence in the primal/dual energy gap -*/
