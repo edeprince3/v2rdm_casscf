@@ -51,8 +51,9 @@ clean:
     rm -f $(F90BINOBJ) $(BINOBJ) $(PSITARGET) *.d *.pyc *.test output.dat psi.timer.dat
 ```
 
-* Compile the plugin
+* Compile the plugin (fortran first)
 
+> make fortran
 > make
 
 INPUT OPTIONS
@@ -83,11 +84,11 @@ INPUT OPTIONS
 
 * **MOLDEN_WRITE** (bool):
 
-    Do write a MOLDEN output file?  If so, the filename will end in .molden, and the prefix is determined by |globals__writer_file_label| (if set), or else by the name of the output file plus the name of the current molecule.  Default false.
+    Do write a MOLDEN output file containing the natural orbitals?  If yes, the filename will end in .molden, and the prefix is determined by **WRITER_FILE_LABEL**, or else by the name of the output file plus the name of the current molecule.  Default false.
 
 * **WRITER_FILE_LABEL** (string):
 
-    Base filename for text files written by PSI, such as the MOLDEN output file, the Hessian file, the internal coordinate file, etc. Use the add_str_i function to make this string case sensitive.  Default "v2rdm_casscf".
+    Base filename for text files written by PSI, such as the MOLDEN output file, the Hessian file, the internal coordinate file, etc. Use the add_str_i function to make this string case sensitive.
 
 KNOWN ISSUES
 ---
