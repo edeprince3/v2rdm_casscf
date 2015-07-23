@@ -84,7 +84,7 @@ INPUT OPTIONS
 
 * **MOLDEN_WRITE** (bool):
 
-    Do write a MOLDEN output file containing the natural orbitals?  If yes, the filename will end in .molden, and the prefix is determined by **WRITER_FILE_LABEL**, or else by the name of the output file plus the name of the current molecule.  Default false.
+    Do write a MOLDEN output file containing the natural orbitals?  If yes, the filename will end in .molden, and the prefix is determined by **WRITER_FILE_LABEL** (if set), or else by the name of the output file plus the name of the current molecule.  Default false.
 
 * **WRITER_FILE_LABEL** (string):
 
