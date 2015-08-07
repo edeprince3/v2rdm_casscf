@@ -432,7 +432,8 @@ module focas_driver
     ! print the information gathered so far
     write(*,'(a5,2x,3(3(a3,1x),5x))')'irrep','d_f','d_l','n_d','a_f','a_l','n_a','e_f','e_l','n_e'
     do irrep=1,nirrep_
-      write(*,'(i5,2x,3(3(i3,1x),5x))')irrep,(first_index_(irrep,i),last_index_(irrep,i),last_index_(irrep,i)-first_index_(irrep,i)+1,i=1,3)
+      write(*,'(i5,2x,3(3(i3,1x),5x))')irrep,(first_index_(irrep,i),last_index_(irrep,i),&
+               & last_index_(irrep,i)-first_index_(irrep,i)+1,i=1,3)
     end do
     write(*,'(a)')'density information'
     write(*,'(a,8(i9,1x))')'ngempi(:)=',dens_%ngempi
