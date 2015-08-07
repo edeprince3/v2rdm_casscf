@@ -657,10 +657,10 @@ double v2RDMSolver::compute_energy() {
 
         //RotateOrbitals();
         // don't update mu every iteration
-        if ( oiter % 20 == 0 && oiter > 0) {
+        if ( oiter % 200 == 0 && oiter > 0) {
             mu = mu*ep/ed;
         }
-        if ( oiter % 20 == 0 && oiter > 0) {
+        if ( oiter % 200 == 0 && oiter > 0) {
             RotateOrbitals();
         }
 

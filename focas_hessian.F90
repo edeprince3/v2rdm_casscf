@@ -13,10 +13,8 @@ module focas_hessian
       real(wp), intent(in) :: q(:,:),z(:,:)
       integer :: error
 
-      diagonal_orbital_hessian_ = 0.0_wp
-
       ! active-doubly occupied pairs
- 
+
       if ( rot_pair_%n_ad > 0 ) error=diagonal_hessian_ad(grad,f_i,f_a,q,z,den1)
 
       ! active-active pairs

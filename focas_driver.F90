@@ -79,8 +79,6 @@ module focas_driver
     ! determine indexing arrays (needed for sorts in the integral transformation step)
     call determine_transformation_maps()
 
-!    call resort_input(int1,int2,den1,den2)
-
     ! print information
     call print_info()    
 
@@ -122,7 +120,7 @@ module focas_driver
       ! update kappa_
       step_size=1.0_wp
       kappa_ = - step_size * orbital_gradient_
-
+      
       t1 = timer()
       t_gh = t1 - t0
 
@@ -131,7 +129,6 @@ module focas_driver
       call compute_exponential(kappa_)
       t1 = timer()
       t_exp = t1 - t0 
-
       write(*,'(a,1x,i5,1x,1(a,1x,f15.8,3x),2(a,1x,es11.3,2x),4(a,1x,f6.2,1x))')'iter:',iter,'E(k):',current_energy,&
                    & 'E(k)-E(k-1)',-delta_energy,'||g||',grad_norm_,'t(g+h):',t_gh,'t(E):',t_ene,&
                    & 't(e^U):',t_exp,'t(tran):',t_trans
