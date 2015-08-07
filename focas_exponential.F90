@@ -104,12 +104,14 @@ module focas_exponential
       diag_tol=2.0_wp*epsilon(1.0_wp)
       allocate(isuppz(2*block_dim))
       ! figure out optimal dimensions for iwork and work
-      call dsyevr('v','a','u',block_dim,K2,block_dim,vl,vu,il,iu,diag_tol,neig_found,d,X,block_dim,isuppz,work_tmp,-1,iwork_tmp,-1,success)
+      call dsyevr('v','a','u',block_dim,K2,block_dim,vl,vu,il,iu,diag_tol,neig_found,d,X,&
+                 & block_dim,isuppz,work_tmp,-1,iwork_tmp,-1,success)
       if ( success /= 0 ) return
       liwork=iwork_tmp(1)
       lwork=int(work_tmp(1,1))
       allocate(work(lwork),iwork(liwork))
-      call dsyevr('v','a','u',block_dim,K2,block_dim,vl,vu,il,iu,diag_tol,neig_found,d,X,block_dim,isuppz,work,lwork,iwork,liwork,success)
+      call dsyevr('v','a','u',block_dim,K2,block_dim,vl,vu,il,iu,diag_tol,neig_found,d,X,&
+                 & block_dim,isuppz,work,lwork,iwork,liwork,success)
       deallocate(isuppz,work,iwork)
       if ( success /= 0 ) return
 
