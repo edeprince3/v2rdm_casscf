@@ -1707,6 +1707,9 @@ void  v2RDMSolver::common_init(){
 
 //build K2 using 3-index integrals 
 void v2RDMSolver::DFK2() {
+
+    throw Psi4Exception("v2rdm casscf doesn't work with df integrals yet",__FILE__,__LINE__);
+
     ThreeIndexIntegrals();
 
 }
