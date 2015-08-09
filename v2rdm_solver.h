@@ -106,6 +106,9 @@ class v2RDMSolver: public Wavefunction{
     int dimx;        // dimension of VARIABLE VECTOR
     int * amopi_;    // active orbitals per irrep
 
+    int nQ_; // number of auxilliary basis functions
+    void ThreeIndexIntegrals(); 
+
     // offsets
     int * d1aoff;  
     int * d1boff;  
@@ -199,7 +202,8 @@ class v2RDMSolver: public Wavefunction{
 
     void Guess();
     void PrintHeader();
-    void Integrals();
+    void K2();
+    void DFK2();
     void BuildConstraints();
 
     void bpsdp_Au(SharedVector A, SharedVector u);

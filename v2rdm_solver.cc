@@ -570,7 +570,13 @@ double v2RDMSolver::compute_energy() {
 
     PrintHeader();
     Guess();
-    Integrals();
+
+    if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD") {
+        DFK2();
+    }else {
+        K2();
+    }
+
     BuildConstraints();
     
     // AATy = A(c-z)+tu(b-Ax) rearange w.r.t cg solver
@@ -1699,39 +1705,41 @@ void  v2RDMSolver::common_init(){
     }
 }
 
+//build K2 using 3-index integrals 
+void v2RDMSolver::DFK2() {
+    ThreeIndexIntegrals();
 
-//build one and two electron integral
-void v2RDMSolver::Integrals(){
+}
+
+//build K2 using 4-index integrals 
+void v2RDMSolver::K2() {
 
     long int full = nmo + nfrzc + nfrzv;
     double * temptei = (double*)malloc(full*full*full*full*sizeof(double));
     memset((void*)temptei,'\0',full*full*full*full*sizeof(double));
-    if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD") {
-    }else {
       
-      // transform integrals
-      outfile->Printf("    ==> Transform two-electron integrals <==\n");
-      outfile->Printf("\n");
-      
-      double start = omp_get_wtime();
-      boost::shared_ptr<Wavefunction> wfn = Process::environment.wavefunction();
-      std::vector<shared_ptr<MOSpace> > spaces;
-      spaces.push_back(MOSpace::all);
-      boost::shared_ptr<IntegralTransform> ints(new IntegralTransform(wfn, spaces, IntegralTransform::Restricted,
-								      IntegralTransform::IWLOnly, IntegralTransform::PitzerOrder, IntegralTransform::None, false));
-      ints->set_dpd_id(0);
-      ints->set_keep_iwl_so_ints(true);
-      ints->set_keep_dpd_so_ints(true);
-      ints->initialize();
-      ints->transform_tei(MOSpace::all, MOSpace::all, MOSpace::all, MOSpace::all);
-      double end = omp_get_wtime();
-      outfile->Printf("\n");
-      outfile->Printf("    Time for integral transformation:  %7.2lf s\n",end-start);
-      outfile->Printf("\n");
-      
-      // read two-electron integrals from disk
-      ReadIntegrals(temptei,full);
-    }
+    // transform integrals
+    outfile->Printf("    ==> Transform two-electron integrals <==\n");
+    outfile->Printf("\n");
+    
+    double start = omp_get_wtime();
+    boost::shared_ptr<Wavefunction> wfn = Process::environment.wavefunction();
+    std::vector<shared_ptr<MOSpace> > spaces;
+    spaces.push_back(MOSpace::all);
+    boost::shared_ptr<IntegralTransform> ints(new IntegralTransform(wfn, spaces, IntegralTransform::Restricted,
+	  						      IntegralTransform::IWLOnly, IntegralTransform::PitzerOrder, IntegralTransform::None, false));
+    ints->set_dpd_id(0);
+    ints->set_keep_iwl_so_ints(true);
+    ints->set_keep_dpd_so_ints(true);
+    ints->initialize();
+    ints->transform_tei(MOSpace::all, MOSpace::all, MOSpace::all, MOSpace::all);
+    double end = omp_get_wtime();
+    outfile->Printf("\n");
+    outfile->Printf("    Time for integral transformation:  %7.2lf s\n",end-start);
+    outfile->Printf("\n");
+    
+    // read two-electron integrals from disk
+    ReadIntegrals(temptei,full);
     
     // K1 has no symmetry, but the orbitals are in pitzer order
     boost::shared_ptr<Matrix> K1 (new Matrix("one-electron integrals",nirrep_,nmopi_,nmopi_));
