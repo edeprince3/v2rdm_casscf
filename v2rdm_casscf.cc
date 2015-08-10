@@ -45,8 +45,6 @@
 #include <libpsio/psio.hpp>
 #include<libciomr/libciomr.h>
 
-#include<../bin/fnocc/frozen_natural_orbitals.h>
-
 INIT_PLUGIN
 
 using namespace boost;
@@ -82,6 +80,18 @@ int read_options(std::string name, Options& options)
         options.add_int("MAXITER", 10000);
         /*- maximum number of conjugate gradient iterations -*/
         options.add_int("CG_MAXITER", 10000);
+
+        /*- SUBSECTION SCF -*/
+
+        /*- Auxiliary basis set for SCF density fitting computations.
+        :ref:`Defaults <apdx:basisFamily>` to a JKFIT basis. -*/
+        options.add_str("DF_BASIS_SCF", "");
+        /*- What algorithm to use for the SCF computation. See Table :ref:`SCF
+        Convergence & Algorithm <table:conv_scf>` for default algorithm for
+        different calculation types. -*/
+        options.add_str("SCF_TYPE", "DF", "DF CD PK OUT_OF_CORE");
+        /*- Tolerance for Cholesky decomposition of the ERI tensor -*/
+        options.add_double("CHOLESKY_TOLERANCE",1e-4);
 
         /*- SUBSECTION JACOBI -*/
 
@@ -120,21 +130,9 @@ PsiReturnType v2rdm_casscf(Options& options)
 
     tstart();
 
-    boost::shared_ptr<Wavefunction> wfn;
-
-    //if ( options.get_str("SCF_TYPE") == "DF" || options.get_str("SCF_TYPE") == "CD") { 
-
-    //    // get three-index integrals in usable form
-    //    boost::shared_ptr<DFFrozenNO> fno(new DFFrozenNO(Process::environment.wavefunction(),options));
-    //    fno->ThreeIndexIntegrals();
-    //    wfn = (boost::shared_ptr<Wavefunction>)fno;
-
-    //}else {
-        wfn = Process::environment.wavefunction();
-    //}
-
-    boost::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(wfn,options));
+    boost::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(Process::environment.wavefunction(),options));
     double energy = v2rdm->compute_energy();
+
     Process::environment.globals["CURRENT ENERGY"] = energy;
 
     tstop();

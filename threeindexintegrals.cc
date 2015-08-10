@@ -38,8 +38,12 @@
 #include <libmints/sieve.h>
 #include <psifiles.h>
 
-namespace psi { namespace v2rdm_casscf {
+#include <../bin/fnocc/blas.h>
 
+using namespace psi;
+using namespace fnocc;
+
+namespace psi { namespace v2rdm_casscf {
 
 void v2RDMSolver::ThreeIndexIntegrals() {
 
@@ -49,9 +53,6 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     boost::shared_ptr<ERISieve> sieve (new ERISieve(basisset_, options_.get_double("INTS_TOLERANCE")));
     const std::vector<std::pair<int, int> >& function_pairs = sieve->function_pairs();
     long int ntri = function_pairs.size();
-
-    // read integrals that were written to disk in the scf
-
 
     // read integrals that were written to disk in the scf
     nQ_ = Process::environment.globals["NAUX (SCF)"];
@@ -98,7 +99,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     double ** qmop = Qmo_->pointer();
     double ** qsop = Qso->pointer();
 
-    //AO2USO_->print();
+    #pragma omp parallel for schedule (static)
     for (int Q = 0; Q < nQ_; Q++) {
         int offh = 0;
         for (int h = 0; h < nirrep_; h++) {
@@ -116,6 +117,8 @@ void v2RDMSolver::ThreeIndexIntegrals() {
             offh += nsopi_[h];
         }
     }
+
+    #pragma omp parallel for schedule (static)
     for (int Q = 0; Q < nQ_; Q++) {
         int offh = 0;
         for (int h = 0; h < nirrep_; h++) {
@@ -139,15 +142,8 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         }
     }
 
-    //for (int Q = 0; Q < nQ_; Q++) {
-    //    for (int i = 0; i < nso_; i++) {
-    //        for (int j = 0; j < nso_; j++) {
-    //            qsop[Q][i*nso_+j] = tempp[Q][i*nso_+j];
-    //        }
-    //    }
-    //}
-
     // SO -> MO transformation:
+    #pragma omp parallel for schedule (static)
     for (int Q = 0; Q < nQ_; Q++) {
         int offh = 0;
         for (int h = 0; h < nirrep_; h++) {
@@ -172,6 +168,8 @@ void v2RDMSolver::ThreeIndexIntegrals() {
             offh += nsopi_[h];
         }
     }
+
+    #pragma omp parallel for schedule (static)
     for (int Q = 0; Q < nQ_; Q++) {
         int offh = 0;
         for (int h = 0; h < nirrep_; h++) {
