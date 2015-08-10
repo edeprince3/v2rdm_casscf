@@ -288,6 +288,7 @@ class v2RDMSolver: public Wavefunction{
 
     /// repack rotated full-space integrals into active-space integrals 
     void RepackIntegrals();
+    void RepackIntegralsDF();
 
     /// function to rotate orbitals
     void RotateOrbitals();
@@ -296,6 +297,9 @@ class v2RDMSolver: public Wavefunction{
     double * jacobi_data_;
     char * jacobi_outfile_;
     bool jacobi_converged_;
+
+    /// are we using 3-index integrals?
+    bool is_df_;
   
 };
 

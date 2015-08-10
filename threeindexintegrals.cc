@@ -94,7 +94,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     boost::shared_ptr<Matrix> AO2USO_ (new Matrix(pet->aotoso()));
 
     boost::shared_ptr<Matrix> Qso (new Matrix(nQ_,nso_*nso_) );
-    Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nQ_,nso_*nso_));
+    Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nso_*nso_,nQ_));
 
     double ** qmop = Qmo_->pointer();
     double ** qsop = Qso->pointer();
@@ -111,7 +111,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                     for (int n = 0; n < nso_; n++) {
                         dum += tempp[Q][m*nso_+n] * cp[n][i];
                     }
-                    qmop[Q][ii*nso_+m] = dum;
+                    qmop[ii*nso_+m][Q] = dum;
                 }
             }
             offh += nsopi_[h];
@@ -131,7 +131,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                         int jj = j + offh2;
                         double dum = 0.0;
                         for (int m = 0; m < nso_; m++) {
-                            dum += qmop[Q][ii*nso_+m] * cp[m][j];
+                            dum += qmop[ii*nso_+m][Q] * cp[m][j];
                         }
                         qsop[Q][ii*nso_+jj] = dum;
                     }
@@ -186,7 +186,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                             int nn = n + offh2;
                             dum += tempp[Q][ii*nso_+nn] * cp[n][j];
                         }
-                        qmop[Q][ii*nso_+jj] = dum;
+                        qmop[ii*nso_+jj][Q] = dum;
                     }
                     offh2 += nsopi_[h2];
                 }
@@ -203,7 +203,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     //            for (int l = 0; l < nso_; l++) {
     //                double dum = 0.0;
     //                for (int Q = 0; Q < nQ_; Q++) {
-    //                    dum += Qmo_->pointer()[Q][i*nso_+j] * Qmo_->pointer()[Q][k*nso_+l];
+    //                    dum += Qmo_->pointer()[i*nso_+j][Q] * Qmo_->pointer()[k*nso_+l][Q];
     //                }
     //                printf("%5i %5i %5i %5i %20.12lf %20.12lf\n",i,j,k,l,dum,eri->pointer()[i*nso_+j][k*nso_+l]);
     //            }

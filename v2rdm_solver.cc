@@ -571,7 +571,7 @@ double v2RDMSolver::compute_energy() {
     PrintHeader();
     Guess();
 
-    if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD") {
+    if ( is_df_ ) {
         DFK2();
     }else {
         K2();
@@ -957,6 +957,13 @@ void v2RDMSolver::MullikenPopulations() {
 
 
 void  v2RDMSolver::common_init(){
+
+
+    is_df_ = false;
+    if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD" ) {
+        is_df_ = true;
+    }
+
     // This function is a copy of common_init() from SDPSolver
     escf      = reference_wavefunction_->reference_energy();
     nalpha_   = reference_wavefunction_->nalpha();
@@ -1738,7 +1745,6 @@ boost::shared_ptr<Matrix> v2RDMSolver::ReadOEI() {
     return K1;
 }
 
-
 //build K2 using 3-index integrals 
 void v2RDMSolver::DFK2() {
 
@@ -1755,44 +1761,22 @@ void v2RDMSolver::DFK2() {
     outfile->Printf("    Time for integral transformation:  %7.2lf s\n",end-start);
     outfile->Printf("\n");
 
-    // one-electron integrals:  TODO: build/transform from MintsHelper
-    //boost::shared_ptr<Matrix> K1 = ReadOEI();
+    // one-electron integrals:  
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
-    tei_full_dim = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        tei_full_dim += gems_full[h] * ( gems_full[h] + 1 ) / 2;
-    }
+    // size of the 3-index integral buffer
+    tei_full_dim = nQ_*nso_*nso_;
+
     d2_plus_core_dim = 0;
     for (int h = 0; h < nirrep_; h++) {
         d2_plus_core_dim += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
     }
 
-    tei_full_sym      = (double*)malloc(tei_full_dim*sizeof(double));
+    // just point to 3-index integral buffer
+    tei_full_sym      = Qmo_->pointer()[0]; 
+
     d2_plus_core_sym  = (double*)malloc(d2_plus_core_dim*sizeof(double));
-    memset((void*)tei_full_sym,'\0',tei_full_dim*sizeof(double));
     memset((void*)d2_plus_core_sym,'\0',d2_plus_core_dim*sizeof(double));
-    //for (int i = 0; i < d2_plus_core_dim; i++) {
-    //    d2_plus_core_sym[i] = -9.0e99;
-    //}
-    // load tei_full_sym
-
-    long int offset = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        #pragma omp parallel for schedule (static)
-        for (long int ij = 0; ij < gems_full[h]; ij++) {
-            long int i = bas_full_sym[h][ij][0];
-            long int j = bas_full_sym[h][ij][1];
-
-            for (long int kl = ij; kl < gems_full[h]; kl++) {
-                long int k = bas_full_sym[h][kl][0];
-                long int l = bas_full_sym[h][kl][1];
-
-                tei_full_sym[offset + INDEX(ij,kl)] = C_DDOT(nQ_,&(Qmo_->pointer()[0][i*nso_+j]),nso_*nso_,&(Qmo_->pointer()[0][k*nso_+l]),nso_*nso_);
-            }
-        }
-        offset += gems_full[h] * ( gems_full[h] + 1 ) / 2;
-    }
 
     // allocate memory for full OEI tensor blocked by symmetry for Greg
     oei_full_dim = 0;
@@ -1818,135 +1802,9 @@ void v2RDMSolver::DFK2() {
         offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
     }
 
-    // if frozen core, adjust oei's and compute frozen core energy:
-    efrzc1 = 0.0;
-    efrzc2 = 0.0;
-    offset = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (long int i = 0; i < frzcpi_[h]; i++) {
-            long int ii = i + offset;
-            efrzc1 += 2.0 * K1->pointer(h)[i][i];
-
-            long int offset2 = 0;
-            for (int h2 = 0; h2 < nirrep_; h2++) {
-                for (long int j = 0; j < frzcpi_[h2]; j++) {
-                    long int jj = j + offset2;
-                    double dum1 = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+ii]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+jj]),nso_*nso_);
-                    double dum2 = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+jj]),nso_*nso_,&(Qmo_->pointer()[0][ii*nso_+jj]),nso_*nso_);
-                    efrzc2 += 2.0 * dum1 - dum2;
-                }
-                offset2 += nmopi_[h2];
-            }
-        }
-        offset += nmopi_[h];
-    }
-    efrzc = efrzc1 + efrzc2;
-    printf("efrzc1       %20.12lf\n",efrzc1);
-    printf("efrzc2       %20.12lf\n",efrzc2);
-
-    // adjust oeis
-    offset = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (long int i = frzcpi_[h]; i < nmopi_[h] - frzvpi_[h]; i++) {
-            int ii = i + offset;
-            for (long int j = frzcpi_[h]; j < nmopi_[h] - frzvpi_[h]; j++) {
-
-                int jj = j + offset;
-                double dum1 = 0.0;
-                double dum2 = 0.0;
-
-                int offset2 = 0;
-                for (int h2 = 0; h2 < nirrep_; h2++) {
-
-                    for (long int k = 0; k < frzcpi_[h2]; k++) {
-                        int kk = k + offset2;
-                        //dum += (2.0 * temptei[(i+offset)*full*full*full+(j+offset)*full*full+(k+offset2)*full+(k+offset2)]
-                        //    - temptei[(i+offset)*full*full*full+(k+offset2)*full*full+(k+offset2)*full+(j+offset)]);
-                        dum1 += C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+jj]),nso_*nso_,&(Qmo_->pointer()[0][kk*nso_+kk]),nso_*nso_);
-                        dum2 += C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+kk]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+kk]),nso_*nso_);
-                    }
-                    offset2 += nmopi_[h2];
-                }
-                K1->pointer(h)[i][j] += 2.0 * dum1 - dum2;
-            }
-        }
-        offset += nmopi_[h];
-    }
-
-    double* c_p = c->pointer();
-    for (int h = 0; h < nirrep_; h++) {
-        for (long int i = 0; i < amopi_[h]; i++) {
-            for (long int j = 0; j < amopi_[h]; j++) {
-                c_p[d1aoff[h] + i*amopi_[h] + j] = K1->pointer(h)[i+frzcpi_[h]][j+frzcpi_[h]];
-                c_p[d1boff[h] + i*amopi_[h] + j] = K1->pointer(h)[i+frzcpi_[h]][j+frzcpi_[h]];
-            }
-        }
-    }
-
-    // two-electron part
-    long int na = nalpha_ - nfrzc;
-    long int nb = nbeta_ - nfrzc;
-    for (int h = 0; h < nirrep_; h++) {
-        #pragma omp parallel for schedule (static)
-        for (long int ij = 0; ij < gems_ab[h]; ij++) {
-            long int i = bas_ab_sym[h][ij][0];
-            long int j = bas_ab_sym[h][ij][1];
-
-            long int ii = full_basis[i];
-            long int jj = full_basis[j];
-
-            for (long int kl = 0; kl < gems_ab[h]; kl++) {
-                long int k = bas_ab_sym[h][kl][0];
-                long int l = bas_ab_sym[h][kl][1];
-
-                long int kk = full_basis[k];
-                long int ll = full_basis[l];
-
-                c_p[d2aboff[h] + ij*gems_ab[h]+kl] = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+kk]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+ll]),nso_*nso_);
-            }
-        }
-    }
-
-    for (int h = 0; h < nirrep_; h++) {
-        #pragma omp parallel for schedule (static)
-        for (long int ij = 0; ij < gems_aa[h]; ij++) {
-            long int i = bas_aa_sym[h][ij][0];
-            long int j = bas_aa_sym[h][ij][1];
-
-            long int ii = full_basis[i];
-            long int jj = full_basis[j];
-
-            for (long int kl = 0; kl < gems_aa[h]; kl++) {
-                long int k = bas_aa_sym[h][kl][0];
-                long int l = bas_aa_sym[h][kl][1];
-
-                long int kk = full_basis[k];
-                long int ll = full_basis[l];
-
-                double dum1 = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+kk]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+ll]),nso_*nso_);
-                double dum2 = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+ll]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+kk]),nso_*nso_);
-
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
-
-                //c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*full*full*full+kk*full*full+jj*full+ll];
-                //c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*full*full*full+ll*full*full+jj*full+kk];
-                //c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*full*full*full+kk*full*full+ii*full+ll];
-                //c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*full*full*full+ll*full*full+ii*full+kk];
-
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
-
-                //c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*full*full*full+kk*full*full+jj*full+ll];
-                //c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*full*full*full+ll*full*full+jj*full+kk];
-                //c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*full*full*full+kk*full*full+ii*full+ll];
-                //c_p[d2bboff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*full*full*full+ll*full*full+ii*full+kk];
-
-            }
-        }
-    }
+    RepackIntegralsDF();
 
     enuc = Process::environment.molecule()->nuclear_repulsion_energy();
-
-    //throw PsiException("v2rdm casscf doesn't work with df integrals yet",__FILE__,__LINE__);
 
 }
 
@@ -3989,6 +3847,7 @@ void v2RDMSolver::bpsdp_ATu(SharedVector A, SharedVector u){
     }
 
 }//end ATu
+
 void v2RDMSolver::bpsdp_ATu_slow(SharedVector A, SharedVector u){
 
     //A->zero();
@@ -4238,9 +4097,9 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                         int iifull = ibas_full_sym[0][ifull][ifull];
                         int jjfull = ibas_full_sym[0][jfull][jfull];
 
-                        if ( fabs(d2_plus_core_sym[INDEX(iifull,jjfull)]) < 1e-10 ) {
-                            en += tei_full_sym[INDEX(iifull,jjfull)];
-                        }
+                        //if ( fabs(d2_plus_core_sym[INDEX(iifull,jjfull)]) < 1e-10 ) {
+                        //    en += tei_full_sym[INDEX(iifull,jjfull)];
+                        //}
 
                         d2_plus_core_sym[INDEX(iifull,jjfull)] =  1.0;
 
@@ -4249,9 +4108,9 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                         int iifull = ibas_full_sym[0][ifull][ifull];
                         int jjfull = ibas_full_sym[0][jfull][jfull];
 
-                        if ( fabs(d2_plus_core_sym[INDEX(iifull,jjfull)]) < 1e-10 ) {
-                            en += 4.0 * tei_full_sym[INDEX(iifull,jjfull)];
-                        }
+                        //if ( fabs(d2_plus_core_sym[INDEX(iifull,jjfull)]) < 1e-10 ) {
+                        //    en += 4.0 * tei_full_sym[INDEX(iifull,jjfull)];
+                        //}
 
                         d2_plus_core_sym[INDEX(iifull,jjfull)] =  4.0;
 
@@ -4265,9 +4124,9 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                         }
 
                         int ijfull = ibas_full_sym[hij][ifull][jfull];
-                        if ( fabs(d2_plus_core_sym[offset + INDEX(ijfull,ijfull)]) < 1e-10 ) {
-                            en -= 2.0 * tei_full_sym[offset2 + INDEX(ijfull,ijfull)];
-                        }
+                        //if ( fabs(d2_plus_core_sym[offset + INDEX(ijfull,ijfull)]) < 1e-10 ) {
+                        //    en -= 2.0 * tei_full_sym[offset2 + INDEX(ijfull,ijfull)];
+                        //}
 
                         d2_plus_core_sym[offset + INDEX(ijfull,ijfull)] = -2.0;
                     }
@@ -4391,24 +4250,24 @@ void v2RDMSolver::UnpackDensityPlusCore() {
     // check energy:
 
     // two-electron part:
-    double en2 = 0.0;
-    int offset_full      = 0;
-    int offset_plus_core = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        en2 += C_DDOT(gems_plus_core[h]*(gems_plus_core[h]+1)/2,tei_full_sym+offset_full,1,d2_plus_core_sym+offset_plus_core,1);
-        offset_full += gems_full[h] * ( gems_full[h] + 1 ) / 2;
-        offset_plus_core += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
-    }
+    //double en2 = 0.0;
+    //int offset_full      = 0;
+    //int offset_plus_core = 0;
+    //for (int h = 0; h < nirrep_; h++) {
+    //    en2 += C_DDOT(gems_plus_core[h]*(gems_plus_core[h]+1)/2,tei_full_sym+offset_full,1,d2_plus_core_sym+offset_plus_core,1);
+    //    offset_full += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+    //    offset_plus_core += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
+    //}
 
     // one-electron part:
-    double en1 = 0.0;
-    offset_full      = 0;
-    offset_plus_core = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        en1 += C_DDOT( ( frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2 ,oei_full_sym + offset_full,1,d1_plus_core_sym + offset_plus_core,1);
-        offset_full      += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
-        offset_plus_core += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
-    }
+    //double en1 = 0.0;
+    //offset_full      = 0;
+    //offset_plus_core = 0;
+    //for (int h = 0; h < nirrep_; h++) {
+    //    en1 += C_DDOT( ( frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2 ,oei_full_sym + offset_full,1,d1_plus_core_sym + offset_plus_core,1);
+    //    offset_full      += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
+    //    offset_plus_core += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
+    //}
 
     //printf("\n");
     //printf("efrzc1       %20.12lf\n",efrzc1);
@@ -4420,285 +4279,131 @@ void v2RDMSolver::UnpackDensityPlusCore() {
     //printf("en1+en2+enuc %20.12lf\n",en1+en2 + enuc);
 }
 
-/*void v2RDMSolver::UnpackFullDensity() {
+// repack rotated full-space integrals into active-space integrals
+void v2RDMSolver::RepackIntegralsDF(){
 
-    // D2 first
-    double * x_p = x->pointer();
-    // active active; active active
-    int offset = 0;
+    long int full = nmo + nfrzc + nfrzv;
+
+    // if frozen core, adjust oei's and compute frozen core energy:
+    efrzc1 = 0.0;
+    efrzc2 = 0.0;
+    offset = 0;
+    long int offset3 = 0;
     for (int h = 0; h < nirrep_; h++) {
-        for (int ij = 0; ij < gems_ab[h]; ij++) {
-            int i       = bas_ab_sym[h][ij][0];
-            int j       = bas_ab_sym[h][ij][1];
-            int hi = symmetry[i];
-            int hj = symmetry[j];
-            int ifull   = i - pitzer_offset[hi] + pitzer_offset_full[hi] + frzcpi_[hi];
-            int jfull   = j - pitzer_offset[hj] + pitzer_offset_full[hj] + frzcpi_[hj];
-            int ij_ab   = ibas_ab_sym[h][i][j];
-            int ji_ab   = ibas_ab_sym[h][j][i];
-            int ij_aa   = ibas_aa_sym[h][i][j];
+        for (long int i = 0; i < frzcpi_[h]; i++) {
+            long int ii = i + offset;
+            efrzc1 += 2.0 * oei_full_sym[offset3 + INDEX(i,i)];
 
-            for (int kl = 0; kl < gems_ab[h]; kl++) {
-                int k       = bas_ab_sym[h][kl][0];
-                int l       = bas_ab_sym[h][kl][1];
-                int hk = symmetry[k];
-                int hl = symmetry[l];
-                int kfull   = k - pitzer_offset[hk] + pitzer_offset_full[hk] + frzcpi_[hk];
-                int lfull   = l - pitzer_offset[hl] + pitzer_offset_full[hl] + frzcpi_[hl];
-                int kl_ab   = ibas_ab_sym[h][k][l];
-                int lk_ab   = ibas_ab_sym[h][l][k];
-                int kl_aa   = ibas_aa_sym[h][k][l];
-
-                if ( i > k ) continue;
-                if ( j > l ) continue;
-
-                int hik = SymmetryPair(symmetry[i],symmetry[k]);
-
-
-                int ik_full = ibas_full_sym[hik][ifull][kfull];
-                int jl_full = ibas_full_sym[hik][jfull][lfull];
-
-
-                if ( ik_full > jl_full ) continue;
-
-                int hkj = SymmetryPair(symmetry[k],symmetry[j]);
-
-                int kj_ab = ibas_ab_sym[hkj][k][j];
-                int il_ab = ibas_ab_sym[hkj][i][l];
-
-                int jk_ab = ibas_ab_sym[hkj][j][k];
-                int li_ab = ibas_ab_sym[hkj][l][i];
-
-                int kj_aa = ibas_aa_sym[hkj][k][j];
-                int il_aa = ibas_aa_sym[hkj][i][l];
-
-                offset = 0;
-                for (int myh = 0; myh < hik; myh++) {
-                    offset += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
+            long int offset2 = 0;
+            for (int h2 = 0; h2 < nirrep_; h2++) {
+                for (long int j = 0; j < frzcpi_[h2]; j++) {
+                    long int jj = j + offset2;
+                    double dum1 = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+ii],1,Qmo_->pointer()[jj*nso_+jj],1);
+                    double dum2 = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+jj],1,Qmo_->pointer()[ii*nso_+jj],1);
+                    efrzc2 += 2.0 * dum1 - dum2;
                 }
-                int id = offset + INDEX(ik_full,jl_full);
-
-                double val = 0.0;
-
-                val += 0.5 * x_p[d2aboff[h]   + ij_ab*gems_ab[h]  + kl_ab];
-                val += 0.5 * x_p[d2aboff[hkj] + kj_ab*gems_ab[hkj]+ il_ab] * (1.0 - (double)(l==j));
-                val += 0.5 * x_p[d2aboff[hkj] + il_ab*gems_ab[hkj]+ kj_ab] * (1.0 - (double)(i==k));
-                val += 0.5 * x_p[d2aboff[h]   + kl_ab*gems_ab[h]  + ij_ab] * (1.0 - (double)(l==j))*(1.0-(double)(i==k));
-
-                val += 0.5 * x_p[d2aboff[h]   + ji_ab*gems_ab[h]  + lk_ab];
-                val += 0.5 * x_p[d2aboff[hkj] + jk_ab*gems_ab[hkj]+ li_ab] * (1.0 - (double)(l==j));
-                val += 0.5 * x_p[d2aboff[hkj] + li_ab*gems_ab[hkj]+ jk_ab] * (1.0 - (double)(i==k));
-                val += 0.5 * x_p[d2aboff[h]   + lk_ab*gems_ab[h]  + ji_ab] * (1.0 - (double)(l==j))*(1.0-(double)(i==k));
-
-                // aa / bb
-                if ( i != j && k != l ) {
-                    int sij = ( i < j ? 1 : -1 );
-                    int skl = ( k < l ? 1 : -1 );
-                    val += 0.5 * sij * skl * x_p[d2aaoff[h]   + ij_aa*gems_aa[h]  + kl_aa];
-                    val += 0.5 * sij * skl * x_p[d2aaoff[h]   + kl_aa*gems_aa[h]  + ij_aa] * (1.0 - (double)(l==j))*(1.0-(double)(i==k));
-                    val += 0.5 * sij * skl * x_p[d2bboff[h]   + ij_aa*gems_aa[h]  + kl_aa];
-                    val += 0.5 * sij * skl * x_p[d2bboff[h]   + kl_aa*gems_aa[h]  + ij_aa] * (1.0 - (double)(l==j))*(1.0-(double)(i==k));
-                }
-                if ( k != j && i != l ) {
-                    int skj = ( k < j ? 1 : -1 );
-                    int sil = ( i < l ? 1 : -1 );
-                    val += 0.5 * skj * sil * x_p[d2aaoff[hkj] + kj_aa*gems_aa[hkj]+ il_aa] * (1.0 - (double)(l==j));
-                    val += 0.5 * skj * sil * x_p[d2aaoff[hkj] + il_aa*gems_aa[hkj]+ kj_aa] * (1.0 - (double)(i==k));
-                    val += 0.5 * skj * sil * x_p[d2bboff[hkj] + kj_aa*gems_aa[hkj]+ il_aa] * (1.0 - (double)(l==j));
-                    val += 0.5 * skj * sil * x_p[d2bboff[hkj] + il_aa*gems_aa[hkj]+ kj_aa] * (1.0 - (double)(i==k));
-                }
-
-                // scale the off-diagonal elements
-                if ( ik_full != jl_full ) {
-                    val *= 2.0;
-                }
-                d2_full_sym[id] = val;
+                offset2 += nmopi_[h2];
             }
         }
-        //offset += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+        offset += nmopi_[h];
+        offset3 += nmopi_[h] * (nmopi_[h] + 1 ) / 2;
     }
+    efrzc = efrzc1 + efrzc2;
+    //printf("%20.12lf\n",efrzc1);
+    //printf("%20.12lf\n",efrzc2);
+    //printf("%20.12lf\n",efrzc);
+    //exit(0);
 
-    // core core; core core
+    double* c_p = c->pointer();
+
+    // adjust oeis
     offset = 0;
-    for (int hi = 0; hi < nirrep_; hi++) {
-        for (int i = 0; i < frzcpi_[hi]; i++) {
-            int ii = i + pitzer_offset_full[hi];
+    offset3 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int i = frzcpi_[h]; i < nmopi_[h] - frzvpi_[h]; i++) {
+            long int ii = i + offset;
+            for (long int j = frzcpi_[h]; j < nmopi_[h] - frzvpi_[h]; j++) {
 
-            for (int hj = 0; hj < nirrep_; hj++) {
-                for (int j = 0; j < frzcpi_[hj]; j++) {
-                    int jj = j + pitzer_offset_full[hj];
+                long int jj = j + offset;
+                double dum1 = 0.0;
+                double dum2 = 0.0;
 
-                    int hij = SymmetryPair(hi,hj);
+                long int offset2 = 0;
+                for (int h2 = 0; h2 < nirrep_; h2++) {
 
-                    if ( ii == jj ) {
-
-                        int iii = ibas_full_sym[0][ii][ii];
-                        int jjj = ibas_full_sym[0][jj][jj];
-                        d2_full_sym[INDEX(iii,jjj)] =  1.0;
-
-                    }else {
-
-                        int iii = ibas_full_sym[0][ii][ii];
-                        int jjj = ibas_full_sym[0][jj][jj];
-                        int ij = ibas_full_sym[hij][ii][jj];
-
-                        d2_full_sym[INDEX(iii,jjj)] =  4.0;
-                        offset = 0;
-                        for (int myh = 0; myh < hij; myh++) {
-                            offset += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
-                        }
-                        d2_full_sym[offset + INDEX(ij,ij)] = -2.0;
+                    for (long int k = 0; k < frzcpi_[h2]; k++) {
+                        int kk = k + offset2;
+                        dum1 += C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+jj],1,Qmo_->pointer()[kk*nso_+kk],1);
+                        dum2 += C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+kk],1,Qmo_->pointer()[jj*nso_+kk],1);
                     }
+                    offset2 += nmopi_[h2];
                 }
+                c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym[offset3+INDEX(i,j)];
+                c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym[offset3+INDEX(i,j)];
+
+                c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] += 2.0 * dum1 - dum2;
+                c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] += 2.0 * dum1 - dum2;
+            }
+        }
+        offset += nmopi_[h];
+        offset3 += nmopi_[h] * (nmopi_[h]+1)/2;
+    }
+
+    // two-electron part
+    long int na = nalpha_ - nfrzc;
+    long int nb = nbeta_ - nfrzc;
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (long int ij = 0; ij < gems_ab[h]; ij++) {
+            long int i = bas_ab_sym[h][ij][0];
+            long int j = bas_ab_sym[h][ij][1];
+
+            long int ii = full_basis[i];
+            long int jj = full_basis[j];
+
+            for (long int kl = 0; kl < gems_ab[h]; kl++) {
+                long int k = bas_ab_sym[h][kl][0];
+                long int l = bas_ab_sym[h][kl][1];
+
+                long int kk = full_basis[k];
+                long int ll = full_basis[l];
+
+                c_p[d2aboff[h] + ij*gems_ab[h]+kl] = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+kk],1,Qmo_->pointer()[jj*nso_+ll],1);
             }
         }
     }
 
-    // core active; core active
-    for (int hi = 0; hi < nirrep_; hi++) {
-        for (int i = 0; i < frzcpi_[hi]; i++) {
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (long int ij = 0; ij < gems_aa[h]; ij++) {
+            long int i = bas_aa_sym[h][ij][0];
+            long int j = bas_aa_sym[h][ij][1];
 
-            int ifull = i + pitzer_offset_full[hi];
-            int ii = ibas_full_sym[0][ifull][ifull];
+            long int ii = full_basis[i];
+            long int jj = full_basis[j];
 
-            // D2(il; ij) ab, ba, aa, bb
-            for (int hj = 0; hj < nirrep_; hj++) {
-                for (int j = 0; j < amopi_[hj]; j++) {
+            for (long int kl = 0; kl < gems_aa[h]; kl++) {
+                long int k = bas_aa_sym[h][kl][0];
+                long int l = bas_aa_sym[h][kl][1];
 
-                    int jfull = j + pitzer_offset_full[hj] + frzcpi_[hj];
+                long int kk = full_basis[k];
+                long int ll = full_basis[l];
 
-                    for (int l = j; l < amopi_[hj]; l++) {
+                double dum1 = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+kk],1,Qmo_->pointer()[jj*nso_+ll],1);
+                double dum2 = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+ll],1,Qmo_->pointer()[jj*nso_+kk],1);
 
-                        int lfull = l + pitzer_offset_full[hj] + frzcpi_[hj];
-
-                        int jl    = ibas_full_sym[0][jfull][lfull];
-
-                        int id = INDEX(ii,jl);
-
-                        double val = 0.0;
-
-                        // aa and bb pieces
-                        if ( j == l ) {
-                            val += 1.0 * x_p[d1aoff[hj]+j*amopi_[hj]+l];
-                            val += 1.0 * x_p[d1boff[hj]+j*amopi_[hj]+l];
-                        }else {
-                            val += 2.0 * x_p[d1aoff[hj]+j*amopi_[hj]+l];
-                            val += 2.0 * x_p[d1boff[hj]+j*amopi_[hj]+l];
-                        }
-
-                        // ab and ba pieces
-                        if ( j == l ) {
-                            val += 1.0 * x_p[d1aoff[hj]+j*amopi_[hj]+l];
-                            val += 1.0 * x_p[d1boff[hj]+j*amopi_[hj]+l];
-                        }else {
-                            val += 2.0 * x_p[d1aoff[hj]+j*amopi_[hj]+l];
-                            val += 2.0 * x_p[d1boff[hj]+j*amopi_[hj]+l];
-                        }
-
-                        d2_full_sym[id] = val;
-
-                        // also (il|ji) with a minus sign
-                        int hil = SymmetryPair(symmetry_plus_core[ifull],symmetry_plus_core[lfull]);
-                        int hji = SymmetryPair(symmetry_plus_core[ifull],symmetry_plus_core[jfull]);
-
-                        int il = ibas_full_sym[hil][ifull][lfull];
-                        int ji = ibas_full_sym[hji][jfull][ifull];
-
-                        //if ( il > ji ) continue;
-
-                        val = 0.0;
-
-                        // aa and bb pieces
-                        if ( j == l ) {
-                            val -= 1.0 * x_p[d1aoff[hj]+j*amopi_[hj]+l];
-                            val -= 1.0 * x_p[d1boff[hj]+j*amopi_[hj]+l];
-                        }else {
-                            val -= 2.0 * x_p[d1aoff[hj]+j*amopi_[hj]+l];
-                            val -= 2.0 * x_p[d1boff[hj]+j*amopi_[hj]+l];
-                        }
-
-                        //if ( j != l )   val *= 2.0;
-                        //if ( il != ji ) val *= 2.0;
-
-                        offset = 0;
-                        for (int myh = 0; myh < hil; myh++) {
-                            offset += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
-                        }
-
-                        d2_full_sym[offset + INDEX(il,ji)] = val;
-
-                    }
-                }
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
             }
         }
     }
-
-    // now D1
-    // active; active
-    offset = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (int i = 0; i < amopi_[h]; i++) {
-
-            int ifull = i + frzcpi_[h];
-
-            for (int j = i; j < amopi_[h]; j++) {
-
-                int jfull = j + frzcpi_[h];
-
-                int id = offset + INDEX(ifull,jfull);
-                
-                d1_full_sym[id]  = x_p[d1aoff[h] + i * amopi_[h] + j];
-                d1_full_sym[id] += x_p[d1boff[h] + i * amopi_[h] + j];
-
-                // scale off-diagonal elements
-                if ( i != j ) {
-                    d1_full_sym[id] *= 2.0;
-                }
-
-            }
-        }
-        offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
-    }
-
-    // core; core;
-    offset = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (int i = 0; i < frzcpi_[h]; i++) {
-            d1_full_sym[offset + INDEX(i,i)] = 2.0;
-        }
-        offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
-    }
-
-    // check energy:
-
-    // two-electron part:
-    int dim = 0; 
-    for (int h = 0; h < nirrep_; h++) {
-        dim += gems_full[h] * ( gems_full[h] + 1 ) / 2;
-    }
-    double en2 = C_DDOT(dim,tei_full_sym,1,d2_full_sym,1);
-
-    // one-electron part:
-    dim = 0; 
-    for (int h = 0; h < nirrep_; h++) {
-        dim += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
-    }
-    double en1 = C_DDOT(dim,oei_full_sym,1,d1_full_sym,1);
-
-    printf("\n");
-    printf("efrzc1       %20.12lf\n",efrzc1);
-    printf("efrzc2       %20.12lf\n",efrzc2);
-    printf("\n");
-    printf("en1          %20.12lf\n",en1);
-    printf("en2          %20.12lf\n",en2);
-    printf("en1+en2      %20.12lf\n",en1+en2);
-    printf("en1+en2+enuc %20.12lf\n",en1+en2 + enuc);
-}*/
+}
 
 // repack rotated full-space integrals into active-space integrals
 void v2RDMSolver::RepackIntegrals(){
 
     long int full = nmo + nfrzc + nfrzv;
+
     // if frozen core, adjust oei's and compute frozen core energy:
     efrzc1 = 0.0;
     efrzc2 = 0.0;
@@ -4709,7 +4414,7 @@ void v2RDMSolver::RepackIntegrals(){
             int ifull = i + pitzer_offset_full[h];
             int ii    = ibas_full_sym[0][ifull][ifull];
 
-            efrzc1 += 2.0 * oei_full_sym[offset + INDEX(i,i)]; //K1->pointer(h)[i][i];
+            efrzc1 += 2.0 * oei_full_sym[offset + INDEX(i,i)]; 
 
             for (int h2 = 0; h2 < nirrep_; h2++) {
                 for (int j = 0; j < frzcpi_[h2]; j++) {
@@ -4958,11 +4663,8 @@ void v2RDMSolver::FinalTransformationMatrix() {
 
 void v2RDMSolver::RotateOrbitals(){
 
-    if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD" ) {
-        //throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
-        if ( nirrep_ > 1 ) {
-            //throw PsiException("orbital optimization does not work with 3-index integrals and point group symmetry yet",__FILE__,__LINE__);
-        }
+    if ( is_df_ ) {
+        throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
     }
 
     UnpackDensityPlusCore();
@@ -4985,7 +4687,11 @@ void v2RDMSolver::RotateOrbitals(){
         jacobi_converged_ = true;
     }
 
-    RepackIntegrals();
+    if ( is_df_ ) {
+        RepackIntegrals();
+    }else {
+        RepackIntegralsDF();
+    }
 }
 
 }} //end namespaces
