@@ -99,7 +99,6 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     double ** qsop = Qso->pointer();
 
     //AO2USO_->print();
-
     for (int Q = 0; Q < nQ_; Q++) {
         int offh = 0;
         for (int h = 0; h < nirrep_; h++) {
@@ -129,7 +128,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                         int jj = j + offh2;
                         double dum = 0.0;
                         for (int m = 0; m < nso_; m++) {
-                            dum += qmop[Q][ii*nso_+m] * cp[j][m];
+                            dum += qmop[Q][ii*nso_+m] * cp[m][j];
                         }
                         qsop[Q][ii*nso_+jj] = dum;
                     }
@@ -139,6 +138,14 @@ void v2RDMSolver::ThreeIndexIntegrals() {
             offh += nsopi_[h];
         }
     }
+
+    //for (int Q = 0; Q < nQ_; Q++) {
+    //    for (int i = 0; i < nso_; i++) {
+    //        for (int j = 0; j < nso_; j++) {
+    //            qsop[Q][i*nso_+j] = tempp[Q][i*nso_+j];
+    //        }
+    //    }
+    //}
 
     // SO -> MO transformation:
     for (int Q = 0; Q < nQ_; Q++) {

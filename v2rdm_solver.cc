@@ -2116,13 +2116,6 @@ void v2RDMSolver::K2() {
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-double dumq = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+kk]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+ll]),nso_*nso_);
-double dum = 0.0;
-for (int Q = 0; Q < nQ_; Q++) {
-    dum += Qmo_->pointer()[Q][ii*nso_+kk] * Qmo_->pointer()[Q][jj*nso_+ll];
-}
-printf("hey %5i %5i %20.12lf %20.12lf %20.12lf\n", ij,kl,temptei[ii*full*full*full+kk*full*full+jj*full+ll], dum,dumq);
-
                 c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = temptei[ii*full*full*full+kk*full*full+jj*full+ll];
 
                 long int hi = symmetry[i];
@@ -4965,7 +4958,7 @@ void v2RDMSolver::RotateOrbitals(){
     if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD" ) {
         //throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
         if ( nirrep_ > 1 ) {
-            throw PsiException("orbital optimization does not work with 3-index integrals and point group symmetry yet",__FILE__,__LINE__);
+            //throw PsiException("orbital optimization does not work with 3-index integrals and point group symmetry yet",__FILE__,__LINE__);
         }
     }
 
