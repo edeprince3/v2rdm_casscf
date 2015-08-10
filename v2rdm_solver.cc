@@ -1887,6 +1887,7 @@ void v2RDMSolver::DFK2() {
     long int na = nalpha_ - nfrzc;
     long int nb = nbeta_ - nfrzc;
     for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
         for (long int ij = 0; ij < gems_ab[h]; ij++) {
             long int i = bas_ab_sym[h][ij][0];
             long int j = bas_ab_sym[h][ij][1];
@@ -1907,6 +1908,7 @@ void v2RDMSolver::DFK2() {
     }
 
     for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
         for (long int ij = 0; ij < gems_aa[h]; ij++) {
             long int i = bas_aa_sym[h][ij][0];
             long int j = bas_aa_sym[h][ij][1];
