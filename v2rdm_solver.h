@@ -108,6 +108,9 @@ class v2RDMSolver: public Wavefunction{
 
     int nQ_; // number of auxilliary basis functions
     void ThreeIndexIntegrals(); 
+    boost::shared_ptr<Matrix> Qmo_;
+
+    boost::shared_ptr<Matrix> ReadOEIs();
 
     // offsets
     int * d1aoff;  

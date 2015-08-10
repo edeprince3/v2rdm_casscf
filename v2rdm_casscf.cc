@@ -122,16 +122,16 @@ PsiReturnType v2rdm_casscf(Options& options)
 
     boost::shared_ptr<Wavefunction> wfn;
 
-    if ( options.get_str("SCF_TYPE") == "DF" || options.get_str("SCF_TYPE") == "CD") { 
+    //if ( options.get_str("SCF_TYPE") == "DF" || options.get_str("SCF_TYPE") == "CD") { 
 
-        // get three-index integrals in usable form
-        boost::shared_ptr<DFFrozenNO> fno(new DFFrozenNO(Process::environment.wavefunction(),options));
-        fno->ThreeIndexIntegrals();
-        wfn = (boost::shared_ptr<Wavefunction>)fno;
+    //    // get three-index integrals in usable form
+    //    boost::shared_ptr<DFFrozenNO> fno(new DFFrozenNO(Process::environment.wavefunction(),options));
+    //    fno->ThreeIndexIntegrals();
+    //    wfn = (boost::shared_ptr<Wavefunction>)fno;
 
-    }else {
+    //}else {
         wfn = Process::environment.wavefunction();
-    }
+    //}
 
     boost::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(wfn,options));
     double energy = v2rdm->compute_energy();

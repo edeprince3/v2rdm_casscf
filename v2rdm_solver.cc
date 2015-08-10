@@ -1705,12 +1705,88 @@ void  v2RDMSolver::common_init(){
     }
 }
 
+boost::shared_ptr<Matrix> v2RDMSolver::ReadOEIs() {
+
+    boost::shared_ptr<Matrix> K1 (new Matrix("one-electron integrals",nirrep_,nmopi_,nmopi_));
+
+    long int full = nmo + nfrzc + nfrzv;
+    double * tempoei = (double*)malloc(full*(full+1)/2*sizeof(double));
+    memset((void*)tempoei,'\0',full*(full+1)/2*sizeof(double));
+    boost::shared_ptr<PSIO> psio(new PSIO());
+    psio->open(PSIF_OEI,PSIO_OPEN_OLD);
+    psio->read_entry(PSIF_OEI,"MO-basis One-electron Ints",(char*)&tempoei[0],full*(full+1)/2*sizeof(double));
+    psio->close(PSIF_OEI,1);
+    offset = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int i = 0; i < nmopi_[h]; i++) {
+            for (long int j = 0; j < nmopi_[h]; j++) {
+                K1->pointer(h)[i][j] = tempoei[INDEX(i+offset,j+offset)];
+            }
+        }
+        offset += nmopi_[h];
+    }
+    free(tempoei);
+
+    return K1;
+}
+
+
 //build K2 using 3-index integrals 
 void v2RDMSolver::DFK2() {
 
-    throw Psi4Exception("v2rdm casscf doesn't work with df integrals yet",__FILE__,__LINE__);
+    outfile->Printf("    ==> Transform three-electron integrals <==\n");
+    outfile->Printf("\n");
+
+    double start = omp_get_wtime();
 
     ThreeIndexIntegrals();
+
+    double end = omp_get_wtime();
+
+    outfile->Printf("\n");
+    outfile->Printf("    Time for integral transformation:  %7.2lf s\n",end-start);
+    outfile->Printf("\n");
+
+    // one-electron integrals:  TODO: build/transform from MintsHelper
+    boost::shared_ptr<Matrix> K1 = ReadOEIs();
+
+
+    // if frozen core, adjust oei's and compute frozen core energy:
+    efrzc1 = 0.0;
+    efrzc2 = 0.0;
+    offset = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int i = 0; i < frzcpi_[h]; i++) {
+            long int ii = i + offset;
+            efrzc1 += 2.0 * K1->pointer(h)[i][i];
+
+            long int offset2 = 0;
+            for (int h2 = 0; h2 < nirrep_; h2++) {
+                for (long int j = 0; j < frzcpi_[h2]; j++) {
+                    long int jj = j + offset2;
+                    double dum1 = 0.0;
+                    double dum2 = 0.0;
+                    for (int Q = 0; Q < nQ_; Q++) {
+                        dum1 += Qmo_->pointer()[Q][ii*nso_+ii] * Qmo_->pointer()[Q][jj*nso_+jj];
+                        dum2 += Qmo_->pointer()[Q][ii*nso_+jj] * Qmo_->pointer()[Q][ii*nso_+jj];
+                    }
+                    efrzc2 += 2.0 * dum1 - dum2;
+                    //efrzc2 += (2.0 * temptei[(i+offset)*full*full*full+(i+offset)*full*full+(j+offset2)*full+(j+offset2)]
+                    //              - temptei[(i+offset)*full*full*full+(j+offset2)*full*full+(i+offset)*full+(j+offset2)]);
+                }
+                offset2 += nmopi_[h2];
+            }
+        }
+        offset += nmopi_[h];
+    }
+    efrzc = efrzc1 + efrzc2;
+    printf("%20.12lf\n",efrzc1);
+    printf("%20.12lf\n",efrzc2);
+    printf("%20.12lf\n",efrzc);
+
+
+
+    throw PsiException("v2rdm casscf doesn't work with df integrals yet",__FILE__,__LINE__);
 
 }
 
@@ -1744,28 +1820,8 @@ void v2RDMSolver::K2() {
     // read two-electron integrals from disk
     ReadIntegrals(temptei,full);
     
-    // K1 has no symmetry, but the orbitals are in pitzer order
-    boost::shared_ptr<Matrix> K1 (new Matrix("one-electron integrals",nirrep_,nmopi_,nmopi_));
-
     // read oei's from disk (this will simplify things when we add symmetry):
-    double * tempoei = (double*)malloc(full*(full+1)/2*sizeof(double));
-    memset((void*)tempoei,'\0',full*(full+1)/2*sizeof(double));
-    boost::shared_ptr<PSIO> psio(new PSIO());
-    psio->open(PSIF_OEI,PSIO_OPEN_OLD);
-    psio->read_entry(PSIF_OEI,"MO-basis One-electron Ints",(char*)&tempoei[0],full*(full+1)/2*sizeof(double));
-    psio->close(PSIF_OEI,1);
-    offset = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (long int i = 0; i < nmopi_[h]; i++) {
-            for (long int j = 0; j < nmopi_[h]; j++) {
-                K1->pointer(h)[i][j] = tempoei[INDEX(i+offset,j+offset)];
-            }
-        }
-        offset += nmopi_[h];
-    }
-    free(tempoei);
-    //saveK1 = (boost::shared_ptr<Matrix> ) (new Matrix(K1) ) ;
-    //saveK1->print();
+    boost::shared_ptr<Matrix> K1 = ReadOEIs();
 
     // allocate memory for full ERI tensor blocked by symmetry for Greg
     tei_full_dim = 0;
