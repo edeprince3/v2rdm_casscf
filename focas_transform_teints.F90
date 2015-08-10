@@ -195,6 +195,10 @@ module focas_transform_teints
           ! followed by
           ! A = (C[k_sym])^T * A_tilde[]ij][k_sym]
 
+          ! only need to do work if there are orbitals with symmetry k_sym and l_sym 
+
+          if ( ( num_k == 0 ) .or. ( num_l == 0 ) ) cycle
+
 # ifdef BLAS
           call dgemm('N','N',num_k,num_l,num_l,1.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k,&
                      trans_%u_irrep_block(l_sym)%val,num_l,0.0_wp,A_tilde,max_nmopi)
@@ -318,6 +322,11 @@ module focas_transform_teints
               ! A_tilde[tu][i_sym] = B_tilde[tu][i_sym] * C[[j_sym]
               ! followed by
               ! B_tilde[tu][i_sym] = (C[i_sym])^T * A_tilde[tu][i_sym]
+
+              ! only need to do work if there are orbitals with symmetry i_sym and j_sym
+
+              if ( ( num_i == 0 ) .or. ( num_j == 0 ) ) cycle 
+ 
 # ifdef BLAS
               call dgemm('N','N',num_i,num_j,num_j,1.0_wp,B_tilde,max_nmopi,&
                      trans_%u_irrep_block(j_sym)%val,num_j,0.0_wp,A_tilde,max_nmopi)
@@ -407,7 +416,11 @@ module focas_transform_teints
 
               num_k = trans_%nmopi(k_sym)
               num_l = trans_%nmopi(l_sym)
-           
+
+              ! do not allocate if there are no orbitals with these symmetries
+
+              if ( ( num_k == 0 ) .or. ( num_l == 0 ) ) cycle         
+
               allocate(A(ij)%irrep(k_sym)%mat(num_k,num_l))
 
               A(ij)%irrep(k_sym)%mat = 0.0_wp
@@ -603,6 +616,10 @@ module focas_transform_teints
           ! followed by
           ! A = (C[k_sym])^T * A_tilde[]ij][k_sym]
 
+          ! only need to do work if there are orbitals with symmetry k_sym  
+
+          if ( num_k == 0 )  cycle
+
 # ifdef BLAS
           call dgemm('N','N',num_k,num_k,num_k,1.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k,&
                      trans_%u_irrep_block(k_sym)%val,num_k,0.0_wp,A_tilde,max_nmopi)
@@ -705,6 +722,10 @@ module focas_transform_teints
               ! followed by
               ! B_tilde[tu][i_sym] = (C[i_sym])^T * A_tilde[tu][i_sym]
 
+              ! only need to do work if there are orbitals with symmetry k_sym  
+ 
+              if ( num_i == 0 )  cycle
+
 # ifdef BLAS
               call dgemm('N','N',num_i,num_i,num_i,1.0_wp,B_tilde,max_nmopi,&
                      trans_%u_irrep_block(i_sym)%val,num_i,0.0_wp,A_tilde,max_nmopi)
@@ -790,7 +811,11 @@ module focas_transform_teints
             do k_sym = 1 , nirrep_
 
               num_k = trans_%nmopi(k_sym)
-           
+          
+              ! do not allocate if there are no orbitals with this symemtry
+            
+              if ( num_k == 0 ) cycle
+ 
               allocate(A(ij)%irrep(k_sym)%mat(num_k,num_k))
 
               A(ij)%irrep(k_sym)%mat = 0.0_wp

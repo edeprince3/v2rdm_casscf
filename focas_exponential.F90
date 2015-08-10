@@ -32,7 +32,8 @@ module focas_exponential
         error = gather_kappa_block(kappa_in,k_block,i_sym)
         if (error /= 0) stop
 
-        error = compute_block_exponential(k_block,i_sym,max_nmopi)
+        error = 0
+        if ( trans_%nmopi(i_sym) > 0 ) error = compute_block_exponential(k_block,i_sym,max_nmopi)
         if (error /= 0) stop
          
       end do
