@@ -1764,15 +1764,9 @@ void v2RDMSolver::DFK2() {
             for (int h2 = 0; h2 < nirrep_; h2++) {
                 for (long int j = 0; j < frzcpi_[h2]; j++) {
                     long int jj = j + offset2;
-                    double dum1 = 0.0;
-                    double dum2 = 0.0;
-                    for (int Q = 0; Q < nQ_; Q++) {
-                        dum1 += Qmo_->pointer()[Q][ii*nso_+ii] * Qmo_->pointer()[Q][jj*nso_+jj];
-                        dum2 += Qmo_->pointer()[Q][ii*nso_+jj] * Qmo_->pointer()[Q][ii*nso_+jj];
-                    }
+                    double dum1 = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+ii]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+jj]),nso_*nso_);
+                    double dum2 = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+jj]),nso_*nso_,&(Qmo_->pointer()[0][ii*nso_+jj]),nso_*nso_);
                     efrzc2 += 2.0 * dum1 - dum2;
-                    //efrzc2 += (2.0 * temptei[(i+offset)*full*full*full+(i+offset)*full*full+(j+offset2)*full+(j+offset2)]
-                    //              - temptei[(i+offset)*full*full*full+(j+offset2)*full*full+(i+offset)*full+(j+offset2)]);
                 }
                 offset2 += nmopi_[h2];
             }
@@ -1780,13 +1774,111 @@ void v2RDMSolver::DFK2() {
         offset += nmopi_[h];
     }
     efrzc = efrzc1 + efrzc2;
-    printf("%20.12lf\n",efrzc1);
-    printf("%20.12lf\n",efrzc2);
-    printf("%20.12lf\n",efrzc);
+    //printf("%20.12lf\n",efrzc1);
+    //printf("%20.12lf\n",efrzc2);
+    //printf("%20.12lf\n",efrzc);
 
+    // adjust oeis
+    offset = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int i = frzcpi_[h]; i < nmopi_[h] - frzvpi_[h]; i++) {
+            int ii = i + offset;
+            for (long int j = frzcpi_[h]; j < nmopi_[h] - frzvpi_[h]; j++) {
 
+                int jj = j + offset;
+                double dum1 = 0.0;
+                double dum2 = 0.0;
 
-    throw PsiException("v2rdm casscf doesn't work with df integrals yet",__FILE__,__LINE__);
+                int offset2 = 0;
+                for (int h2 = 0; h2 < nirrep_; h2++) {
+
+                    for (long int k = 0; k < frzcpi_[h2]; k++) {
+                        int kk = k + offset2;
+                        //dum += (2.0 * temptei[(i+offset)*full*full*full+(j+offset)*full*full+(k+offset2)*full+(k+offset2)]
+                        //    - temptei[(i+offset)*full*full*full+(k+offset2)*full*full+(k+offset2)*full+(j+offset)]);
+                        dum1 += C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+jj]),nso_*nso_,&(Qmo_->pointer()[0][kk*nso_+kk]),nso_*nso_);
+                        dum2 += C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+kk]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+kk]),nso_*nso_);
+                    }
+                    offset2 += nsopi_[h2];
+                }
+                K1->pointer(h)[i][j] += 2.0 * dum1 - dum2;
+            }
+        }
+        offset += nsopi_[h];
+    }
+
+    double* c_p = c->pointer();
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int i = 0; i < amopi_[h]; i++) {
+            for (long int j = 0; j < amopi_[h]; j++) {
+                c_p[d1aoff[h] + i*amopi_[h] + j] = K1->pointer(h)[i+frzcpi_[h]][j+frzcpi_[h]];
+                c_p[d1boff[h] + i*amopi_[h] + j] = K1->pointer(h)[i+frzcpi_[h]][j+frzcpi_[h]];
+            }
+        }
+    }
+
+    // two-electron part
+    long int na = nalpha_ - nfrzc;
+    long int nb = nbeta_ - nfrzc;
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int ij = 0; ij < gems_ab[h]; ij++) {
+            long int i = bas_ab_sym[h][ij][0];
+            long int j = bas_ab_sym[h][ij][1];
+
+            long int ii = full_basis[i];
+            long int jj = full_basis[j];
+
+            for (long int kl = 0; kl < gems_ab[h]; kl++) {
+                long int k = bas_ab_sym[h][kl][0];
+                long int l = bas_ab_sym[h][kl][1];
+
+                long int kk = full_basis[k];
+                long int ll = full_basis[l];
+
+                c_p[d2aboff[h] + ij*gems_ab[h]+kl] = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+kk]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+ll]),nso_*nso_);
+            }
+        }
+    }
+
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int ij = 0; ij < gems_aa[h]; ij++) {
+            long int i = bas_aa_sym[h][ij][0];
+            long int j = bas_aa_sym[h][ij][1];
+
+            long int ii = full_basis[i];
+            long int jj = full_basis[j];
+
+            for (long int kl = 0; kl < gems_aa[h]; kl++) {
+                long int k = bas_aa_sym[h][kl][0];
+                long int l = bas_aa_sym[h][kl][1];
+
+                long int kk = full_basis[k];
+                long int ll = full_basis[l];
+
+                double dum1 = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+kk]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+ll]),nso_*nso_);
+                double dum2 = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+ll]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+kk]),nso_*nso_);
+
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
+
+                //c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*full*full*full+kk*full*full+jj*full+ll];
+                //c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*full*full*full+ll*full*full+jj*full+kk];
+                //c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*full*full*full+kk*full*full+ii*full+ll];
+                //c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*full*full*full+ll*full*full+ii*full+kk];
+
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
+
+                //c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*full*full*full+kk*full*full+jj*full+ll];
+                //c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*full*full*full+ll*full*full+jj*full+kk];
+                //c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*full*full*full+kk*full*full+ii*full+ll];
+                //c_p[d2bboff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*full*full*full+ll*full*full+ii*full+kk];
+
+            }
+        }
+    }
+
+    enuc = Process::environment.molecule()->nuclear_repulsion_energy();
+
+    //throw PsiException("v2rdm casscf doesn't work with df integrals yet",__FILE__,__LINE__);
 
 }
 
@@ -1909,15 +2001,14 @@ void v2RDMSolver::K2() {
 	      
                 double dum = 0.0;
 
-		int offset2 = 0;
+		        int offset2 = 0;
                 for (int h2 = 0; h2 < nirrep_; h2++) {
 		 
-		  //int offset2 = 0;
                     for (long int k = 0; k < frzcpi_[h2]; k++) {
-		      // outfile->Printf(" compound index = %li\n",(i+offset)*full*full*full+(j+offset)*full*full+(k+offset2)*full+(k+offset2));
-		      dum += (2.0 * temptei[(i+offset)*full*full*full+(j+offset)*full*full+(k+offset2)*full+(k+offset2)] 
-			      - temptei[(i+offset)*full*full*full+(k+offset2)*full*full+(k+offset2)*full+(j+offset)]);
+		            dum += (2.0 * temptei[(i+offset)*full*full*full+(j+offset)*full*full+(k+offset2)*full+(k+offset2)] 
+			            - temptei[(i+offset)*full*full*full+(k+offset2)*full*full+(k+offset2)*full+(j+offset)]);
                     }
+
                     offset2 += nmopi_[h2];
                 }
                 K1->pointer(h)[i][j] += dum;
@@ -4795,6 +4886,10 @@ void v2RDMSolver::FinalTransformationMatrix() {
 }
 
 void v2RDMSolver::RotateOrbitals(){
+
+    if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD" ) {
+        throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
+    }
 
     UnpackDensityPlusCore();
 
