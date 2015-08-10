@@ -52,9 +52,15 @@ void v2RDMSolver::ThreeIndexIntegrals() {
 
     // read integrals that were written to disk in the scf
 
-    boost::shared_ptr<BasisSet> auxiliary = BasisSet::pyconstruct_auxiliary(molecule_,
-          "DF_BASIS_SCF", options_.get_str("DF_BASIS_SCF"), "JKFIT", options_.get_str("BASIS"));
-    nQ_ = auxiliary->nbf();
+
+    // read integrals that were written to disk in the scf
+    nQ_ = Process::environment.globals["NAUX (SCF)"];
+    if ( options_.get_str("SCF_TYPE") == "DF" ) {
+        boost::shared_ptr<BasisSet> auxiliary = BasisSet::pyconstruct_auxiliary(molecule_,
+              "DF_BASIS_SCF", options_.get_str("DF_BASIS_SCF"), "JKFIT", options_.get_str("BASIS"));
+        nQ_ = auxiliary->nbf();
+        Process::environment.globals["NAUX (SCF)"] = nQ_;
+    }
 
     boost::shared_ptr<Matrix> Qmn = SharedMatrix(new Matrix("Qmn Integrals",nQ_,ntri));
     double** Qmnp = Qmn->pointer();
@@ -63,6 +69,23 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->read_entry(PSIF_DFSCF_BJ, "(Q|mn) Integrals", (char*) Qmnp[0], sizeof(double) * ntri * nQ_);
     psio->close(PSIF_DFSCF_BJ,1);
 
+    // unpack
+
+    boost::shared_ptr<Matrix> temp (new Matrix(nQ_,nso_*nso_));
+    double ** tempp = temp->pointer();
+    
+    for (long int Q = 0; Q < nQ_; Q++) {
+        for (long int mn = 0; mn < ntri; mn++) {
+
+            long int m = function_pairs[mn].first;
+            long int n = function_pairs[mn].second;
+
+            tempp[Q][m*nso_+n] = Qmnp[Q][mn];
+            tempp[Q][n*nso_+m] = Qmnp[Q][mn];
+        }
+    }
+    Qmn.reset();
+
     // have three-index integrals in AO basis. now, transform to SO basis
 
     boost::shared_ptr<IntegralFactory> integral(new IntegralFactory(basisset_,basisset_,basisset_,basisset_));
@@ -70,30 +93,45 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     boost::shared_ptr<Matrix> AO2USO_ (new Matrix(pet->aotoso()));
 
     boost::shared_ptr<Matrix> Qso (new Matrix(nQ_,nso_*nso_) );
+    Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nQ_,nso_*nso_));
+
+    double ** qmop = Qmo_->pointer();
+    double ** qsop = Qso->pointer();
+
+    //AO2USO_->print();
 
     for (int Q = 0; Q < nQ_; Q++) {
         int offh = 0;
         for (int h = 0; h < nirrep_; h++) {
-            double ** c1 = AO2USO_->pointer(h);
+            double ** cp = AO2USO_->pointer(h);
+            for (int i = 0; i < nsopi_[h]; i++) {
+                int ii = i + offh;
+                for (int m = 0; m < nso_; m++) {
+                    double dum = 0.0;
+                    for (int n = 0; n < nso_; n++) {
+                        dum += tempp[Q][m*nso_+n] * cp[n][i];
+                    }
+                    qmop[Q][ii*nso_+m] = dum;
+                }
+            }
+            offh += nsopi_[h];
+        }
+    }
+    for (int Q = 0; Q < nQ_; Q++) {
+        int offh = 0;
+        for (int h = 0; h < nirrep_; h++) {
             for (int i = 0; i < nsopi_[h]; i++) {
                 int ii = i + offh;
                 int offh2 = 0;
                 for (int h2 = 0; h2 < nirrep_; h2++) {
-                    double ** c2 = AO2USO_->pointer(h2);
+                    double ** cp = AO2USO_->pointer(h2);
                     for (int j = 0; j < nsopi_[h2]; j++) {
                         int jj = j + offh2;
-
                         double dum = 0.0;
-                        for (int mn = 0; mn < ntri; mn++) {
-                            long int m = function_pairs[mn].first;
-                            long int n = function_pairs[mn].second;
-                            dum += Qmnp[Q][mn] * c1[m][i] * c2[n][j];
-                            if ( m != n ) {
-                                dum += Qmnp[Q][mn] * c1[m][i] * c2[n][j];
-                            }
+                        for (int m = 0; m < nso_; m++) {
+                            dum += qmop[Q][ii*nso_+m] * cp[j][m];
                         }
-                        Qso->pointer()[Q][ii*nso_+jj] = dum;
-
+                        qsop[Q][ii*nso_+jj] = dum;
                     }
                     offh2 += nsopi_[h2];
                 }
@@ -101,32 +139,25 @@ void v2RDMSolver::ThreeIndexIntegrals() {
             offh += nsopi_[h];
         }
     }
-    Qso->print();
 
     // SO -> MO transformation:
-    Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nQ_,nso_*nso_));
-
     for (int Q = 0; Q < nQ_; Q++) {
         int offh = 0;
         for (int h = 0; h < nirrep_; h++) {
-            double ** c1 = Ca_->pointer(h);
+            double ** cp = Ca_->pointer(h);
             for (int i = 0; i < nmopi_[h]; i++) {
                 int ii = i + offh;
+
                 int offh2 = 0;
                 for (int h2 = 0; h2 < nirrep_; h2++) {
-                    double ** c2 = Ca_->pointer(h2);
-                    for (int j = 0; j < nmopi_[h2]; j++) {
-                        int jj = j + offh2;
-
+                    for (int m = 0; m < nsopi_[h2]; m++) {
+                        int mm = m + offh2;
                         double dum = 0.0;
-                        for (int m = 0; m < nsopi_[h]; m++) {
-                            int mm = m + offh;
-                            for (int n = 0; n < nsopi_[h2]; n++) {
-                                int nn = n + offh2;
-                                dum += Qso->pointer()[Q][mm*nso_+nn] * c1[m][i] * c2[n][j];
-                            }
+                        for (int n = 0; n < nsopi_[h]; n++) {
+                            int nn = n + offh;
+                            dum += qsop[Q][mm*nso_+nn] * cp[n][i];
                         }
-                        Qmo_->pointer()[Q][ii*nso_+jj] = dum;
+                        tempp[Q][ii*nso_+mm] = dum;
                     }
                     offh2 += nsopi_[h2];
                 }
@@ -134,6 +165,48 @@ void v2RDMSolver::ThreeIndexIntegrals() {
             offh += nsopi_[h];
         }
     }
+    for (int Q = 0; Q < nQ_; Q++) {
+        int offh = 0;
+        for (int h = 0; h < nirrep_; h++) {
+            for (int i = 0; i < nmopi_[h]; i++) {
+                int ii = i + offh;
+
+                int offh2 = 0;
+                for (int h2 = 0; h2 < nirrep_; h2++) {
+                    double ** cp = Ca_->pointer(h2);
+                    for (int j = 0; j < nsopi_[h2]; j++) {
+                        int jj = j + offh2;
+                        double dum = 0.0;
+                        for (int n = 0; n < nsopi_[h2]; n++) {
+                            int nn = n + offh2;
+                            dum += tempp[Q][ii*nso_+nn] * cp[n][j];
+                        }
+                        qmop[Q][ii*nso_+jj] = dum;
+                    }
+                    offh2 += nsopi_[h2];
+                }
+            }
+            offh += nsopi_[h];
+        }
+    }
+
+    //boost::shared_ptr<MintsHelper> mints(new MintsHelper() );
+    //boost::shared_ptr<Matrix> eri = mints->mo_eri(Ca_,Ca_);
+    //for (int i = 0; i < nso_; i++) {
+    //    for (int j = 0; j < nso_; j++) {
+    //        for (int k = 0; k < nso_; k++) {
+    //            for (int l = 0; l < nso_; l++) {
+    //                double dum = 0.0;
+    //                for (int Q = 0; Q < nQ_; Q++) {
+    //                    dum += Qmo_->pointer()[Q][i*nso_+j] * Qmo_->pointer()[Q][k*nso_+l];
+    //                }
+    //                printf("%5i %5i %5i %5i %20.12lf %20.12lf\n",i,j,k,l,dum,eri->pointer()[i*nso_+j][k*nso_+l]);
+    //            }
+    //        }
+    //    }
+    //}
+    //exit(0);
+
 }
 
 

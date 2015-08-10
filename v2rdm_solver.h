@@ -110,7 +110,8 @@ class v2RDMSolver: public Wavefunction{
     void ThreeIndexIntegrals(); 
     boost::shared_ptr<Matrix> Qmo_;
 
-    boost::shared_ptr<Matrix> ReadOEIs();
+    boost::shared_ptr<Matrix> ReadOEI();
+    boost::shared_ptr<Matrix> GetOEI();
 
     // offsets
     int * d1aoff;  

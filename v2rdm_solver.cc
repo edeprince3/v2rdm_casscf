@@ -1705,7 +1705,15 @@ void  v2RDMSolver::common_init(){
     }
 }
 
-boost::shared_ptr<Matrix> v2RDMSolver::ReadOEIs() {
+boost::shared_ptr<Matrix> v2RDMSolver::GetOEI() {
+    boost::shared_ptr<MintsHelper> mints(new MintsHelper());
+    boost::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
+    K1->add(mints->so_kinetic());
+    K1->transform(Ca_);
+    return K1;
+}
+
+boost::shared_ptr<Matrix> v2RDMSolver::ReadOEI() {
 
     boost::shared_ptr<Matrix> K1 (new Matrix("one-electron integrals",nirrep_,nmopi_,nmopi_));
 
@@ -1748,8 +1756,66 @@ void v2RDMSolver::DFK2() {
     outfile->Printf("\n");
 
     // one-electron integrals:  TODO: build/transform from MintsHelper
-    boost::shared_ptr<Matrix> K1 = ReadOEIs();
+    //boost::shared_ptr<Matrix> K1 = ReadOEI();
+    boost::shared_ptr<Matrix> K1 = GetOEI();
 
+    tei_full_dim = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        tei_full_dim += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+    }
+    d2_plus_core_dim = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        d2_plus_core_dim += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
+    }
+
+    tei_full_sym      = (double*)malloc(tei_full_dim*sizeof(double));
+    d2_plus_core_sym  = (double*)malloc(d2_plus_core_dim*sizeof(double));
+    memset((void*)tei_full_sym,'\0',tei_full_dim*sizeof(double));
+    memset((void*)d2_plus_core_sym,'\0',d2_plus_core_dim*sizeof(double));
+    //for (int i = 0; i < d2_plus_core_dim; i++) {
+    //    d2_plus_core_sym[i] = -9.0e99;
+    //}
+    // load tei_full_sym
+
+    long int offset = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int ij = 0; ij < gems_full[h]; ij++) {
+            long int i = bas_full_sym[h][ij][0];
+            long int j = bas_full_sym[h][ij][1];
+
+            for (long int kl = ij; kl < gems_full[h]; kl++) {
+                long int k = bas_full_sym[h][kl][0];
+                long int l = bas_full_sym[h][kl][1];
+
+                tei_full_sym[offset + INDEX(ij,kl)] = C_DDOT(nQ_,&(Qmo_->pointer()[0][i*nso_+j]),nso_*nso_,&(Qmo_->pointer()[0][k*nso_+l]),nso_*nso_);
+            }
+        }
+        offset += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+    }
+
+    // allocate memory for full OEI tensor blocked by symmetry for Greg
+    oei_full_dim = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        oei_full_dim += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
+    }
+    d1_plus_core_dim = 0;
+    for ( int h = 0; h < nirrep_; h++) {
+        d1_plus_core_dim += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
+    }
+    oei_full_sym = (double*)malloc(oei_full_dim*sizeof(double));
+    d1_plus_core_sym  = (double*)malloc(d1_plus_core_dim*sizeof(double));
+    memset((void*)oei_full_sym,'\0',oei_full_dim*sizeof(double));
+    memset((void*)d1_plus_core_sym,'\0',d1_plus_core_dim*sizeof(double));
+
+    offset = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int i = 0; i < nmopi_[h]; i++) {
+            for (long int j = i; j < nmopi_[h]; j++) {
+                oei_full_sym[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
+            }
+        }
+        offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
+    }
 
     // if frozen core, adjust oei's and compute frozen core energy:
     efrzc1 = 0.0;
@@ -1774,9 +1840,8 @@ void v2RDMSolver::DFK2() {
         offset += nmopi_[h];
     }
     efrzc = efrzc1 + efrzc2;
-    //printf("%20.12lf\n",efrzc1);
-    //printf("%20.12lf\n",efrzc2);
-    //printf("%20.12lf\n",efrzc);
+    printf("efrzc1       %20.12lf\n",efrzc1);
+    printf("efrzc2       %20.12lf\n",efrzc2);
 
     // adjust oeis
     offset = 0;
@@ -1799,12 +1864,12 @@ void v2RDMSolver::DFK2() {
                         dum1 += C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+jj]),nso_*nso_,&(Qmo_->pointer()[0][kk*nso_+kk]),nso_*nso_);
                         dum2 += C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+kk]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+kk]),nso_*nso_);
                     }
-                    offset2 += nsopi_[h2];
+                    offset2 += nmopi_[h2];
                 }
                 K1->pointer(h)[i][j] += 2.0 * dum1 - dum2;
             }
         }
-        offset += nsopi_[h];
+        offset += nmopi_[h];
     }
 
     double* c_p = c->pointer();
@@ -1913,7 +1978,8 @@ void v2RDMSolver::K2() {
     ReadIntegrals(temptei,full);
     
     // read oei's from disk (this will simplify things when we add symmetry):
-    boost::shared_ptr<Matrix> K1 = ReadOEIs();
+    //boost::shared_ptr<Matrix> K1 = ReadOEI();
+    boost::shared_ptr<Matrix> K1 = GetOEI();
 
     // allocate memory for full ERI tensor blocked by symmetry for Greg
     tei_full_dim = 0;
@@ -1992,7 +2058,8 @@ void v2RDMSolver::K2() {
         offset += nmopi_[h];
     }
     efrzc = efrzc1 + efrzc2;
-
+    printf("efrzc1       %20.12lf\n",efrzc1);
+    printf("efrzc2       %20.12lf\n",efrzc2);
     
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -2025,6 +2092,7 @@ void v2RDMSolver::K2() {
                 //c_p[d1boff[h] + INDEX(i-frzcpi_[h],j-frzcpi_[h])] = K1->pointer(h)[i][j];
                 //c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = K1->pointer(h)[i][j];
                 //c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = K1->pointer(h)[i][j];
+
                 c_p[d1aoff[h] + i*amopi_[h] + j] = K1->pointer(h)[i+frzcpi_[h]][j+frzcpi_[h]];
                 c_p[d1boff[h] + i*amopi_[h] + j] = K1->pointer(h)[i+frzcpi_[h]][j+frzcpi_[h]];
             }
@@ -2047,6 +2115,13 @@ void v2RDMSolver::K2() {
 
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
+
+double dumq = C_DDOT(nQ_,&(Qmo_->pointer()[0][ii*nso_+kk]),nso_*nso_,&(Qmo_->pointer()[0][jj*nso_+ll]),nso_*nso_);
+double dum = 0.0;
+for (int Q = 0; Q < nQ_; Q++) {
+    dum += Qmo_->pointer()[Q][ii*nso_+kk] * Qmo_->pointer()[Q][jj*nso_+ll];
+}
+printf("hey %5i %5i %20.12lf %20.12lf %20.12lf\n", ij,kl,temptei[ii*full*full*full+kk*full*full+jj*full+ll], dum,dumq);
 
                 c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = temptei[ii*full*full*full+kk*full*full+jj*full+ll];
 
@@ -4888,7 +4963,10 @@ void v2RDMSolver::FinalTransformationMatrix() {
 void v2RDMSolver::RotateOrbitals(){
 
     if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD" ) {
-        throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
+        //throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
+        if ( nirrep_ > 1 ) {
+            throw PsiException("orbital optimization does not work with 3-index integrals and point group symmetry yet",__FILE__,__LINE__);
+        }
     }
 
     UnpackDensityPlusCore();
