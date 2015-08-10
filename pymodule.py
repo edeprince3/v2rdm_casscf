@@ -51,7 +51,6 @@ def run_v2rdm_casscf(name, **kwargs):
 
     psi4.set_local_option('SCF', 'DF_INTS_IO', 'SAVE')
 
-
     # Your plugin's psi4 run sequence goes here
     scf_helper(name, **kwargs)
     returnvalue = psi4.plugin('v2rdm_casscf.so')
