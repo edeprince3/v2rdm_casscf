@@ -1779,6 +1779,7 @@ void v2RDMSolver::DFK2() {
 
     long int offset = 0;
     for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
         for (long int ij = 0; ij < gems_full[h]; ij++) {
             long int i = bas_full_sym[h][ij][0];
             long int j = bas_full_sym[h][ij][1];
