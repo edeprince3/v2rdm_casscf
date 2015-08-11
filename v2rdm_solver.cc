@@ -4688,9 +4688,9 @@ void v2RDMSolver::RotateOrbitals(){
     }
 
     if ( is_df_ ) {
-        RepackIntegrals();
-    }else {
         RepackIntegralsDF();
+    }else {
+        RepackIntegrals();
     }
 }
 
