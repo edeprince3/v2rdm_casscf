@@ -91,108 +91,153 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     boost::shared_ptr<PetiteList> pet(new PetiteList(basisset_, integral));
     boost::shared_ptr<Matrix> AO2USO_ (new Matrix(pet->aotoso()));
 
-    #pragma omp parallel for schedule (static)
-    for (int Q = 0; Q < nQ_; Q++) {
-        int offh = 0;
-        for (int h = 0; h < nirrep_; h++) {
-            double ** cp = AO2USO_->pointer(h);
-            for (int i = 0; i < nsopi_[h]; i++) {
-                int ii = i + offh;
-                for (int m = 0; m < nso_; m++) {
-                    double dum = 0.0;
-                    for (int n = 0; n < nso_; n++) {
-                        dum += tmp1[Q*nso_*nso_+m*nso_+n] * cp[n][i];
-                    }
-                    tmp2[Q*nso_*nso_+ii*nso_+m] = dum;
+    long int off1 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        double ** cp = AO2USO_->pointer(h);
+
+        F_DGEMM('n','n',nsopi_[h],nQ_*nso_,nso_,1.0,&cp[0][0],nsopi_[h],tmp1,nso_,0.0,tmp2+off1,nsopi_[h]);
+        off1 += nQ_ * nsopi_[h] * nso_;
+
+    }
+    off1 = 0;
+    long int off2 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+
+        #pragma omp parallel for schedule (static)
+        for (long int Q = 0; Q < nQ_; Q++) {
+            for (long int i = 0; i < nsopi_[h]; i++) {
+                long int ii = i + off2;
+                for (long int m = 0; m < nso_; m++) {
+                    tmp1[Q*nso_*nso_+ii*nso_+m] = tmp2[Q*nso_*nsopi_[h]+m*nsopi_[h] + i + off1];
                 }
             }
-            offh += nsopi_[h];
+        }
+        off1 += nQ_ * nsopi_[h] * nso_;
+        off2 += nsopi_[h];
+    }
+
+    off1 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        double ** cp = AO2USO_->pointer(h);
+
+        F_DGEMM('n','n',nsopi_[h],nQ_*nso_,nso_,1.0,&cp[0][0],nsopi_[h],tmp1,nso_,0.0,tmp2+off1,nsopi_[h]);
+        off1 += nQ_ * nsopi_[h] * nso_;
+
+    }
+
+    off1 = 0;
+    off2 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+
+        #pragma omp parallel for schedule (static)
+        for (long int Q = 0; Q < nQ_; Q++) {
+            for (long int m = 0; m < nso_; m++) {
+                for (long int i = 0; i < nsopi_[h]; i++) {
+                    long int ii = i + off2;
+                    tmp1[Q*nso_*nso_+m*nso_+ii] = tmp2[Q*nso_*nsopi_[h]+m*nsopi_[h] + i + off1];
+                }
+            }
+        }
+        off1 += nQ_ * nsopi_[h] * nso_;
+        off2 += nsopi_[h];
+    }
+
+    int off3 = 0;
+    off1 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        double ** cp = Ca_->pointer(h);
+
+        off2 = 0;
+        for (int h2 = 0; h2 < nirrep_; h2++) {
+
+            for (int Q = 0; Q < nQ_; Q++) {
+
+                for (int m = 0; m < nsopi_[h2]; m++) {
+                    int mm = m + off2;
+
+                    double dum = 0.0;
+                    for (int n = 0; n < nsopi_[h]; n++) {
+                        int nn = n + off1;
+
+                        tmp2[Q*nsopi_[h]*nsopi_[h2] + m*nsopi_[h] + n + off3] = tmp1[Q*nso_*nso_+mm*nso_+nn];
+
+                    }
+                }
+            }
+            off3 += nQ_*nsopi_[h]*nsopi_[h2];
+            off2 += nsopi_[h2];
+        }
+        off1 += nsopi_[h];
+    }
+
+    off3 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        double ** cp = Ca_->pointer(h);
+        for (int h2 = 0; h2 < nirrep_; h2++) {
+
+            F_DGEMM('n','n',nsopi_[h],nQ_*nsopi_[h2],nsopi_[h],1.0,&cp[0][0],nsopi_[h],tmp2+off3,nsopi_[h],0.0,tmp1+off3,nsopi_[h]);
+            off3 += nQ_*nsopi_[h]*nsopi_[h2];
+
         }
     }
 
-    #pragma omp parallel for schedule (static)
-    for (int Q = 0; Q < nQ_; Q++) {
-        int offh = 0;
-        for (int h = 0; h < nirrep_; h++) {
-            for (int i = 0; i < nsopi_[h]; i++) {
-                int ii = i + offh;
-                int offh2 = 0;
-                for (int h2 = 0; h2 < nirrep_; h2++) {
-                    double ** cp = AO2USO_->pointer(h2);
-                    for (int j = 0; j < nsopi_[h2]; j++) {
-                        int jj = j + offh2;
-                        double dum = 0.0;
-                        for (int m = 0; m < nso_; m++) {
-                            dum += tmp2[Q*nso_*nso_+ii*nso_+m] * cp[m][j];
-                        }
-                        tmp1[Q*nso_*nso_+ii*nso_+jj] = dum;
+    off3 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (int h2 = 0; h2 < nirrep_; h2++) {
+
+            for (int Q = 0; Q < nQ_; Q++) {
+                for (int m = 0; m < nsopi_[h2]; m++) {
+                    for (int i = 0; i < nsopi_[h]; i++) {
+                        tmp2[Q*nsopi_[h]*nsopi_[h2] + i*nsopi_[h2] + m + off3] = tmp1[Q*nsopi_[h]*nsopi_[h2]+m*nsopi_[h] + i + off3];
                     }
-                    offh2 += nsopi_[h2];
                 }
             }
-            offh += nsopi_[h];
+
+            off3 += nQ_*nsopi_[h]*nsopi_[h2];
         }
     }
 
     // SO -> MO transformation:
-    #pragma omp parallel for schedule (static)
-    for (int Q = 0; Q < nQ_; Q++) {
-        int offh = 0;
-        for (int h = 0; h < nirrep_; h++) {
-            double ** cp = Ca_->pointer(h);
-            for (int i = 0; i < nmopi_[h]; i++) {
-                int ii = i + offh;
+    off3 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (int h2 = 0; h2 < nirrep_; h2++) {
+            double ** cp = Ca_->pointer(h2);
 
-                int offh2 = 0;
-                for (int h2 = 0; h2 < nirrep_; h2++) {
-                    for (int m = 0; m < nsopi_[h2]; m++) {
-                        int mm = m + offh2;
-                        double dum = 0.0;
-                        for (int n = 0; n < nsopi_[h]; n++) {
-                            int nn = n + offh;
-                            dum += tmp1[Q*nso_*nso_+mm*nso_+nn] * cp[n][i];
-                        }
-                        tmp2[Q*nso_*nso_+ii*nso_+mm] = dum;
-                    }
-                    offh2 += nsopi_[h2];
-                }
-            }
-            offh += nsopi_[h];
-        }
-    }
+            F_DGEMM('n','n',nsopi_[h2],nQ_*nsopi_[h],nsopi_[h2],1.0,&cp[0][0],nsopi_[h2],tmp2+off3,nsopi_[h2],0.0,tmp1+off3,nsopi_[h2]);
 
-    free(tmp1);
-
-    Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nso_*nso_,nQ_));
-    double ** qmop = Qmo_->pointer();
-
-    #pragma omp parallel for schedule (static)
-    for (int Q = 0; Q < nQ_; Q++) {
-        int offh = 0;
-        for (int h = 0; h < nirrep_; h++) {
-            for (int i = 0; i < nmopi_[h]; i++) {
-                int ii = i + offh;
-
-                int offh2 = 0;
-                for (int h2 = 0; h2 < nirrep_; h2++) {
-                    double ** cp = Ca_->pointer(h2);
-                    for (int j = 0; j < nsopi_[h2]; j++) {
-                        int jj = j + offh2;
-                        double dum = 0.0;
-                        for (int n = 0; n < nsopi_[h2]; n++) {
-                            int nn = n + offh2;
-                            dum += tmp2[Q*nso_*nso_+ii*nso_+nn] * cp[n][j];
-                        }
-                        qmop[ii*nso_+jj][Q] = dum;
-                    }
-                    offh2 += nsopi_[h2];
-                }
-            }
-            offh += nsopi_[h];
+            off3 += nQ_*nsopi_[h]*nsopi_[h2];
         }
     }
 
     free(tmp2);
+
+    Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nso_*nso_,nQ_));
+    double ** qmop = Qmo_->pointer();
+
+    off3 = 0;
+    off1 = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        off2 = 0;
+        for (int h2 = 0; h2 < nirrep_; h2++) {
+
+            for (int Q = 0; Q < nQ_; Q++) {
+                for (int i = 0; i < nmopi_[h]; i++) {
+                    int ii = i + off1;
+
+                    for (int j = 0; j < nsopi_[h2]; j++) {
+                        int jj = j + off2;
+
+                        qmop[ii*nso_+jj][Q] = tmp1[Q*nsopi_[h]*nsopi_[h2] + i * nsopi_[h2]+j + off3];
+                    }
+                }
+            }
+            off2 += nsopi_[h2];
+            off3 += nQ_*nsopi_[h]*nsopi_[h2];
+        }
+        off1 += nsopi_[h];
+    }
+
+    free(tmp1);
 
     //boost::shared_ptr<MintsHelper> mints(new MintsHelper() );
     //boost::shared_ptr<Matrix> eri = mints->mo_eri(Ca_,Ca_);
