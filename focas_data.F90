@@ -70,6 +70,12 @@ module focas_data
     integer, allocatable :: pair_offset(:,:)
   end type rot_info
 
+  type df_info 
+    integer :: nQ                                                  !  number of auxiliary function for density-fitted integrals
+    integer :: use_df_teints                                       ! flag to use density-fitted 2-e integrals
+    integer, allocatable :: class_to_df_map(:)                     ! mapping array to map orbital indeces from class order to df order
+  end type df_info
+
   ! *** allocatable derived types
 
   type(sym_info)   :: dens_                                        ! density symmetry data
@@ -79,6 +85,7 @@ module focas_data
   ! indexing derived types
   
   type(rot_info)   :: rot_pair_                                    ! info for rotation pair indexing
+  type(df_info)    :: df_vars_
 
   ! *** indexing arrays
 
@@ -135,6 +142,25 @@ module focas_data
         return
       end if
     end function pq_index
+
+    pure function df_pq_index(i,j)
+! this function computes the two-electron index index (lower triangular reference)
+! index = ii*(ii+1)/2+jj where ii=max(i,j) and jj=min(i,j)
+! the ishft(k,-1) divides the value of the integer k by 2 and seems to be somewhat
+! faster than the regular human-readable expression
+      implicit none
+      integer, intent(in) ::i,j
+      integer(ip) :: df_pq_index
+      if (i.ge.j) then
+        df_pq_index= i + j * nmo_tot_
+!        df_pq_index=ishft(i*(i+1),-1)+j
+        return
+      else
+        df_pq_index= j + i * nmo_tot_
+!        df_pq_index=ishft(j*(j+1),-1)+i
+        return
+      end if
+    end function df_pq_index
 
     function timer()
       real(wp) :: timer,omp_get_wtime

@@ -21,7 +21,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer :: nproc,aarot,nfrozen,angtol,detol,mcetol,print
   real(wp) :: integrals_1(nnz_i1),integrals_2(nnz_i2),density_1(nnz_d1),density_2(nnz_d2)
   real(wp) :: mo_coeff_out(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
-  real(wp) :: jacobi_data_io(10) 
+  real(wp) :: jacobi_data_io(11) 
   character(120) :: jacobi_log_file
   integer  :: syms(ncore_in+nact_in+nvirt_in)
   logical :: fexist
@@ -30,7 +30,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
 
   integer :: nactpi(nirrep_in),ndocpi(nirrep_in),nextpi(nirrep_in)
   integer :: ndoc,nact,next,nmo,nirrep,converged
-  integer :: nnz_int1,nnz_int2,nnz_den1,nnz_den2
+  integer :: nnz_int1,nnz_int2,nnz_den1,nnz_den2,df_ints
   integer :: gemind_int(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: gemind_den_new(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: gemind_int_new(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
@@ -62,7 +62,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
 !  8) ntrot
 !  9) delrot
 ! 10) converged (1=yes/0=no)
- 
+! 11) df integral flag 
   ! copy some variables
  
   ndoc=ncore_in 
@@ -80,6 +80,8 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   gnorm_tol=jacobi_data_io(4)
   ! energy tolerance
   dele_tol=jacobi_data_io(5)
+  ! set density-fitted integral flag
+  df_ints = int(jacobi_data_io(11))
   ! print flag for jacobi routine
   print=int(jacobi_data_io(6))
   if (print == 1) then
@@ -108,11 +110,15 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   call initial_sort()
   nnz_int1 = gemind_int_new(last_index(nirrep,3),last_index(nirrep,3))
   nnz_den1 = gemind_den_new(last_index(nirrep,2),last_index(nirrep,2))
-  nnz_int2 = sum(nnz_int)
+  if (df_ints == 0 ) then
+    nnz_int2 = sum(nnz_int)  
+  else
+    nnz_int2 = size(integrals_2,dim=1)
+  endif
   nnz_den2 = sum(nnz_den_new)
   call focas_optimize(integrals_1,nnz_int1,integrals_2,nnz_int2,                    &
                     & density_1(1:nnz_den1),nnz_den1,density_2(1:nnz_den2),nnz_den2,&
-                    & ndocpi,nactpi,nextpi,nirrep,gnorm_tol,dele_tol,gnorm,delrot,converged)
+                    & ndocpi,nactpi,nextpi,nirrep,gnorm_tol,dele_tol,gnorm,delrot,converged,df_ints)
   call final_sort()
   jacobi_data_io(7)=real(1.0_wp,kind=wp)
   jacobi_data_io(8)=real(1.0_wp,kind=wp)
@@ -163,38 +169,40 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
 
       ! copy 2-e integrals
 
-      do pq_sym = 1 , nirrep
-        block=huge(1.0_wp)
-        pq_off=offset_int(pq_sym)
-        do p_class = 1 , 3
-          do q_class = 1 , p_class
-            do p_sym = 1 , nirrep
-              q_sym = mult_tab(pq_sym,p_sym)
-              if ( ( q_sym > p_sym ) .and. ( p_class == q_class ) ) cycle
-              do r_class = 1 , 3
-                do s_class = 1 , r_class
-                  do r_sym = 1 , nirrep
-                    s_sym = mult_tab(pq_sym,r_sym)
-                    if ( ( s_sym > r_sym ) .and. ( r_class==q_class ) ) cycle
-                    do p_c = first_index(p_sym,p_class),last_index(p_sym,p_class)
-                      p_i = class_to_energy_map(p_c)
-                      q_max = last_index(q_sym,q_class)
-                      if ( ( p_class == q_class ) .and. ( p_sym == q_sym ) ) q_max = p_c
-                      do q_c = first_index(q_sym,q_class),q_max
-                        q_i = class_to_energy_map(q_c)
-                        pq_c = gemind_int_new(p_c,q_c)
-                        pq_i = gemind_int(p_i,q_i)
-                        do r_c=first_index(r_sym,r_class),last_index(r_sym,r_class)
-                          r_i = class_to_energy_map(r_c)
-                          s_max = last_index(s_sym,s_class)
-                          if ( ( s_sym == r_sym ) .and. ( s_class == r_class ) ) s_max = r_c
-                          do s_c = first_index(s_sym,s_class),s_max
-                            s_i = class_to_energy_map(s_c)
-                            rs_c = gemind_int_new(r_c,s_c)
-                            rs_i = gemind_int(r_i,s_i)
-                            pqrs_c = pq_ind(pq_c,rs_c)
-                            pqrs_i = pq_ind(pq_i,rs_i)
-                            block(pqrs_i) = integrals_2(pqrs_c+pq_off)
+      if ( df_ints == 0 ) then
+        do pq_sym = 1 , nirrep
+          block=huge(1.0_wp)
+          pq_off=offset_int(pq_sym)
+          do p_class = 1 , 3
+            do q_class = 1 , p_class
+              do p_sym = 1 , nirrep
+                q_sym = mult_tab(pq_sym,p_sym)
+                if ( ( q_sym > p_sym ) .and. ( p_class == q_class ) ) cycle
+                do r_class = 1 , 3
+                  do s_class = 1 , r_class
+                    do r_sym = 1 , nirrep
+                      s_sym = mult_tab(pq_sym,r_sym)
+                      if ( ( s_sym > r_sym ) .and. ( r_class==q_class ) ) cycle
+                      do p_c = first_index(p_sym,p_class),last_index(p_sym,p_class)
+                        p_i = class_to_energy_map(p_c)
+                        q_max = last_index(q_sym,q_class)
+                        if ( ( p_class == q_class ) .and. ( p_sym == q_sym ) ) q_max = p_c
+                        do q_c = first_index(q_sym,q_class),q_max
+                          q_i = class_to_energy_map(q_c)
+                          pq_c = gemind_int_new(p_c,q_c)
+                          pq_i = gemind_int(p_i,q_i)
+                          do r_c=first_index(r_sym,r_class),last_index(r_sym,r_class)
+                            r_i = class_to_energy_map(r_c)
+                            s_max = last_index(s_sym,s_class)
+                            if ( ( s_sym == r_sym ) .and. ( s_class == r_class ) ) s_max = r_c
+                            do s_c = first_index(s_sym,s_class),s_max
+                              s_i = class_to_energy_map(s_c)
+                              rs_c = gemind_int_new(r_c,s_c)
+                              rs_i = gemind_int(r_i,s_i)
+                              pqrs_c = pq_ind(pq_c,rs_c)
+                              pqrs_i = pq_ind(pq_i,rs_i)
+                              block(pqrs_i) = integrals_2(pqrs_c+pq_off)
+                            end do
                           end do
                         end do
                       end do
@@ -204,10 +212,10 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
               end do
             end do
           end do
+          integrals_2(pq_off+1:pq_off+nnz_int(pq_sym))=block(1:nnz_int(pq_sym))
         end do
-        integrals_2(pq_off+1:pq_off+nnz_int(pq_sym))=block(1:nnz_int(pq_sym))
-      end do
- 
+      endif
+
       deallocate(block)
 
       return
@@ -276,39 +284,40 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       density_1(1:p_sym) = block(1:p_sym)
 
       ! copy 2-e integrals
-
-      do pq_sym = 1 , nirrep
-        block=huge(1.0_wp)
-        pq_off=offset_int(pq_sym)
-        do p_class = 1 , 3
-          do q_class = 1 , p_class
-            do p_sym = 1 , nirrep
-              q_sym = mult_tab(pq_sym,p_sym)
-              if ( ( q_sym > p_sym ) .and. ( p_class == q_class ) ) cycle
-              do r_class = 1 , 3
-                do s_class = 1 , r_class
-                  do r_sym = 1 , nirrep
-                    s_sym = mult_tab(pq_sym,r_sym)
-                    if ( ( s_sym > r_sym ) .and. ( r_class==q_class ) ) cycle
-                    do p_c = first_index(p_sym,p_class),last_index(p_sym,p_class)
-                      p_i = class_to_energy_map(p_c)
-                      q_max = last_index(q_sym,q_class)
-                      if ( ( p_class == q_class ) .and. ( p_sym == q_sym ) ) q_max = p_c
-                      do q_c = first_index(q_sym,q_class),q_max
-                        q_i = class_to_energy_map(q_c)
-                        pq_c = gemind_int_new(p_c,q_c)
-                        pq_i = gemind_int(p_i,q_i)
-                        do r_c=first_index(r_sym,r_class),last_index(r_sym,r_class)
-                          r_i = class_to_energy_map(r_c)
-                          s_max = last_index(s_sym,s_class)
-                          if ( ( s_sym == r_sym ) .and. ( s_class == r_class ) ) s_max = r_c                        
-                          do s_c = first_index(s_sym,s_class),s_max
-                            s_i = class_to_energy_map(s_c)
-                            rs_c = gemind_int_new(r_c,s_c)
-                            rs_i = gemind_int(r_i,s_i)
-                            pqrs_c = pq_ind(pq_c,rs_c)
-                            pqrs_i = pq_ind(pq_i,rs_i)
+      if ( df_ints == 0 ) then
+        do pq_sym = 1 , nirrep
+          block=huge(1.0_wp)
+          pq_off=offset_int(pq_sym)
+          do p_class = 1 , 3
+            do q_class = 1 , p_class
+              do p_sym = 1 , nirrep
+                q_sym = mult_tab(pq_sym,p_sym)
+                if ( ( q_sym > p_sym ) .and. ( p_class == q_class ) ) cycle
+                do r_class = 1 , 3
+                  do s_class = 1 , r_class
+                    do r_sym = 1 , nirrep
+                      s_sym = mult_tab(pq_sym,r_sym)
+                      if ( ( s_sym > r_sym ) .and. ( r_class==q_class ) ) cycle
+                      do p_c = first_index(p_sym,p_class),last_index(p_sym,p_class)
+                        p_i = class_to_energy_map(p_c)
+                        q_max = last_index(q_sym,q_class)
+                        if ( ( p_class == q_class ) .and. ( p_sym == q_sym ) ) q_max = p_c
+                        do q_c = first_index(q_sym,q_class),q_max
+                          q_i = class_to_energy_map(q_c)
+                          pq_c = gemind_int_new(p_c,q_c)
+                          pq_i = gemind_int(p_i,q_i)
+                          do r_c=first_index(r_sym,r_class),last_index(r_sym,r_class)
+                            r_i = class_to_energy_map(r_c)
+                            s_max = last_index(s_sym,s_class)
+                            if ( ( s_sym == r_sym ) .and. ( s_class == r_class ) ) s_max = r_c                        
+                            do s_c = first_index(s_sym,s_class),s_max
+                              s_i = class_to_energy_map(s_c)
+                              rs_c = gemind_int_new(r_c,s_c)
+                              rs_i = gemind_int(r_i,s_i)
+                              pqrs_c = pq_ind(pq_c,rs_c)
+                              pqrs_i = pq_ind(pq_i,rs_i)
                             block(pqrs_c) = integrals_2(pqrs_i+pq_off)
+                            end do
                           end do
                         end do
                       end do
@@ -318,9 +327,9 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
               end do
             end do
           end do
+          integrals_2(pq_off+1:pq_off+nnz_int(pq_sym))=block(1:nnz_int(pq_sym))
         end do
-        integrals_2(pq_off+1:pq_off+nnz_int(pq_sym))=block(1:nnz_int(pq_sym))
-      end do
+      end if
 
       ! copy/scale 2-e active density
       do pq_sym = 1 , nirrep

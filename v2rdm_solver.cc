@@ -1682,7 +1682,7 @@ void  v2RDMSolver::common_init(){
     cg_maxiter = options_.get_double("CG_MAXITER");
 
     // input/output array for jacobi sweeps
-    jacobi_data_    = (double*)malloc(10*sizeof(double));
+    jacobi_data_    = (double*)malloc(11*sizeof(double));
     jacobi_data_[0] = (double)options_.get_int("JACOBI_NTHREAD");
     jacobi_data_[1] = (double)options_.get_bool("JACOBI_ACTIVE_ACTIVE_ROTATIONS");
     jacobi_data_[2] = (double)options_.get_int("JACOBI_FROZEN_CORE");
@@ -1693,6 +1693,10 @@ void  v2RDMSolver::common_init(){
     jacobi_data_[7] = 0.0;  // ntrot: total pairs rotated (output)
     jacobi_data_[8] = 0.0;  // delrot: change in energy
     jacobi_data_[9] = 0.0;  // converged?
+    jacobi_data_[10] = 0.0;
+    if ( is_df_ ) {
+      jacobi_data_[10] = 1.0;
+    }
     jacobi_converged_ = false;
 
     int full = nmo + nfrzc + nfrzv;
@@ -4663,9 +4667,11 @@ void v2RDMSolver::FinalTransformationMatrix() {
 
 void v2RDMSolver::RotateOrbitals(){
 
+/*   
     if ( is_df_ ) {
         throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
     }
+*/
 
     UnpackDensityPlusCore();
 

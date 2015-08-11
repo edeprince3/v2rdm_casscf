@@ -8,6 +8,7 @@ module focas_energy
   subroutine compute_energy(int1,int2,den1,den2)
     implicit none
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
+    real(wp) :: t0,t1
 
     ! initialize values
     e1_c_          = 0.0_wp
@@ -17,6 +18,7 @@ module focas_energy
     e2_aa_         = 0.0_wp   
     e_frozen_core_ = 0.0_wp
 
+    t0=timer()
     ! compute core contribution to 1-e energy ; 2 indeces \in D
     call compute_core_1e(int1,e1_c_)
 
@@ -24,14 +26,27 @@ module focas_energy
     call compute_active_1e(int1,den1,e1_a_)
 
     ! compute core-core contribution to 2-e energy ; 4 indeces \in D
-    call compute_core_core_2e(int2,e2_cc_)
+    if ( df_vars_%use_df_teints == 0 ) then
+      call compute_core_core_2e(int2,e2_cc_)
+    else
+      call compute_core_core_2e_df(int2,e2_cc_)
+    end if
 
     ! compute core-active contribution to 2-e energy ; 2 indeces \in D && 2 indeces \in A
-    call compute_core_active_2e(int2,den1,e2_ca_) 
+    if ( df_vars_%use_df_teints == 0 ) then
+      call compute_core_active_2e(int2,den1,e2_ca_) 
+    else
+      call compute_core_active_2e_df(int2,den1,e2_ca_)
+    end if
 
     ! compute active-active contribution to 2-e energy ; 4 indeces \in A
-    call compute_active_active_2e(int2,den2,e2_aa_)
+    if ( df_vars_%use_df_teints == 0 ) then
+      call compute_active_active_2e(int2,den2,e2_aa_)
+    else
+      call compute_active_active_2e_df(int2,den2,e2_aa_)
+    end if
 
+    t1=timer()
     ! frozen core energy
     e_frozen_core_ = e1_c_ + e2_cc_
 
@@ -47,6 +62,18 @@ module focas_energy
     ! total 2-e energy
     e2_total_      = e2_cc_ + e2_ca_ + e2_aa_
 
+    write(*,'(a,2x,f25.15)')'e_total_:',e_total_
+    write(*,'(a,2x,f25.15)')'e_frozen_core_:',e_frozen_core_
+    write(*,'(a,2x,f25.15)')'e_active_:',e_active_
+    write(*,'(a,2x,f25.15)')'e1_c:',e1_c_ 
+    write(*,'(a,2x,f25.15)')'e1_a:',e1_a_
+    write(*,'(a,2x,f25.15)')'e2_cc:',e2_cc_
+    write(*,'(a,2x,f25.15)')'e2_ca:',e2_ca_
+    write(*,'(a,2x,f25.15)')'e2_aa:',e2_aa_
+
+    write(*,'(a,1x,f20.15)')'time:',t1-t0
+
+    stop
     return
   end subroutine compute_energy
 
@@ -141,13 +168,84 @@ module focas_energy
     return
   end subroutine compute_active_1e
 
+  subroutine compute_core_core_2e_df(int2,e_out)
+    implicit none
+    ! subroutine to accumulate 2-e contribution to the core energy given by
+    ! e2_core = sum(i,j \in D) { 2g(ii|jj) - g(ij|ij) }
+    ! integrals are stored in density-fitted 3-index format
+    ! NOTE: the coulomb terms g(ii|jj) belong to the totally symmetric irrep
+    real(wp), intent(in) :: int2(:)
+    real(wp) :: e_out,coulomb,exchange
+    integer :: j_sym,i_sym,ij_sym,i,j,idf,jdf,i_class,j_class
+    integer(ip) :: ii,jj,int_ind,ij,ij_offset
+    real(wp) :: ddot
+
+    ! initialize coulomb and exchange energies
+
+    coulomb  = 0.0_wp
+    exchange = 0.0_wp
+
+    ! loop over irreps for i
+
+    do i_sym = 1 , nirrep_
+
+      ! loop over irreps for j
+
+      do j_sym = 1 , nirrep_
+
+        ! loop over i indeces
+
+        do i = first_index_(i_sym,1) , last_index_(i_sym,1)
+
+          ! orbital index in df order
+          idf = df_vars_%class_to_df_map(i)
+
+          ! ii-geminal index
+          ii  = df_pq_index(idf,idf) * df_vars_%nQ 
+
+          ! loop over j indeces
+
+          do j = first_index_(j_sym,1) , last_index_(j_sym,1)
+
+            ! orbital index in df order
+            jdf       = df_vars_%class_to_df_map(j)
+
+            ! geminal indeces
+            jj        = df_pq_index(jdf,jdf) * df_vars_%nQ 
+            ij        = df_pq_index(idf,jdf) * df_vars_%nQ
+
+            ! calculate Coulomb contribution // g(ii,jj) ... i,j \in C)
+            ! calculate exchange contribution // g(ij,ij) ... i,j \in C)
+#ifdef BLAS
+            coulomb  = coulomb  + ddot(df_vars_%nQ,int2(ii+1:ii+df_vars_%nQ),1,int2(jj+1:jj+df_vars_%nQ),1)
+            exchange = exchange + ddot(df_vars_%nQ,int2(ij+1:ij+df_vars_%nQ),1,int2(ij+1:ij+df_vars_%nQ),1)
+#else
+            coulomb  = coulomb  + dot_product(int2(ii+1:ii+df_vars_%nQ),int2(jj+1:jj+df_vars_%nQ))
+            exchange = exchange + dot_product(int2(ij+1:ij+df_vars_%nq),int2(ij+1:ij+df_vars_%nq))  
+#endif
+
+          end do ! end j loop
+
+        end do ! end i loop
+
+      end do ! end j_sym loop
+
+    end do ! end i_sym loop
+
+    ! subtract the exchange terms from twice the coulomb terms
+    e_out = 2.0_wp * coulomb - exchange
+
+    return
+  end subroutine compute_core_core_2e_df
+
   subroutine compute_core_core_2e(int2,e_out)
     implicit none
     ! subroutine to accumulate 2-e contribution to the core energy given by
     ! e2_core = sum(i,j \in D) { 2g(ii|jj) - g(ij|ij) }
+    ! integrals are stored in full 4-index format
     ! NOTE: the coulomb terms g(ii|jj) belong to the totally symmetric irrep
     real(wp), intent(in) :: int2(:)
-    real(wp) :: e_out,coulomb,exchange
+    real(wp) :: e_out,coulomb,exchange,ccc
     integer :: j_sym,i_sym,ij_sym,i,j
     integer(ip) :: ii,jj,int_ind,ij,ij_offset
     
@@ -186,6 +284,7 @@ module focas_energy
             ! Coulomb contribution // g(ii,jj) ... i,j \in C)
             int_ind   = pq_index(ii,jj)
             coulomb   = coulomb + int2(int_ind)
+            ccc = int2(int_ind)
             ! exchange contribution // g(ij|ij) ... i,j \in C 
             int_ind   = pq_index(ij,ij) + ij_offset
             exchange  = exchange + int2(int_ind)
@@ -203,6 +302,92 @@ module focas_energy
 
     return
   end subroutine compute_core_core_2e
+
+  subroutine compute_core_active_2e_df(int2,den1,e_out)
+    implicit none
+    ! subroutine to compute the core-active contribution to the 2-e energy
+    ! e = 0.5 * sum(ij \in A & k \in D) { 2 * d(i|j) * [ 2g(ij|kk) - g(ik|jk) ] }
+    real(wp), intent(in) :: int2(:),den1(:)
+    real(wp) :: e_out
+    integer :: i,j,k,i_sym,k_sym,ik_sym
+    integer :: idf,jdf,kdf
+    integer(ip) :: ij,kk,ik,jk,ij_den
+    real(wp) :: coulomb,exchange,ddot
+
+    ! initialize energy value
+    e_out = 0.0_wp
+
+    ! loop over irreps for i
+
+    do i_sym = 1 , nirrep_
+
+      ! loop over irreps for k
+
+      do k_sym = 1 , nirrep_
+
+        ! ik geminal symmetry
+        ik_sym    = group_mult_tab_(i_sym,k_sym)
+
+        ! loop over i indeces
+
+        do i = first_index_(i_sym,2) , last_index_(i_sym,2)
+
+          ! orbital index in df order
+          idf = df_vars_%class_to_df_map(i)
+
+          ! loop over j indeces 
+
+          do j = first_index_(i_sym,2) , last_index_(i_sym,2)
+
+            ! orbital index in df order
+            jdf = df_vars_%class_to_df_map(j)
+
+            ! ij geminal integral index
+            ij  = df_pq_index(idf,jdf) * df_vars_%nQ
+
+            ! initialize coulomb and exhange contributions
+            coulomb  = 0.0_wp
+            exchange = 0.0_wp
+
+            ! loop over k indeces
+
+            do k = first_index_(k_sym,1) , last_index_(k_sym,1)
+
+              ! orbital index in df order
+              kdf      = df_vars_%class_to_df_map(k)
+ 
+              ! geminal indeces
+              kk       = df_pq_index(kdf,kdf) * df_vars_%nQ
+              ik       = df_pq_index(idf,kdf) * df_vars_%nQ
+              jk       = df_pq_index(jdf,kdf) * df_vars_%nQ
+
+              ! calculate Coulomb contribution // g(ij,kk) ... i,j \in A && k \in D
+              ! calculate exchange contribution // g(ik,jk) ... i,j \in A && k \in D
+#ifdef BLAS
+              coulomb  = coulomb  + ddot(df_vars_%nQ,int2(ij+1:ij+df_vars_%nQ),1,int2(kk+1:kk+df_vars_%nQ),1)
+              exchange = exchange + ddot(df_vars_%nQ,int2(ik+1:ik+df_vars_%nQ),1,int2(jk+1:jk+df_vars_%nQ),1)
+#else
+              coulomb  = coulomb  + dot_product(int2(ij+1:ij+df_vars_%nQ),int2(kk+1:kk+df_vars_%nQ))
+              exchange = exchange + dot_product(int2(ik+1:ik+df_vars_%nQ),int2(jk+1:jk+df_vars_%nQ))
+#endif
+
+            end do ! end k loop
+
+            ! ij geminal density index
+            ij_den = dens_%gemind(i,j)
+            ! add up terms
+            e_out = e_out + den1(ij_den) * ( 2.0_wp * coulomb - exchange )
+
+          end do ! end j loop
+
+        end do ! end i loop
+
+      end do ! end k_sym loop 
+
+    end do ! end i_sym loop
+
+    return
+  end subroutine compute_core_active_2e_df
 
   subroutine compute_core_active_2e(int2,den1,e_out)
     implicit none
@@ -279,6 +464,108 @@ module focas_energy
 
     return
   end subroutine compute_core_active_2e
+
+  subroutine compute_active_active_2e_df(int2,den2,e_out)
+    implicit none
+    ! subroutine to compute active-active contribution to 2-electron energy
+    ! e = 0.5 * sum(ijkl \in A) { d2(ij|kl) * g(ij|kl) }
+    real(wp), intent(in) :: int2(:),den2(:)
+    real(wp) :: e_out
+    integer :: i,j,k,l,i_sym,j_sym,k_sym,l_sym,ij_sym,idf,jdf,kdf,ldf,ij,kl
+    integer(ip) :: ij_den,kl_den,ij_den_offset,den_ind
+    real(wp) :: int_val,ddot
+
+    ! initialize energy
+    e_out = 0.0_wp
+
+    ! loop over irreps for i
+
+    do i_sym = 1 , nirrep_
+
+      ! loop over irreps for j
+
+      do j_sym = 1 , nirrep_
+
+        ! ij geminal symmetry    
+        ij_sym        = group_mult_tab_(i_sym,j_sym)
+        ! ij geminal density offset
+        ij_den_offset = dens_%offset(ij_sym)
+
+        ! loop over irreps for k
+
+        do k_sym = 1 , nirrep_
+
+          ! figure out symmetry of l such that ij_sym == kl_sym
+          l_sym = group_mult_tab_(ij_sym,k_sym)
+
+          ! loop over i indeces
+
+          do i = first_index_(i_sym,2) , last_index_(i_sym,2)
+
+            ! orbital index in df order
+            idf = df_vars_%class_to_df_map(i)
+
+            ! loop over j indeces
+
+            do j = first_index_(j_sym,2) , last_index_(j_sym,2)
+
+              ! orbital index in df order
+              jdf    = df_vars_%class_to_df_map(j)
+
+              ! ij geminal integral index
+              ij     = df_pq_index(idf,jdf) * df_vars_%nQ
+
+              ! ij geminal density index
+              ij_den = dens_%gemind(i,j)
+
+              do k = first_index_(k_sym,2) , last_index_(k_sym,2)
+
+                ! orbital index in df order
+                kdf = df_vars_%class_to_df_map(k)
+
+                do l = first_index_(l_sym,2) , last_index_(l_sym,2)
+
+                  ! orbital index in df order
+                  ldf     = df_vars_%class_to_df_map(l)
+
+                  ! kl geminal integral index
+                  kl      = df_pq_index(kdf,ldf) * df_vars_%nQ 
+
+                  ! compute integral value g(ij,kl)
+#ifdef BLAS
+                  int_val = ddot(df_vars_%nQ,int2(ij+1:ij+df_vars_%nQ),1,int2(kl+1:kl+df_vars_%nQ),1)
+#else
+                  int_val = dot_product(int2(ij+1:ij+df_vars_%nQ),int2(kl+1:kl+df_vars_%nQ))
+#endif
+
+                  ! ij geminal density index
+                  kl_den  = dens_%gemind(k,l)
+
+                  ! density d2(ij|kl) index 
+                  den_ind = pq_index(ij_den,kl_den) + ij_den_offset
+
+                  ! update 2-e active contribution
+                  e_out   = e_out + int_val * den2(den_ind)
+
+                end do ! end l loop
+
+              end do ! end k loop
+
+            end do ! end j_loop
+
+          end  do ! end i loop
+
+        end do ! end k_sym loop
+
+      end  do ! end j_sym loop
+
+    end do ! end i_sym loop
+
+    e_out = 0.5_wp * e_out
+
+    return
+
+  end subroutine compute_active_active_2e_df
 
   subroutine compute_active_active_2e(int2,den2,e_out)
     implicit none

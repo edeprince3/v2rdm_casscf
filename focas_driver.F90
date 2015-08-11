@@ -11,10 +11,11 @@ module focas_driver
   contains
 
   subroutine focas_optimize(int1,nnz_int1,int2,nnz_int2,den1,nnz_den1,den2,nnz_den2,ndocpi,nactpi,nextpi,nirrep, &
-                           & gnorm_tol,dele_tol,gnorm_last,dele_last,converged)
+                           & gnorm_tol,dele_tol,gnorm_last,dele_last,converged,df_ints_in)
  
     ! integer input
     integer, intent(inout)  :: converged       ! flag for convergence
+    integer, intent(in)     :: df_ints_in      ! flag for using density-fitted 2-e integrals (0--> 4-index integrals, 1--> 3-index DF integrals)
     integer, intent(in)     :: nirrep          ! number of irreps in point group
     integer, intent(in)     :: nnz_int1        ! total number of nonzero 1-e integrals
     integer, intent(in)     :: nnz_int2        ! total number of nonzero 2-e integrals
@@ -45,6 +46,9 @@ module focas_driver
     ! 1) class (doubly occupied, active, virtual)
     ! 2) within each class, orbitals should be sorted accoring to irrep
     ! 3) within each class and irrep, orbitals are sorted according to energy
+
+    ! set df integral flag
+    df_vars_%use_df_teints  = df_ints_in
 
     ! calculate the total number of orbitals in space
     ndoc_tot_ = sum(ndocpi)
@@ -79,8 +83,13 @@ module focas_driver
     ! determine indexing arrays (needed for sorts in the integral transformation step)
     call determine_transformation_maps()
 
+    ! set up df mapping arrays if density-fitted 2-e integrals are used
+    error = 0
+    if ( df_vars_%use_df_teints == 1 ) error = df_map_setup(nnz_int2)
+    if ( error /= 0 ) stop
+
     ! print information
-    call print_info()    
+    ! call print_info()    
 
     ! **********************************************************************************
     ! *** at this point, everything is allocated and we are ready to do the optimization
@@ -169,9 +178,10 @@ module focas_driver
   subroutine deallocate_final()
     implicit none
     call deallocate_temporary_fock_matrices()
-    if (allocated(orbital_gradient_))      deallocate(orbital_gradient_)
-    if (allocated(kappa_))                 deallocate(kappa_)
-    if (allocated(rot_pair_%pair_offset))  deallocate(rot_pair_%pair_offset)
+    if (allocated(orbital_gradient_))        deallocate(orbital_gradient_)
+    if (allocated(kappa_))                   deallocate(kappa_)
+    if (allocated(rot_pair_%pair_offset))    deallocate(rot_pair_%pair_offset)
+    if (allocated(df_vars_%class_to_df_map)) deallocate(df_vars_%class_to_df_map)
     call deallocate_transformation_matrices()
     call deallocate_hessian_data()
     return
@@ -191,6 +201,55 @@ module focas_driver
 
     return
   end subroutine allocate_initial
+
+  integer function df_map_setup(nnz_int2)
+    implicit none
+    integer, intent(in) :: nnz_int2
+    integer :: npair,i_sym,i_class,ic,idf
+
+    df_map_setup = 1
+
+    ! check to make sure that input integral array is of reasonable size
+    npair        = nmo_tot_*nmo_tot_
+    if ( mod(nnz_int2,npair) /= 0 ) then
+      write(*,'(a)')'mod(nnz_int2,nmo_tot_^2) /= 0'
+      return 
+    endif
+ 
+    ! determine the number of auxiliary function 
+    df_vars_%nQ  = nnz_int2/npair
+
+    ! allocate and determine mapping array from class order to df order
+    allocate(df_vars_%class_to_df_map(nmo_tot_))
+
+    idf = 0
+
+    do i_sym = 1 , nirrep_
+
+      do i_class = 1 , 3
+
+        do ic = first_index_(i_sym,i_class) , last_index_(i_sym,i_class)
+
+          df_vars_%class_to_df_map(ic) = idf
+          idf = idf + 1          
+
+        end do
+
+      end do
+
+    end do
+
+    if ( minval(df_vars_%class_to_df_map) < 0 ) then
+
+      write(*,'(a)')'error ... min(class_to_df_map(:)) < 0 )'
+      return
+
+    end if
+
+    df_map_setup = 0
+
+    return
+  end function df_map_setup
 
   subroutine setup_rotation_indeces()
     implicit none
