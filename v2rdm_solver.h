@@ -101,7 +101,6 @@ class v2RDMSolver: public Wavefunction{
     std::vector < std::vector < std::pair<int,int> > > gems_fullspace;
     std::vector < std::vector < std::pair<int,int> > > gems_plus_corespace;
 
-    long int memory;
     int ndocc,nso,nmo,nvirt,ndoccact,nfrzc,nfrzv,nconstraints;
     int dimx;        // dimension of VARIABLE VECTOR
     int * amopi_;    // active orbitals per irrep

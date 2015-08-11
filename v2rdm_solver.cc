@@ -1046,7 +1046,7 @@ void  v2RDMSolver::common_init(){
         throw PsiException("bpsdp does not yet work when nmo!=nso",__FILE__,__LINE__);
     }
     // memory is from process::environment        
-    memory = Process::environment.get_memory();
+    memory_ = Process::environment.get_memory();
     // set the wavefunction name
     name_ = "BPSDP";
 
@@ -2887,33 +2887,126 @@ void v2RDMSolver::PrintHeader(){
     outfile->Printf("\n");
     outfile->Printf("  ==> Memory requirements <==\n");
     outfile->Printf("\n");
-    int nd2s   = 0;
-    int nd2t   = 0;
+    int nd2   = 0;
     int ng2    = 0;
+    int nt1    = 0;
+    int nt2    = 0;
     int maxgem = 0;
     for (int h = 0; h < nirrep_; h++) {
-        nd2s += gems_ab[h]*(gems_ab[h]+1)/2;
-        nd2t += gems_aa[h]*(gems_aa[h]+1)/2 * 2;
-        ng2  += gems[h].size()*(gems[h].size()+1)/2;
-        if ( gems[h].size() > maxgem ) {
-            maxgem = gems[h].size();
+        nd2 +=     gems_ab[h]*gems_ab[h];
+        nd2 += 2 * gems_aa[h]*gems_aa[h];
+
+        ng2 +=     gems_ab[h] * gems_ab[h]; // G2ab
+        ng2 +=     gems_ab[h] * gems_ab[h]; // G2ba
+        ng2 += 4 * gems_ab[h] * gems_ab[h]; // G2aa
+
+        if ( gems_ab[h] > maxgem ) {
+            maxgem = gems_ab[h];
         }
+        if ( constrain_g2 ) {
+            if ( 2*gems_ab[h] > maxgem ) {
+                maxgem = 2*gems_ab[h];
+            }
+        }
+
+        if ( constrain_t1 ) {
+            nt1 += trip_aaa[h] * trip_aaa[h]; // T1aaa
+            nt1 += trip_aaa[h] * trip_aaa[h]; // T1bbb
+            nt1 += trip_aab[h] * trip_aab[h]; // T1aab
+            nt1 += trip_aab[h] * trip_aab[h]; // T1bba
+            if ( trip_aab[h] > maxgem ) {
+                maxgem = trip_aab[h];
+            }
+        }
+
+        if ( constrain_t2 ) {
+            nt2 += (trip_aab[h]+trip_aba[h]) * (trip_aab[h]+trip_aba[h]); // T2aaa
+            nt2 += (trip_aab[h]+trip_aba[h]) * (trip_aab[h]+trip_aba[h]); // T2bbb
+            nt2 += trip_aab[h] * trip_aab[h]; // T2aab
+            nt2 += trip_aab[h] * trip_aab[h]; // T2bba
+            nt2 += trip_aba[h] * trip_aba[h]; // T2aba
+            nt2 += trip_aba[h] * trip_aba[h]; // T2bab
+
+            if ( trip_aab[h]+trip_aaa[h] > maxgem ) {
+                maxgem = trip_aab[h]+trip_aaa[h];
+            }
+        }
+
     }
-    outfile->Printf("        D2(0,0):                       %7.2lf mb\n",nd2s * 8.0 / 1024.0 / 1024.0);
-    outfile->Printf("        D2(1,0):                       %7.2lf mb\n",nd2t * 8.0 / 1024.0 / 1024.0);
-    outfile->Printf("        Q2(0,0):                       %7.2lf mb\n",nd2s * 8.0 / 1024.0 / 1024.0);
-    outfile->Printf("        Q2(1,0):                       %7.2lf mb\n",nd2t * 8.0 / 1024.0 / 1024.0);
-    outfile->Printf("        G2(0,0):                       %7.2lf mb\n",ng2  * 8.0 / 1024.0 / 1024.0);
-    outfile->Printf("        G2(1,0):                       %7.2lf mb\n",ng2  * 8.0 / 1024.0 / 1024.0);
+
+    outfile->Printf("        D2:                       %7.2lf mb\n",nd2 * 8.0 / 1024.0 / 1024.0);
+    if ( constrain_q2 ) {
+        outfile->Printf("        Q2:                       %7.2lf mb\n",nd2 * 8.0 / 1024.0 / 1024.0);
+    }
+    if ( constrain_g2 ) {
+        outfile->Printf("        G2:                       %7.2lf mb\n",ng2 * 8.0 / 1024.0 / 1024.0);
+    }
+    if ( constrain_d3 ) {
+        outfile->Printf("        D3:                       %7.2lf mb\n",nt1 * 8.0 / 1024.0 / 1024.0);
+    }
+    if ( constrain_t1 ) {
+        outfile->Printf("        T1:                       %7.2lf mb\n",nt1 * 8.0 / 1024.0 / 1024.0);
+    }
+    if ( constrain_t2 ) {
+        outfile->Printf("        T2:                       %7.2lf mb\n",nt2 * 8.0 / 1024.0 / 1024.0);
+    }
     outfile->Printf("\n");
 
     // we have 4 arrays the size of x and 4 the size of y
-    // in addition, we need to store whatever the 2x largest block is, 
-    // without packed storage for the diagonalization step
+    // in addition, we need to store whatever the 2x largest block is
+    // for the diagonalization step
+    // integrals:
+    //     K2a, K2b
+    // casscf:
+    //     4-index integrals (no permutational symmetry)
+    //     3-index integrals 
+
+    double tot = 4.0*dimx + 4.0*nconstraints + 2.0*maxgem*maxgem;
+    tot += nd2; // for K2a, K2b
+
+    // for casscf, need d2 and 3- or 4-index integrals
+
+    // allocate memory for full ERI tensor blocked by symmetry for Greg
+    tei_full_dim = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        tei_full_dim += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+    }
+    d2_plus_core_dim = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        d2_plus_core_dim += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
+    }
+    tot += d2_plus_core_dim;
+    if ( is_df_ ) {
+        nQ_ = Process::environment.globals["NAUX (SCF)"];
+        tot += nQ_*nso_*nso_;       // for three-index integrals
+    }else {
+        tei_full_dim = 0;
+        for (int h = 0; h < nirrep_; h++) {
+            tei_full_dim += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+        }
+        tot += tei_full_dim;
+        tot += nso_*nso_*nso_*nso_; // for four-index integrals stored stupidly 
+    }
+    
     outfile->Printf("        Total number of variables:     %10i\n",dimx);
     outfile->Printf("        Total number of constraints:   %10i\n",nconstraints);
-    outfile->Printf("        Total memory requirements:     %7.2lf mb\n",(4.0*dimx+4.0*nconstraints+2.0*maxgem*maxgem) * 8.0 / 1024.0 / 1024.0);
+    outfile->Printf("        Total memory requirements:     %7.2lf mb\n",tot * 8.0 / 1024.0 / 1024.0);
     outfile->Printf("\n");
+
+    if ( tot * 8.0 > (double)memory_ ) {
+        outfile->Printf("\n");
+        outfile->Printf("        Not enough memory!\n");
+        outfile->Printf("\n");
+        if ( !is_df_ ) {
+            outfile->Printf("        Either increase the available memory by %7.2lf mb\n",(8.0 * tot - memory_)/1024.0/1024.0);
+            outfile->Printf("        or try scf_type = df or scf_type = cd\n");
+        
+        }else {
+            outfile->Printf("        Increase the available memory by %7.2lf mb.\n",(8.0 * tot - memory_)/1024.0/1024.0);
+        }
+        outfile->Printf("\n");
+        throw PsiException("Not enough memory",__FILE__,__LINE__);
+    }
 
 }
 
