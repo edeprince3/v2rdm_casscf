@@ -63,41 +63,33 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         Process::environment.globals["NAUX (SCF)"] = nQ_;
     }
 
-    boost::shared_ptr<Matrix> Qmn = SharedMatrix(new Matrix("Qmn Integrals",nQ_,ntri));
-    double** Qmnp = Qmn->pointer();
+    double * tmp1 = (double*)malloc(nQ_*nso_*nso_*sizeof(double));
+    double * tmp2 = (double*)malloc(nQ_*nso_*nso_*sizeof(double));
+
     boost::shared_ptr<PSIO> psio(new PSIO());
     psio->open(PSIF_DFSCF_BJ,PSIO_OPEN_OLD);
-    psio->read_entry(PSIF_DFSCF_BJ, "(Q|mn) Integrals", (char*) Qmnp[0], sizeof(double) * ntri * nQ_);
+    psio->read_entry(PSIF_DFSCF_BJ, "(Q|mn) Integrals", (char*) tmp2, sizeof(double) * ntri * nQ_);
     psio->close(PSIF_DFSCF_BJ,1);
 
     // unpack
 
-    boost::shared_ptr<Matrix> temp (new Matrix(nQ_,nso_*nso_));
-    double ** tempp = temp->pointer();
-    
+    #pragma omp parallel for schedule (static)
     for (long int Q = 0; Q < nQ_; Q++) {
         for (long int mn = 0; mn < ntri; mn++) {
 
             long int m = function_pairs[mn].first;
             long int n = function_pairs[mn].second;
 
-            tempp[Q][m*nso_+n] = Qmnp[Q][mn];
-            tempp[Q][n*nso_+m] = Qmnp[Q][mn];
+            tmp1[Q*nso_*nso_+m*nso_+n] = tmp2[Q*ntri+mn];
+            tmp1[Q*nso_*nso_+n*nso_+m] = tmp2[Q*ntri+mn];
         }
     }
-    Qmn.reset();
 
     // have three-index integrals in AO basis. now, transform to SO basis
 
     boost::shared_ptr<IntegralFactory> integral(new IntegralFactory(basisset_,basisset_,basisset_,basisset_));
     boost::shared_ptr<PetiteList> pet(new PetiteList(basisset_, integral));
     boost::shared_ptr<Matrix> AO2USO_ (new Matrix(pet->aotoso()));
-
-    boost::shared_ptr<Matrix> Qso (new Matrix(nQ_,nso_*nso_) );
-    Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nso_*nso_,nQ_));
-
-    double ** qmop = Qmo_->pointer();
-    double ** qsop = Qso->pointer();
 
     #pragma omp parallel for schedule (static)
     for (int Q = 0; Q < nQ_; Q++) {
@@ -109,9 +101,9 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                 for (int m = 0; m < nso_; m++) {
                     double dum = 0.0;
                     for (int n = 0; n < nso_; n++) {
-                        dum += tempp[Q][m*nso_+n] * cp[n][i];
+                        dum += tmp1[Q*nso_*nso_+m*nso_+n] * cp[n][i];
                     }
-                    qmop[ii*nso_+m][Q] = dum;
+                    tmp2[Q*nso_*nso_+ii*nso_+m] = dum;
                 }
             }
             offh += nsopi_[h];
@@ -131,9 +123,9 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                         int jj = j + offh2;
                         double dum = 0.0;
                         for (int m = 0; m < nso_; m++) {
-                            dum += qmop[ii*nso_+m][Q] * cp[m][j];
+                            dum += tmp2[Q*nso_*nso_+ii*nso_+m] * cp[m][j];
                         }
-                        qsop[Q][ii*nso_+jj] = dum;
+                        tmp1[Q*nso_*nso_+ii*nso_+jj] = dum;
                     }
                     offh2 += nsopi_[h2];
                 }
@@ -158,9 +150,9 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                         double dum = 0.0;
                         for (int n = 0; n < nsopi_[h]; n++) {
                             int nn = n + offh;
-                            dum += qsop[Q][mm*nso_+nn] * cp[n][i];
+                            dum += tmp1[Q*nso_*nso_+mm*nso_+nn] * cp[n][i];
                         }
-                        tempp[Q][ii*nso_+mm] = dum;
+                        tmp2[Q*nso_*nso_+ii*nso_+mm] = dum;
                     }
                     offh2 += nsopi_[h2];
                 }
@@ -168,6 +160,11 @@ void v2RDMSolver::ThreeIndexIntegrals() {
             offh += nsopi_[h];
         }
     }
+
+    free(tmp1);
+
+    Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nso_*nso_,nQ_));
+    double ** qmop = Qmo_->pointer();
 
     #pragma omp parallel for schedule (static)
     for (int Q = 0; Q < nQ_; Q++) {
@@ -184,7 +181,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                         double dum = 0.0;
                         for (int n = 0; n < nsopi_[h2]; n++) {
                             int nn = n + offh2;
-                            dum += tempp[Q][ii*nso_+nn] * cp[n][j];
+                            dum += tmp2[Q*nso_*nso_+ii*nso_+nn] * cp[n][j];
                         }
                         qmop[ii*nso_+jj][Q] = dum;
                     }
@@ -194,6 +191,8 @@ void v2RDMSolver::ThreeIndexIntegrals() {
             offh += nsopi_[h];
         }
     }
+
+    free(tmp2);
 
     //boost::shared_ptr<MintsHelper> mints(new MintsHelper() );
     //boost::shared_ptr<Matrix> eri = mints->mo_eri(Ca_,Ca_);
