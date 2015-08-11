@@ -2978,7 +2978,11 @@ void v2RDMSolver::PrintHeader(){
     tot += d2_plus_core_dim;
     if ( is_df_ ) {
         nQ_ = Process::environment.globals["NAUX (SCF)"];
-        tot += nQ_*nso_*nso_;       // for three-index integrals
+        // for 3-index integrals.  the factor of 2 comes from the AO/MO 
+        // transformation.  TODO: transform these before allocating the
+        // other memory so the factor of 2 doesn't affect the overall
+        // memory footprint
+        tot += nQ_*nso_*nso_*2;
     }else {
         tei_full_dim = 0;
         for (int h = 0; h < nirrep_; h++) {
