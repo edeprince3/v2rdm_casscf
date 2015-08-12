@@ -30,9 +30,10 @@ module focas_transform_teints
 
       ! loop over threads
 
-! shared    first_q,last_Q,int2,df_vars_,nirrep_
-! private   i_thread,Q,col,row,int_ind,col_sym,row_sym,col_min,col_max,row_min,row_max,ncol,nrow,col_off,row_off
-
+#ifdef OMP
+!$omp parallel shared(first_Q,last_Q,int2,df_vars_,nirrep_) num_threads(nthread_use_)
+!$omp do private(i_thread,Q,col,row,int_ind,col_sym,row_sym,col_min,col_max,row_min,row_max,ncol,nrow,col_off,row_off)
+#endif
       do i_thread = 1 , nthread_use_
 
         ! loop over Q indeces to be transformed by this thread
@@ -103,7 +104,7 @@ module focas_transform_teints
 
               nrow    = trans_%nmopi(row_sym)
 
-              if ( ncol == 0 ) cycle
+              if ( nrow == 0 ) cycle
 
               row_off = trans_%offset(row_sym)
 
@@ -112,10 +113,10 @@ module focas_transform_teints
               row_max = row_off + nrow
 
 #ifdef BLAS
-          call dgemm('N','N',nrow,ncol,ncol,1.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow,&
-                     trans_%u_irrep_block(col_sym)%val,ncol,0.0_wp,aux(i_thread)%tmp,max_nmopi)
-          call dgemm('T','N',nrow,ncol,nrow,1.0_wp,trans_%u_irrep_block(row_sym)%val,nrow, &
-                     aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow)
+              call dgemm('N','N',nrow,ncol,ncol,1.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow,&
+                         trans_%u_irrep_block(col_sym)%val,ncol,0.0_wp,aux(i_thread)%tmp,max_nmopi)
+              call dgemm('T','N',nrow,ncol,nrow,1.0_wp,trans_%u_irrep_block(row_sym)%val,nrow, &
+                         aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow)
 #else
               aux(i_thread)%tmp(1:nrow,1:ncol) = matmul(aux(i_thread)%mat(row_min:row_max,col_min:col_max),&
                                                & trans_%u_irrep_block(col_sym)%val)
@@ -151,6 +152,10 @@ module focas_transform_teints
         end do ! end Q loop
 
       end do ! end i_thread loop
+#ifdef OMP
+!$omp end do
+!$omp end parallel
+#endif
 
       transform_teints_df = deallocate_tmp_matrices()
 

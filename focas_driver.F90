@@ -11,9 +11,10 @@ module focas_driver
   contains
 
   subroutine focas_optimize(int1,nnz_int1,int2,nnz_int2,den1,nnz_den1,den2,nnz_den2,ndocpi,nactpi,nextpi,nirrep, &
-                           & gnorm_tol,dele_tol,gnorm_last,dele_last,converged,df_ints_in)
+                           & gnorm_tol,dele_tol,gnorm_last,dele_last,converged,df_ints_in,nthread)
  
     ! integer input
+    integer, intent(in)     :: nthread         ! number of threads to use
     integer, intent(inout)  :: converged       ! flag for convergence
     integer, intent(in)     :: df_ints_in      ! flag for using density-fitted 2-e integrals (0--> 4-index integrals, 1--> 3-index DF integrals)
     integer, intent(in)     :: nirrep          ! number of irreps in point group
@@ -59,7 +60,7 @@ module focas_driver
     include_aa_rot_ = 0
 
     ! figure out maxmimum number of threads to use
-    nthread_want_ = 2
+    nthread_want_ = nthread
     nthread_use_  =get_nthread()
     
     ! allocate indexing arrays
@@ -160,13 +161,11 @@ module focas_driver
       write(*,'(a)')'gradient descent did not converge'
     endif
 
-    stop
-
     dele_last      = delta_energy
     gnorm_last     = grad_norm_
 
     ! debug
-    call compute_energy(int1,int2,den1,den2)
+    ! call compute_energy(int1,int2,den1,den2)
 
     ! deallocate indexing arrays
     call deallocate_indexing_arrays()
@@ -212,7 +211,8 @@ module focas_driver
     df_map_setup = 1
 
     ! check to make sure that input integral array is of reasonable size
-    npair        = nmo_tot_*nmo_tot_
+    npair        = nmo_tot_* ( nmo_tot_ + 1 ) / 2
+
     if ( mod(nnz_int2,npair) /= 0 ) then
       write(*,'(a)')'mod(nnz_int2,nmo_tot_^2) /= 0'
       return 
