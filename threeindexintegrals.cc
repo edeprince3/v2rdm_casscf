@@ -85,176 +85,94 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         }
     }
 
-    // have three-index integrals in AO basis. now, transform to SO basis
+    boost::shared_ptr<Matrix> myCa_ = reference_wavefunction_->Ca_subset("AO","ALL");
 
-    boost::shared_ptr<IntegralFactory> integral(new IntegralFactory(basisset_,basisset_,basisset_,basisset_));
-    boost::shared_ptr<PetiteList> pet(new PetiteList(basisset_, integral));
-    boost::shared_ptr<Matrix> AO2USO_ (new Matrix(pet->aotoso()));
-
-    long int off1 = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        double ** cp = AO2USO_->pointer(h);
-
-        F_DGEMM('n','n',nsopi_[h],nQ_*nso_,nso_,1.0,&cp[0][0],nsopi_[h],tmp1,nso_,0.0,tmp2+off1,nsopi_[h]);
-        off1 += nQ_ * nsopi_[h] * nso_;
-
-    }
-    off1 = 0;
-    long int off2 = 0;
-    for (int h = 0; h < nirrep_; h++) {
-
-        #pragma omp parallel for schedule (static)
-        for (long int Q = 0; Q < nQ_; Q++) {
-            for (long int i = 0; i < nsopi_[h]; i++) {
-                long int ii = i + off2;
-                for (long int m = 0; m < nso_; m++) {
-                    tmp1[Q*nso_*nso_+ii*nso_+m] = tmp2[Q*nso_*nsopi_[h]+m*nsopi_[h] + i + off1];
+    for (int Q = 0; Q < nQ_; Q++) {
+        for (int i = 0; i < nso_; i++) {
+            for (int k = 0; k < nso_; k++) {
+                double dum = 0.0;
+                for (int l = 0; l < nso_; l++) {
+                    dum += tmp1[Q*nso_*nso_+k*nso_+l] * myCa_->pointer()[l][i];
                 }
+                tmp2[i*nQ_*nso_+Q*nso_+k] = dum;
             }
         }
-        off1 += nQ_ * nsopi_[h] * nso_;
-        off2 += nsopi_[h];
     }
 
-    off1 = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        double ** cp = AO2USO_->pointer(h);
-
-        F_DGEMM('n','n',nsopi_[h],nQ_*nso_,nso_,1.0,&cp[0][0],nsopi_[h],tmp1,nso_,0.0,tmp2+off1,nsopi_[h]);
-        off1 += nQ_ * nsopi_[h] * nso_;
-
-    }
-
-    off1 = 0;
-    off2 = 0;
-    for (int h = 0; h < nirrep_; h++) {
-
-        #pragma omp parallel for schedule (static)
-        for (long int Q = 0; Q < nQ_; Q++) {
-            for (long int m = 0; m < nso_; m++) {
-                for (long int i = 0; i < nsopi_[h]; i++) {
-                    long int ii = i + off2;
-                    tmp1[Q*nso_*nso_+m*nso_+ii] = tmp2[Q*nso_*nsopi_[h]+m*nsopi_[h] + i + off1];
+    for (int Q = 0; Q < nQ_; Q++) {
+        for (int i = 0; i < nso_; i++) {
+            for (int j = 0; j < nso_; j++) {
+                double dum = 0.0;
+                for (int k = 0; k < nso_; k++) {
+                    dum += tmp2[i*nQ_*nso_+Q*nso_+k] * myCa_->pointer()[k][j];
                 }
+                tmp1[j*nQ_*nso_+i*nQ_+Q] = dum;
             }
-        }
-        off1 += nQ_ * nsopi_[h] * nso_;
-        off2 += nsopi_[h];
-    }
-
-    int off3 = 0;
-    off1 = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        double ** cp = Ca_->pointer(h);
-
-        off2 = 0;
-        for (int h2 = 0; h2 < nirrep_; h2++) {
-
-            for (int Q = 0; Q < nQ_; Q++) {
-
-                for (int m = 0; m < nsopi_[h2]; m++) {
-                    int mm = m + off2;
-
-                    double dum = 0.0;
-                    for (int n = 0; n < nsopi_[h]; n++) {
-                        int nn = n + off1;
-
-                        tmp2[Q*nsopi_[h]*nsopi_[h2] + m*nsopi_[h] + n + off3] = tmp1[Q*nso_*nso_+mm*nso_+nn];
-
-                    }
-                }
-            }
-            off3 += nQ_*nsopi_[h]*nsopi_[h2];
-            off2 += nsopi_[h2];
-        }
-        off1 += nsopi_[h];
-    }
-
-    off3 = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        double ** cp = Ca_->pointer(h);
-        for (int h2 = 0; h2 < nirrep_; h2++) {
-
-            F_DGEMM('n','n',nsopi_[h],nQ_*nsopi_[h2],nsopi_[h],1.0,&cp[0][0],nsopi_[h],tmp2+off3,nsopi_[h],0.0,tmp1+off3,nsopi_[h]);
-            off3 += nQ_*nsopi_[h]*nsopi_[h2];
-
-        }
-    }
-
-    off3 = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (int h2 = 0; h2 < nirrep_; h2++) {
-
-            for (int Q = 0; Q < nQ_; Q++) {
-                for (int m = 0; m < nsopi_[h2]; m++) {
-                    for (int i = 0; i < nsopi_[h]; i++) {
-                        tmp2[Q*nsopi_[h]*nsopi_[h2] + i*nsopi_[h2] + m + off3] = tmp1[Q*nsopi_[h]*nsopi_[h2]+m*nsopi_[h] + i + off3];
-                    }
-                }
-            }
-
-            off3 += nQ_*nsopi_[h]*nsopi_[h2];
-        }
-    }
-
-    // SO -> MO transformation:
-    off3 = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (int h2 = 0; h2 < nirrep_; h2++) {
-            double ** cp = Ca_->pointer(h2);
-
-            F_DGEMM('n','n',nsopi_[h2],nQ_*nsopi_[h],nsopi_[h2],1.0,&cp[0][0],nsopi_[h2],tmp2+off3,nsopi_[h2],0.0,tmp1+off3,nsopi_[h2]);
-
-            off3 += nQ_*nsopi_[h]*nsopi_[h2];
         }
     }
 
     free(tmp2);
 
+    // orbitals are in energy order.  we want them in pitzer
+
+    int * reorder = (int*)malloc(nso_*sizeof(int));
+    int * ireorder = (int*)malloc(nso_*sizeof(int));
+    int * sym     = (int*)malloc(nso_*sizeof(int));
+    bool * skip   = (bool*)malloc(nso_*sizeof(bool));
+    memset((void*)skip,'\0',nso_*sizeof(int));
+    for (int i = 0; i < nso_; i++) {
+        skip[i] = false;
+    }
+    for (int i = 0; i < nso_; i++) {
+        double min   = 1.e99;
+        int count    = 0;
+        int minj     = -999;
+        int minh     = -999;
+        int mincount = -999;
+        for (int h = 0; h < nirrep_; h++) {
+            for (int j = 0; j < nsopi_[h]; j++) {
+                if ( skip[count+j] ) continue;
+                if ( epsilon_a_->pointer(h)[j] < min ) {
+                    min      = epsilon_a_->pointer(h)[j];
+                    mincount = count;
+                    minj     = j;
+                    minh     = h;
+                }
+            }
+            count += nsopi_[h];
+        }
+        skip[mincount + minj]     = true;
+        reorder[i]                = minj;
+        ireorder[i]               = mincount + minj;
+        sym[i]                    = minh;
+
+    }
+
     Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nso_*nso_,nQ_));
     double ** qmop = Qmo_->pointer();
 
-    off3 = 0;
-    off1 = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        off2 = 0;
-        for (int h2 = 0; h2 < nirrep_; h2++) {
-
-            for (int Q = 0; Q < nQ_; Q++) {
-                for (int i = 0; i < nmopi_[h]; i++) {
-                    int ii = i + off1;
-
-                    for (int j = 0; j < nsopi_[h2]; j++) {
-                        int jj = j + off2;
-
-                        qmop[ii*nso_+jj][Q] = tmp1[Q*nsopi_[h]*nsopi_[h2] + i * nsopi_[h2]+j + off3];
-                    }
-                }
-            }
-            off2 += nsopi_[h2];
-            off3 += nQ_*nsopi_[h]*nsopi_[h2];
+    // sort integrals: (Q|mn) -> (Q|m'n') mn are energy order, m'n' are pitzer order
+    for (int m = 0; m < nso_; m++) {
+        int hm = sym[m];
+        int offm = 0;
+        for (int h = 0; h < hm; h++) {
+            offm += nsopi_[h];
         }
-        off1 += nsopi_[h];
+        int mm = reorder[m] + offm;
+        for (int n = 0; n < nso_; n++) {
+            int hn = sym[n];
+            int offn = 0;
+            for (int h = 0; h < hn; h++) {
+                offn += nsopi_[h];
+            }
+            int nn = reorder[n] + offn;
+            //C_DCOPY(nQ_,qmop[mm*nso_+nn], 1 ,tmp1 + m*nQ_*nso_+n*nQ_,1);
+            C_DCOPY(nQ_,tmp1+m*nQ_*nso_+n*nQ_, 1 ,qmop[mm*nso_+nn],1);
+        }
     }
+    //C_DCOPY(nQ_*nso_*nso_,tmp1,1,qmop[0],1);
 
     free(tmp1);
-
-    //boost::shared_ptr<MintsHelper> mints(new MintsHelper() );
-    //boost::shared_ptr<Matrix> eri = mints->mo_eri(Ca_,Ca_);
-    //for (int i = 0; i < nso_; i++) {
-    //    for (int j = 0; j < nso_; j++) {
-    //        for (int k = 0; k < nso_; k++) {
-    //            for (int l = 0; l < nso_; l++) {
-    //                double dum = 0.0;
-    //                for (int Q = 0; Q < nQ_; Q++) {
-    //                    dum += Qmo_->pointer()[i*nso_+j][Q] * Qmo_->pointer()[k*nso_+l][Q];
-    //                }
-    //                printf("%5i %5i %5i %5i %20.12lf %20.12lf\n",i,j,k,l,dum,eri->pointer()[i*nso_+j][k*nso_+l]);
-    //            }
-    //        }
-    //    }
-    //}
-    //exit(0);
 
 }
 
