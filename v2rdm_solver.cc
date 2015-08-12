@@ -1768,7 +1768,7 @@ void v2RDMSolver::DFK2() {
     outfile->Printf("\n");
 
     // size of the 3-index integral buffer
-    tei_full_dim = nQ_*nso_*nso_;
+    tei_full_dim = nQ_*nso_*(nso_+1)/2;
 
     d2_plus_core_dim = 0;
     for (int h = 0; h < nirrep_; h++) {
