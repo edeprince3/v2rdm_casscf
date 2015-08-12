@@ -127,8 +127,8 @@ void v2RDMSolver::ThreeIndexIntegrals() {
 
     }
 
-    Qmo_ = (double*)malloc(nso_*nso_*nQ_*sizeof(double));
-    memset((void*)Qmo_,'\0',nso_*nso_*nQ_*sizeof(double));
+    Qmo_ = (double*)malloc(nso_*(nso_+1)/2*nQ_*sizeof(double));
+    memset((void*)Qmo_,'\0',nso_*(nso_+1)/2*nQ_*sizeof(double));
 
     // sort integrals: (Q|mn) -> (Q|m'n') mn are energy order, m'n' are pitzer order
     for (int m = 0; m < nso_; m++) {
