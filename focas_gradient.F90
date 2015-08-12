@@ -8,24 +8,55 @@ module focas_gradient
   subroutine orbital_gradient(int1,int2,den1,den2)
     implicit none
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
+    real(wp) :: t0,t1
 
+    t0=timer()
     ! calculate inactive Fock matrix
-    call compute_f_i(int1,int2)
+    if ( df_vars_%use_df_teints == 0 ) then
+      call compute_f_i(int1,int2)
+    else
+      call compute_f_i_df(int1,int2)
+    endif
+    t1=timer()
+    write(*,*)'inactive',t1-t0
 
+    t0=timer()
     ! calculate active Fock matrix
-    call compute_f_a(den1,int2)
+    if ( df_vars_%use_df_teints == 0 ) then
+      call compute_f_a(den1,int2)
+    else
+      call compute_f_a_df(den1,int2)
+    endif
+    t1=timer()
+    write(*,*)'active',t1-t0
 
+    t0=timer()
     ! calculate auxiliary q matrix
-    call compute_q(den2,int2)
-
+    if ( df_vars_%use_df_teints == 0 ) then
+      call compute_q(den2,int2)
+    else
+      call compute_q_df(den2,int2)
+    endif
+    t1=timer()
+    write(*,*)'q',t1-t0
+ 
+    t0=timer()
     ! calculate auxiliary z matrix
     call compute_z(den1)
-
+    t1=timer()
+    write(*,*)'z',t1-t0
+ 
+    t0=timer()
     ! build generalized Fock matrix
     call compute_f_gen(den1)
+    t1=timer()
+    write(*,*)'f_gen',t1-t0
 
+    t0=timer()
     ! compute gradient
     call compute_orbital_gradient()
+    t1=timer()
+    write(*,*)'gradient',t1-t0
 
 !    ! print the gradient 
 !    call print_orbital_gradient()
@@ -275,12 +306,136 @@ module focas_gradient
 
   end subroutine compute_z
 
+  subroutine compute_q_df(den2,int2)
+    implicit none
+    ! this subroutine computes the "auxiliary Q" matrix according to Eq. 12.5.14 in Helgaker on page 622
+    ! Q(v,m) = \SUM[w,x,y \in A] { d2(vw|xy) * g(mw|xy) }
+    ! Because only those D2 elements with all four indeces \in A are nonzero, we have v \in A
+    ! Also, m is a general orbital index && sym_m == sym_v
+    real(wp), intent(in) :: den2(:),int2(:)
+    integer :: mw_sym,x_sym,y_sym,w_sym,m_sym,m_class,m,v,w,x,y,mdf,vdf,wdf,xdf,ydf
+    integer(ip) :: xy,mw,xy_den,vw_den,den_sym_offset,den_ind
+    real(wp) :: val,int_val,ddot
+
+    ! initialize
+    q_ = 0.0_wp
+
+    ! loop irreps for m and v
+
+    do m_sym = 1 , nirrep_
+
+      ! loop over irreps for w
+
+      do w_sym = 1, nirrep_
+
+        ! mw//vw symmetry
+        mw_sym = group_mult_tab_(m_sym,w_sym)
+        ! offsets for integral/density addressing
+        den_sym_offset = dens_%offset(mw_sym)
+
+        ! loop over irreps for x
+
+        do x_sym = 1 , nirrep_
+
+          ! correspoing irrep for y
+          y_sym = group_mult_tab_(x_sym,mw_sym)
+
+          ! at this point, we have mw_sym == xy_sym && m_sym == v_sym
+
+          ! loop over m_class
+
+          do m_class = 1 , 3
+
+            ! loop over v indeces
+
+            do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
+
+              ! orbital index in df order
+              mdf = df_vars_%class_to_df_map(m)
+
+              ! loop over v \in A
+
+              do v = first_index_(m_sym,2) , last_index_(m_sym,2)
+
+                ! orbital index in df order
+                vdf = df_vars_%class_to_df_map(v)
+
+                ! initialize q matrix element
+                val     = 0.0_wp
+
+                ! loop over w indeces
+
+                 do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+
+                  ! orbital index in df order
+                  wdf     = df_vars_%class_to_df_map(w)
+
+                  ! save geminal indeces for integral/density addressing
+                  mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
+                  vw_den  = dens_%gemind(v,w)
+
+                  ! loop over x indeces
+
+                  do x = first_index_(x_sym,2) , last_index_(x_sym,2)
+
+                    ! orbital index in df order
+                    xdf = df_vars_%class_to_df_map(x) 
+ 
+                    ! loop over y indeces
+
+                    do y = first_index_(y_sym,2) , last_index_(y_sym,2)
+
+                      ! xy geminal index for density addressing 
+                      xy_den  = dens_%gemind(x,y)
+                      ! density address
+                      den_ind = pq_index(xy_den,vw_den) + den_sym_offset
+ 
+                      ! orbital index in df order
+                      ydf     = df_vars_%class_to_df_map(y)
+
+                      ! geminal index in df order
+                      xy      = df_pq_index(xdf,ydf) * df_vars_%nQ
+
+#ifdef BLAS
+                      int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)                       
+#else
+                      int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
+#endif
+
+                      ! update temporary value
+                      val     = val + den2(den_ind) * int_val
+
+                    end do ! end y loop
+
+                  end do ! end x loop
+
+                end do ! end w loop
+
+                ! update q matrix element
+                q_( v - ndoc_tot_ , m ) = q_( v - ndoc_tot_ , m ) + val
+
+              end do ! end v loop
+
+            end do ! end m loop 
+
+          end do ! end m_class loop
+
+        end do ! end x_sym loop
+
+      end do ! end w_sym loop
+
+    end do ! end m_sym loop
+
+    return
+
+  end subroutine compute_q_df
+
   subroutine compute_q(den2,int2)
     implicit none
     ! this subroutine computes the "auxiliary Q" matrix according to Eq. 12.5.14 in Helgaker on page 622
     ! Q(v,m) = \SUM[w,x,y \in A] { d2(vw|xy) * g(mw|xy) }
     ! Because only those D2 elements with all four indeces \in A are nonzero, we have v \in A
-    ! Also, m is a general orbital index && sym_m == sym_n
+    ! Also, m is a general orbital index && sym_m == sym_v
     real(wp), intent(in) :: den2(:),int2(:)   
     integer :: mw_sym,x_sym,y_sym,w_sym,m_sym,m_class,m,v,w,x,y
     integer(ip) :: xy_den,xy_int,mw,vw,int_sym_offset,den_sym_offset,int_ind,den_ind
@@ -375,6 +530,245 @@ module focas_gradient
 
     return
   end subroutine compute_q
+
+  subroutine compute_f_a_df(den1,int2)
+    implicit none
+    ! this subroutine computes the "active fock matrix" according to Eq. 12.5.13 in Helgaker on page 622
+    ! F_a(m|n) = h(m|n) + SUM[v,w \in A] { g(mn|vw) - 0.5 g(mw|vn) }
+    ! Apart from the symmetry constraint m_sym == n_sym and m >= n, m and n can belong to either of the three
+    ! orbital classes.
+    ! v and w belong to the active orbital class
+    real(wp), intent(in) :: den1(:),int2(:)
+    integer :: m_class,n_class,m_sym,m,n,v,w,v_act,w_act,w_sym,mw_sym,mdf,ndf,wdf,vdf,nw,ww
+    integer(ip) :: int_ind,den_ind,mn,vw,mw,vn,sym_offset,wn,mn_fock
+    real(wp) :: val,ival,dval,ddot
+
+    ! initialize
+    fock_a_ = 0.0_wp
+
+    ! loop over orbital classes for m
+
+    do m_class = 1 , 3
+
+      ! loop over irreps (m_sym == n_sym for F(m,n) != 0)
+
+      do m_sym = 1 , nirrep_
+
+        ! loop over m indeces
+
+        do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
+
+          ! orbital index in df order
+          mdf = df_vars_%class_to_df_map(m)
+
+          ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
+
+          do n = first_index_(m_sym,m_class) , m
+
+            ! orbital index in df order
+            ndf = df_vars_%class_to_df_map(n)
+
+            ! mn-geminal index in df order
+            mn  = df_pq_index(mdf,ndf) * df_vars_%nQ
+
+            ! initialize Fock matrix element
+            val = 0.0_wp
+
+            ! loop over irreps for v
+
+            do w_sym = 1 , nirrep_
+
+              ! loop over w indeces
+
+              do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+
+                ! orbital index in df order
+                wdf = df_vars_%class_to_df_map(w)
+
+                ! *** w > v --> factor of 2
+
+                ! loop over v indeces
+
+                do v = first_index_(w_sym,2) , w - 1 
+
+                  ! 1-e density element
+                  den_ind = dens_%gemind(v,w)
+                  dval    = den1(den_ind)
+
+                  ! orbital index in df order
+                  vdf     = df_vars_%class_to_df_map(v)
+
+                  ! 2-e coulomb contribution 2 g(mn|vw)
+                  vw      = df_pq_index(wdf,vdf) * df_vars_%nQ
+
+#ifdef BLAS
+                  ival    = 2.0_wp * ddot(df_vars_%nQ,int2(mn+1:mn+df_vars_%nQ),1,int2(vw+1:vw+df_vars_%nQ),1)
+#else
+                  ival    = 2.0_wp *      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(vw+1:vw+df_vars_%nQ))
+#endif
+
+                  ! 2-e exchange contribution - g(mw|vn)
+                  mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
+                  vn      = df_pq_index(vdf,ndf) * df_vars_%nQ
+#ifdef BLAS
+                  ival    = ival - ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(vn+1:vn+df_vars_%nQ),1)
+#else
+                  ival    = ival -      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(vn+1:vn+df_vars_%nQ))
+#endif
+
+                  ! contract with integral/density matrix elements
+                  val     = val + dval * ival
+
+                end do ! end v loop
+
+                ! **** w == v --> factor of 1
+
+                ! 1-e density element
+                den_ind = dens_%gemind(w,w)
+                dval    = den1(den_ind)
+
+                ! 2-e coulomb contribution 2 g(mn|vw)
+                ww      = df_pq_index(wdf,wdf) * df_vars_%nQ
+
+#ifdef BLAS
+                ival    = ddot(df_vars_%nQ,int2(mn+1:mn+df_vars_%nQ),1,int2(ww+1:ww+df_vars_%nQ),1)
+#else
+                ival    =      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(ww+1:ww+df_vars_%nQ))
+#endif
+
+                ! 2-e exchange contribution - g(mw|vn)
+                mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
+                wn      = df_pq_index(wdf,ndf) * df_vars_%nQ
+#ifdef BLAS
+                ival    = ival - 0.5_wp * ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(wn+1:wn+df_vars_%nQ),1)
+#else
+                ival    = ival - 0.5_wp *      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(wn+1:wn+df_vars_%nQ))
+#endif
+
+                ! contract with integral/density matrix elements
+                val     = val + dval * ival
+
+              end do ! end w loop
+
+            end do ! end w_sym loop
+
+            ! save Fock matrix element
+            mn_fock          = ints_%gemind(m,n)
+            fock_a_(mn_fock) = val
+
+          end do ! end n loop
+
+          ! loop over orbital classes for n (n_class < m_class --> n < m) 
+
+          do n_class = 1 , m_class - 1
+
+            ! loop over n indeces
+
+            do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
+
+              ! orbital index in df order
+              ndf = df_vars_%class_to_df_map(n)
+
+              ! mn-geminal index in df order
+              mn  = df_pq_index(mdf,ndf) * df_vars_%nQ
+
+              ! initialize Fock matrix element
+              val = 0.0_wp
+
+              ! loop over irreps for v
+
+              do w_sym = 1 , nirrep_
+
+                ! loop over w indeces
+
+                do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+
+                  ! orbital index in df order
+                  wdf = df_vars_%class_to_df_map(w)
+
+                  ! *** w > v --> factor of 2 
+
+                  ! loop over v indeces
+
+                  do v = first_index_(w_sym,2) , w -1 
+
+                    ! 1-e density element
+                    den_ind = dens_%gemind(v,w)
+                    dval    = den1(den_ind)
+
+                    ! orbital index in df order
+                    vdf     = df_vars_%class_to_df_map(v)
+
+                    ! 2-e coulomb contribution 2 g(mn|vw)
+                    vw      = df_pq_index(wdf,vdf) * df_vars_%nQ
+
+#ifdef BLAS
+                    ival    = 2.0_wp * ddot(df_vars_%nQ,int2(mn+1:mn+df_vars_%nQ),1,int2(vw+1:vw+df_vars_%nQ),1)
+#else
+                    ival    = 2.0_wp *      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(vw+1:vw+df_vars_%nQ))
+#endif
+
+                    ! 2-e exchange contribution - g(mw|vn)
+                    mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
+                    vn      = df_pq_index(vdf,ndf) * df_vars_%nQ
+#ifdef BLAS
+                    ival    = ival - ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(vn+1:vn+df_vars_%nQ),1)
+#else
+                    ival    = ival -      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(vn+1:vn+df_vars_%nQ))
+#endif
+
+                    ! contract with integral/density matrix elements
+                    val     = val + dval * ival
+
+                  end do ! end v loop
+
+                  ! *** w == v --> factor of 1
+
+                  ! 1-e density element
+                  den_ind = dens_%gemind(w,w)
+                  dval    = den1(den_ind)
+
+                  ! 2-e coulomb contribution 2 g(mn|vw)
+                  ww      = df_pq_index(wdf,wdf) * df_vars_%nQ
+
+#ifdef BLAS
+                  ival    = ddot(df_vars_%nQ,int2(mn+1:mn+df_vars_%nQ),1,int2(ww+1:ww+df_vars_%nQ),1)
+#else
+                  ival    =      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(ww+1:ww+df_vars_%nQ))
+#endif
+
+                  ! 2-e exchange contribution - g(mw|vn)
+                  mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
+                  wn      = df_pq_index(wdf,ndf) * df_vars_%nQ
+#ifdef BLAS
+                  ival    = ival - 0.5_wp * ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(wn+1:wn+df_vars_%nQ),1)
+#else
+                  ival    = ival - 0.5_wp *      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(wn+1:wn+df_vars_%nQ))
+#endif
+
+                  ! contract with integral/density matrix elements
+                  val     = val + dval * ival
+
+                end do ! end w loop
+
+              end do ! end w_sym loop
+
+              ! save Fock matrix element
+              mn_fock          = ints_%gemind(m,n)
+              fock_a_(mn_fock) = val
+
+            end do ! end n loop
+
+          end do ! and n_class loop
+
+        end do ! end m loop
+
+      end do ! end m_sym loop
+
+    end do ! end m_class loop
+
+    return
+  end subroutine compute_f_a_df
 
   subroutine compute_f_a(den1,int2)
     implicit none
@@ -523,6 +917,170 @@ module focas_gradient
    
     return
   end subroutine compute_f_a
+
+  subroutine compute_f_i_df(int1,int2)
+    ! this subroutine computes the "inactive fock matrix" according to Eq. 12.5.12 in Helgaker on page 622
+    ! F_i(m|n) = h(m|n) + SUM[i \in D] { 2 g(mn|ii) - g(mi|in) }
+    ! using 3-index 2-e integrals
+    ! Apart from the symmetry constraint m_sym == n_sym and m >= n, m and n can belong to either of the three
+    ! orbital classes. 
+    implicit none
+    real(wp), intent(in) :: int1(:),int2(:)
+    integer :: m_class,n_class,m_sym,m,n,i,i_sym,mi_sym,mdf,ndf,idf
+    integer(ip) :: int_ind,mn,mn_fock,mn_int1,ii,mi,in,sym_offset
+    real(wp) :: val,int_val,ddot
+
+    ! initialize
+    fock_i_ = 0.0_wp
+
+    ! loop over orbital classes for m
+
+    do m_class = 1 , 3
+
+      ! loop over irreps (m_sym == n_sym for F(m,n) != 0)
+
+      do m_sym = 1 , nirrep_
+
+        ! loop over m indeces
+
+        do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
+
+          ! orbital index in df order
+          mdf = df_vars_%class_to_df_map(m)
+
+          ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
+
+          do n = first_index_(m_sym,m_class) , m
+
+            ! mn-geminal index
+            mn_int1 = ints_%gemind(m,n)
+
+            ! 1-e contribution h(m|n)
+            val     = int1(mn_int1)
+
+            ! orbital index in df order
+            ndf = df_vars_%class_to_df_map(n)
+
+            ! mn-geminal index in df order
+            mn      = df_pq_index(mdf,ndf) * df_vars_%nQ  
+
+            ! loop over irreps for i
+
+            do i_sym = 1 , nirrep_
+
+              ! loop over i indeces
+
+              do i = first_index_(i_sym,1) , last_index_(i_sym,1)
+
+                ! orbital index in df order
+                idf        = df_vars_%class_to_df_map(i) 
+
+                ! ii-geminal index in df order
+                ii         = df_pq_index(idf,idf) * df_vars_%nQ
+
+                ! 2-e coulomb contribution 2 g(mn|ii)
+#ifdef BLAS
+                int_val    = ddot(df_vars_%nQ,int2(ii+1:ii+df_vars_%nQ),1,int2(mn+1:mn+df_vars_%nQ),1)     
+#else
+                int_val    = dot_product(int2(ii+1:ii+df_vars_%nQ),int2(mn+1:mn+df_vars_%nQ))
+#endif
+                val        = val + 2.0_wp * int_val
+
+                ! geminal indeces in df order
+                mi         = df_pq_index(mdf,idf) * df_vars_%nQ
+                in         = df_pq_index(idf,ndf) * df_vars_%nQ
+
+                ! 2-e exchange contribution - g(mi|in)
+#ifdef BLAS
+                int_val    = ddot(df_vars_%nQ,int2(mi+1:mi+df_vars_%nQ),1,int2(in+1:in+df_vars_%nQ),1)
+#else
+                int_val    = dot_product(int2(mi+1:mi+df_vars_%nQ),int2(in+1:in+df_vars_%nQ))
+#endif
+                val        = val - int_val
+
+              end do ! end i loop
+
+            end do ! end i_sym loop
+
+            ! save Fock matrix element
+
+            mn_fock          = ints_%gemind(m,n)
+            fock_i_(mn_fock) = val
+
+          end do ! end n loop
+
+          ! loop over orbital classes for n (n_class < m_class --> n < m) 
+
+          do n_class = 1 , m_class - 1
+
+            ! loop over n indeces
+
+            do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
+
+              mn_int1 = ints_%gemind(m,n)
+              ! 1-e contribution h(m|n)
+              val     = int1(mn_int1)
+
+              ! orbital index in df order
+              ndf     = df_vars_%class_to_df_map(n)
+
+              ! mn geminal index in df order
+              mn      = df_pq_index(mdf,ndf) * df_vars_%nQ
+
+              ! loop over irreps for i
+
+              do i_sym = 1 , nirrep_
+
+                ! loop over i indeces
+
+                do i = first_index_(i_sym,1) , last_index_(i_sym,1)
+
+                  ! orbital index in df order
+                  idf        = df_vars_%class_to_df_map(i)
+
+                  ! ii-geminal index in df order
+                  ii         = df_pq_index(idf,idf) * df_vars_%nQ
+
+                  ! 2-e coulomb contribution 2 g(mn|ii)
+#ifdef BLAS
+                  int_val    = ddot(df_vars_%nQ,int2(ii+1:ii+df_vars_%nQ),1,int2(mn+1:mn+df_vars_%nQ),1)
+#else
+                  int_val    = dot_product(int2(ii+1:ii+df_vars_%nQ),int2(mn+1:mn+df_vars_%nQ))
+#endif
+                  val        = val + 2.0_wp * int_val
+
+                  ! geminal indeces in df order
+                  mi         = df_pq_index(mdf,idf) * df_vars_%nQ
+                  in         = df_pq_index(idf,ndf) * df_vars_%nQ
+ 
+                  ! 2-e exchange contribution - g(mi|in)
+#ifdef BLAS
+                  int_val    = ddot(df_vars_%nQ,int2(mi+1:mi+df_vars_%nQ),1,int2(in+1:in+df_vars_%nQ),1)
+#else
+                  int_val    = dot_product(int2(mi+1:mi+df_vars_%nQ),int2(in+1:in+df_vars_%nQ))
+#endif
+                  val        = val - int_val
+
+                end do ! end i loop
+
+              end do ! end i_sym loop
+
+              ! save Fock matrix element
+              mn_fock          = ints_%gemind(m,n)
+              fock_i_(mn_fock) = val
+
+            end do ! end n_loop
+
+          end do ! end n_class loop
+
+        end do ! end m_loop
+
+      end do ! end m_sym loop
+
+    end do ! end m_class loop
+
+    return
+  end subroutine compute_f_i_df
 
   subroutine compute_f_i(int1,int2)
     ! this subroutine computes the "inactive fock matrix" according to Eq. 12.5.12 in Helgaker on page 622
