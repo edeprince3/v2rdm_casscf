@@ -10,53 +10,53 @@ module focas_gradient
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
     real(wp) :: t0,t1
 
-    t0=timer()
+!    t0=timer()
     ! calculate inactive Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_i(int1,int2)
     else
       call compute_f_i_df(int1,int2)
     endif
-    t1=timer()
-    write(*,*)'inactive',t1-t0
+!    t1=timer()
+!    write(*,*)'inactive',t1-t0
 
-    t0=timer()
+!    t0=timer()
     ! calculate active Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_a(den1,int2)
     else
       call compute_f_a_df(den1,int2)
     endif
-    t1=timer()
-    write(*,*)'active',t1-t0
+!    t1=timer()
+!    write(*,*)'active',t1-t0
 
-    t0=timer()
+!    t0=timer()
     ! calculate auxiliary q matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_q(den2,int2)
     else
       call compute_q_df(den2,int2)
     endif
-    t1=timer()
-    write(*,*)'q',t1-t0
+!    t1=timer()
+!    write(*,*)'q',t1-t0
  
-    t0=timer()
+!    t0=timer()
     ! calculate auxiliary z matrix
     call compute_z(den1)
-    t1=timer()
-    write(*,*)'z',t1-t0
+!    t1=timer()
+!    write(*,*)'z',t1-t0
  
-    t0=timer()
+!    t0=timer()
     ! build generalized Fock matrix
     call compute_f_gen(den1)
-    t1=timer()
-    write(*,*)'f_gen',t1-t0
+!    t1=timer()
+!    write(*,*)'f_gen',t1-t0
 
-    t0=timer()
+!    t0=timer()
     ! compute gradient
     call compute_orbital_gradient()
-    t1=timer()
-    write(*,*)'gradient',t1-t0
+!    t1=timer()
+!    write(*,*)'gradient',t1-t0
 
 !    ! print the gradient 
 !    call print_orbital_gradient()

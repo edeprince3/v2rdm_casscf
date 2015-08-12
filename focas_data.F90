@@ -153,11 +153,9 @@ module focas_data
       integer(ip) :: df_pq_index
       if (i.ge.j) then
         df_pq_index= i + j * nmo_tot_
-!        df_pq_index=ishft(i*(i+1),-1)+j
         return
       else
         df_pq_index= j + i * nmo_tot_
-!        df_pq_index=ishft(j*(j+1),-1)+i
         return
       end if
     end function df_pq_index
