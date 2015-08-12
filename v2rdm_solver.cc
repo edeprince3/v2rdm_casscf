@@ -4398,8 +4398,8 @@ void v2RDMSolver::RepackIntegralsDF(){
             for (int h2 = 0; h2 < nirrep_; h2++) {
                 for (long int j = 0; j < frzcpi_[h2]; j++) {
                     long int jj = j + offset2;
-                    double dum1 = C_DDOT(nQ_,Qmo_ + nQ_*(ii*nso_+ii),1,Qmo_+nQ_*(jj*nso_+jj),1);
-                    double dum2 = C_DDOT(nQ_,Qmo_ + nQ_*(ii*nso_+jj),1,Qmo_+nQ_*(ii*nso_+jj),1);
+                    double dum1 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,ii),1,Qmo_+nQ_*INDEX(jj,jj),1);
+                    double dum2 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,jj),1,Qmo_+nQ_*INDEX(ii,jj),1);
                     efrzc2 += 2.0 * dum1 - dum2;
                 }
                 offset2 += nmopi_[h2];
@@ -4433,8 +4433,8 @@ void v2RDMSolver::RepackIntegralsDF(){
 
                     for (long int k = 0; k < frzcpi_[h2]; k++) {
                         int kk = k + offset2;
-                        dum1 += C_DDOT(nQ_,Qmo_ + nQ_*(ii*nso_+jj),1,Qmo_+nQ_*(kk*nso_+kk),1);
-                        dum2 += C_DDOT(nQ_,Qmo_ + nQ_*(ii*nso_+kk),1,Qmo_+nQ_*(jj*nso_+kk),1);
+                        dum1 += C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,jj),1,Qmo_+nQ_*INDEX(kk,kk),1);
+                        dum2 += C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,kk),1);
                     }
                     offset2 += nmopi_[h2];
                 }
@@ -4468,7 +4468,7 @@ void v2RDMSolver::RepackIntegralsDF(){
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                c_p[d2aboff[h] + ij*gems_ab[h]+kl] = C_DDOT(nQ_,Qmo_+nQ_*(ii*nso_+kk),1,Qmo_+nQ_*(jj*nso_+ll),1);
+                c_p[d2aboff[h] + ij*gems_ab[h]+kl] = C_DDOT(nQ_,Qmo_+nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,ll),1);
             }
         }
     }
@@ -4489,8 +4489,8 @@ void v2RDMSolver::RepackIntegralsDF(){
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                double dum1 = C_DDOT(nQ_,Qmo_+nQ_*(ii*nso_+kk),1,Qmo_+nQ_*(jj*nso_+ll),1);
-                double dum2 = C_DDOT(nQ_,Qmo_+nQ_*(ii*nso_+ll),1,Qmo_+nQ_*(jj*nso_+kk),1);
+                double dum1 = C_DDOT(nQ_,Qmo_+nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,ll),1);
+                double dum2 = C_DDOT(nQ_,Qmo_+nQ_*INDEX(ii,ll),1,Qmo_+nQ_*INDEX(jj,kk),1);
 
                 c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
                 c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;

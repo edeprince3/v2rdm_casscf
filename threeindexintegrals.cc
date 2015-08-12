@@ -40,6 +40,8 @@
 
 #include <../bin/fnocc/blas.h>
 
+#include <libtrans/integraltransform.h>
+
 using namespace psi;
 using namespace fnocc;
 
@@ -144,7 +146,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
             }
             int nn = reorder[n] + offn;
             //C_DCOPY(nQ_,qmop[mm*nso_+nn], 1 ,tmp1 + m*nQ_*nso_+n*nQ_,1);
-            C_DCOPY(nQ_,tmp1 + nQ_*(m*nso_+n), 1 ,Qmo_ + nQ_*(mm*nso_+nn),1);
+            C_DCOPY(nQ_,tmp1 + nQ_*(m*nso_+n), 1 ,Qmo_ + nQ_*INDEX(mm,nn),1);
         }
     }
 
