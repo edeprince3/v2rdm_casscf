@@ -144,8 +144,6 @@ module focas_driver
       last_energy = current_energy
       iter = iter + 1
 
-      stop
-
       if ( iter == max_iter ) exit
 
       if ( ( delta_energy > delta_energy_tolerance ) .or. (grad_norm_ > gradient_norm_tolerance) ) cycle
@@ -161,6 +159,8 @@ module focas_driver
     else
       write(*,'(a)')'gradient descent did not converge'
     endif
+
+    stop
 
     dele_last      = delta_energy
     gnorm_last     = grad_norm_
