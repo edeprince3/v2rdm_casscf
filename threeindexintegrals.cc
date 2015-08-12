@@ -85,41 +85,19 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         }
     }
 
-    boost::shared_ptr<Matrix> myCa_ = reference_wavefunction_->Ca_subset("AO","ALL");
+    boost::shared_ptr<Matrix> myCa_ (new Matrix(reference_wavefunction_->Cb_subset("AO","ALL")));
 
-    for (int Q = 0; Q < nQ_; Q++) {
-        for (int i = 0; i < nso_; i++) {
-            for (int k = 0; k < nso_; k++) {
-                double dum = 0.0;
-                for (int l = 0; l < nso_; l++) {
-                    dum += tmp1[Q*nso_*nso_+k*nso_+l] * myCa_->pointer()[l][i];
-                }
-                tmp2[i*nQ_*nso_+Q*nso_+k] = dum;
-            }
-        }
-    }
-
-    for (int Q = 0; Q < nQ_; Q++) {
-        for (int i = 0; i < nso_; i++) {
-            for (int j = 0; j < nso_; j++) {
-                double dum = 0.0;
-                for (int k = 0; k < nso_; k++) {
-                    dum += tmp2[i*nQ_*nso_+Q*nso_+k] * myCa_->pointer()[k][j];
-                }
-                tmp1[j*nQ_*nso_+i*nQ_+Q] = dum;
-            }
-        }
-    }
+    F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp1,nso_,&(myCa_->pointer()[0][0]),nso_,0.0,tmp2,nso_*nQ_);
+    F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp2,nso_,&(myCa_->pointer()[0][0]),nso_,0.0,tmp1,nso_*nQ_);
 
     free(tmp2);
 
     // orbitals are in energy order.  we want them in pitzer
 
-    int * reorder = (int*)malloc(nso_*sizeof(int));
-    int * ireorder = (int*)malloc(nso_*sizeof(int));
-    int * sym     = (int*)malloc(nso_*sizeof(int));
-    bool * skip   = (bool*)malloc(nso_*sizeof(bool));
-    memset((void*)skip,'\0',nso_*sizeof(int));
+    int * reorder  = (int*)malloc(nso_*sizeof(int));
+    int * sym      = (int*)malloc(nso_*sizeof(int));
+    bool * skip    = (bool*)malloc(nso_*sizeof(bool));
+
     for (int i = 0; i < nso_; i++) {
         skip[i] = false;
     }
@@ -143,13 +121,12 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         }
         skip[mincount + minj]     = true;
         reorder[i]                = minj;
-        ireorder[i]               = mincount + minj;
         sym[i]                    = minh;
 
     }
 
-    Qmo_ = (boost::shared_ptr<Matrix>)(new Matrix(nso_*nso_,nQ_));
-    double ** qmop = Qmo_->pointer();
+    Qmo_ = (double*)malloc(nso_*nso_*nQ_*sizeof(double));
+    memset((void*)Qmo_,'\0',nso_*nso_*nQ_*sizeof(double));
 
     // sort integrals: (Q|mn) -> (Q|m'n') mn are energy order, m'n' are pitzer order
     for (int m = 0; m < nso_; m++) {
@@ -167,13 +144,14 @@ void v2RDMSolver::ThreeIndexIntegrals() {
             }
             int nn = reorder[n] + offn;
             //C_DCOPY(nQ_,qmop[mm*nso_+nn], 1 ,tmp1 + m*nQ_*nso_+n*nQ_,1);
-            C_DCOPY(nQ_,tmp1+m*nQ_*nso_+n*nQ_, 1 ,qmop[mm*nso_+nn],1);
+            C_DCOPY(nQ_,tmp1 + nQ_*(m*nso_+n), 1 ,Qmo_ + nQ_*(mm*nso_+nn),1);
         }
     }
-    //C_DCOPY(nQ_*nso_*nso_,tmp1,1,qmop[0],1);
 
     free(tmp1);
-
+    free(reorder);
+    free(skip);
+    free(sym);
 }
 
 
