@@ -154,7 +154,7 @@ module focas_driver
       exit
 
     end do
-  
+
     if ( converged == 1 ) then
       write(*,'(a)')'gradient descent converged'
     else

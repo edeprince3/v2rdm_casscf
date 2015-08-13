@@ -18,7 +18,7 @@ module focas_gradient
       call compute_f_i_df(int1,int2)
     endif
 !    t1=timer()
-!    write(*,*)'inactive',t1-t0
+!    write(*,*)'f_i',t1-t0
 
 !    t0=timer()
     ! calculate active Fock matrix
@@ -28,7 +28,7 @@ module focas_gradient
       call compute_f_a_df(den1,int2)
     endif
 !    t1=timer()
-!    write(*,*)'active',t1-t0
+!    write(*,*)'f_a',t1-t0
 
 !    t0=timer()
     ! calculate auxiliary q matrix
@@ -475,14 +475,14 @@ module focas_gradient
             do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
 
               ! loop over v \in A
- 
+
               do v = first_index_(m_sym,2) , last_index_(m_sym,2)
 
                 ! initialize q matrix element
                 val     = 0.0_wp
 
                 ! loop over w indeces
- 
+
                 do w = first_index_(w_sym,2) , last_index_(w_sym,2)
                   
                   ! save geminal indeces for integral/density addressing
@@ -562,6 +562,11 @@ module focas_gradient
           mdf = df_vars_%class_to_df_map(m)
 
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
+
+#ifdef OMP
+!$omp parallel shared(ints_,dens_,m_class,m_sym,m,mdf,first_index_,last_index_,df_vars_,den1,int2) num_threads(nthread_use_)
+!$omp do private(n,ndf,mn,val,w_sym,w,wdf,v,den_ind,dval,vdf,vw,ival,ww,mw,wn,vn,mn_fock)
+#endif
 
           do n = first_index_(m_sym,m_class) , m
 
@@ -658,11 +663,21 @@ module focas_gradient
 
           end do ! end n loop
 
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
+
           ! loop over orbital classes for n (n_class < m_class --> n < m) 
 
           do n_class = 1 , m_class - 1
 
             ! loop over n indeces
+
+#ifdef OMP
+!$omp parallel shared(n_class,ints_,dens_,m_class,m_sym,m,mdf,first_index_,last_index_,df_vars_,den1,int2) num_threads(nthread_use_)
+!$omp do private(n,ndf,mn,val,w_sym,w,wdf,v,den_ind,dval,vdf,vw,ival,mw,wn,mn_fock)
+#endif
 
             do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
 
@@ -758,6 +773,11 @@ module focas_gradient
               fock_a_(mn_fock) = val
 
             end do ! end n loop
+
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
 
           end do ! and n_class loop
 
@@ -926,9 +946,10 @@ module focas_gradient
     ! orbital classes. 
     implicit none
     real(wp), intent(in) :: int1(:),int2(:)
-    integer :: m_class,n_class,m_sym,m,n,i,i_sym,mi_sym,mdf,ndf,idf
+    integer :: m_class,n_class,m_sym,m,n,i,i_sym,mi_sym,mdf,ndf,idf,error
     integer(ip) :: int_ind,mn,mn_fock,mn_int1,ii,mi,in,sym_offset
     real(wp) :: val,int_val,ddot
+!    integer :: first_m(nthread_use_),last_m(nthread_use_)
 
     ! initialize
     fock_i_ = 0.0_wp
@@ -943,12 +964,21 @@ module focas_gradient
 
         ! loop over m indeces
 
+!#ifdef OMP
+!!$omp parallel shared(first_index_,last_index_,fock_i_,int2,int1,ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
+!!$omp do private(m,mdf,n,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock,n_class)
+!#endif
         do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
 
           ! orbital index in df order
           mdf = df_vars_%class_to_df_map(m)
 
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
+
+#ifdef OMP
+!$omp parallel shared(m,mdf,first_index_,last_index_,fock_i_,int2,int1,ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
+!$omp do private(n,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock,n_class)
+#endif
 
           do n = first_index_(m_sym,m_class) , m
 
@@ -1009,12 +1039,21 @@ module focas_gradient
 
           end do ! end n loop
 
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
+
           ! loop over orbital classes for n (n_class < m_class --> n < m) 
 
           do n_class = 1 , m_class - 1
 
             ! loop over n indeces
 
+#ifdef OMP
+!$omp parallel shared(n_class,m,mdf,first_index_,last_index_,fock_i_,int2,int1,ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
+!$omp do private(n,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock)
+#endif
             do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
 
               mn_int1 = ints_%gemind(m,n)
@@ -1071,15 +1110,25 @@ module focas_gradient
 
             end do ! end n_loop
 
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
+
           end do ! end n_class loop
 
         end do ! end m_loop
+!#ifdef OMP
+!!$omp end do nowait
+!!$omp end parallel
+!#endif
 
       end do ! end m_sym loop
 
     end do ! end m_class loop
 
     return
+
   end subroutine compute_f_i_df
 
   subroutine compute_f_i(int1,int2)
