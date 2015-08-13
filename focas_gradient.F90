@@ -8,7 +8,6 @@ module focas_gradient
   subroutine orbital_gradient(int1,int2,den1,den2)
     implicit none
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
-    real(wp) :: t0,t1
 
     ! calculate inactive Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
@@ -35,7 +34,7 @@ module focas_gradient
     call compute_z(den1)
  
     ! build generalized Fock matrix
-    call compute_f_gen(den1)
+    call compute_f_gen()
 
     ! compute gradient
     call compute_orbital_gradient()
@@ -175,7 +174,7 @@ module focas_gradient
     return
   end subroutine compute_orbital_gradient
 
-  subroutine compute_f_gen(den1)
+  subroutine compute_f_gen()
     implicit none
     ! subroutine to compute the generalized fock matrix accoring to Eqs. 12.5.-12.9.10 in Helgaker on page 622
     ! f_gen(i|n) = 2 [ f_i(i|n) + f_a(i|n) ]               --> i \in D && n \in D,A,E
@@ -183,9 +182,7 @@ module focas_gradient
     ! f_gen(e,n) = 0                                       --> e \in E && n \in D,A,E
     ! here :: z(v|n) = SUM(u) { f_i(v,u) * d1(v,u) }       --> v,u \in A && n \in D,A,E
     !      :: Q(v|n) = SUM(xyz) { d(vxyz) * g(nxyz) }      --> v,x,y,z \in A && n \in D,A,E
-    real(wp), intent(in) :: den1(:)
-    integer :: i,v,n,ni,w,nw,vw,vn,n_class,n_sym
-    real(wp) :: val
+    integer :: i,v,n,ni,n_class,n_sym
 
     ! initialize
     fock_gen_ = 0.0_wp
@@ -236,7 +233,7 @@ module focas_gradient
     ! function to compute contraction of the density with the inactive Fock matrix according to
     ! z(m,t) = sum_u { den1(tu) * f_i(mu) } t,u \in A m \in D,A,E
     real(wp), intent(in) :: den1(:)
-    integer :: t,u,tu_den,mu_int,tt_den,tt_int,t_sym,m,m_class
+    integer :: t,u,tu_den,mu_int,t_sym,m,m_class
     real(wp) :: val
 
     ! initialize output
@@ -296,7 +293,8 @@ module focas_gradient
     ! Also, m is a general orbital index && sym_m == sym_v
     real(wp), intent(in) :: den2(:),int2(:)
     integer :: mw_sym,x_sym,y_sym,w_sym,m_sym,m_class,m,v,w,x,y,mdf,vdf,wdf,xdf,ydf
-    integer(ip) :: xy,mw,xy_den,vw_den,den_sym_offset,den_ind
+    integer :: xy_den,vw_den
+    integer(ip) :: mw,xy,den_ind,den_sym_offset
     real(wp) :: val,int_val,ddot
 
     ! initialize
@@ -399,11 +397,11 @@ module focas_gradient
                         ! xy geminal index in df order
                         xy  = df_pq_index(xdf,ydf) * df_vars_%nQ  
 
-#ifdef BLAS
+!#ifdef BLAS
                         int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)
-#else
-                        int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
-#endif
+!#else
+!                        int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
+!#endif
 
                         ! update matrix element
 
@@ -421,11 +419,11 @@ module focas_gradient
                       ! xy geminal index in df order
                       xy  = df_pq_index(xdf,xdf) * df_vars_%nQ
 
-#ifdef BLAS
+!#ifdef BLAS
                       int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)
-#else
-                      int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
-#endif
+!#else
+!                      int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
+!#endif
 
                       ! update matrix element
 
@@ -461,11 +459,11 @@ module focas_gradient
                         ! xy geminal index in df order
                         xy  = df_pq_index(xdf,ydf) * df_vars_%nQ
 
-#ifdef BLAS
+!#ifdef BLAS
                         int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)
-#else
-                        int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
-#endif
+!#else
+!                        int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
+!#endif
 
                         ! update matrix element
 
@@ -512,7 +510,8 @@ module focas_gradient
     ! Also, m is a general orbital index && sym_m == sym_v
     real(wp), intent(in) :: den2(:),int2(:)   
     integer :: mw_sym,x_sym,y_sym,w_sym,m_sym,m_class,m,v,w,x,y
-    integer(ip) :: xy_den,xy_int,mw,vw,int_sym_offset,den_sym_offset,int_ind,den_ind
+    integer :: xy_den,xy_int,mw,vw
+    integer(ip) :: den_ind,den_Sym_offset,int_ind,int_sym_offset
     real(wp) :: val
 
     ! initialize
@@ -613,8 +612,9 @@ module focas_gradient
     ! orbital classes.
     ! v and w belong to the active orbital class
     real(wp), intent(in) :: den1(:),int2(:)
-    integer :: m_class,n_class,m_sym,m,n,v,w,v_act,w_act,w_sym,mw_sym,mdf,ndf,wdf,vdf,nw,ww
-    integer(ip) :: int_ind,den_ind,mn,vw,mw,vn,sym_offset,wn,mn_fock
+    integer :: m_class,n_class,m_sym,m,n,v,w,w_sym,mdf,ndf,wdf,vdf,ww
+    integer :: den_ind,mn_fock
+    integer(ip) :: mn,vw,mw,vn,wn 
     real(wp) :: val,ival,dval,ddot
 
     ! initialize
@@ -680,20 +680,20 @@ module focas_gradient
                   ! 2-e coulomb contribution 2 g(mn|vw)
                   vw      = df_pq_index(wdf,vdf) * df_vars_%nQ
 
-#ifdef BLAS
+!#ifdef BLAS
                   ival    = 2.0_wp * ddot(df_vars_%nQ,int2(mn+1:mn+df_vars_%nQ),1,int2(vw+1:vw+df_vars_%nQ),1)
-#else
-                  ival    = 2.0_wp *      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(vw+1:vw+df_vars_%nQ))
-#endif
+!#else
+!                  ival    = 2.0_wp *      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(vw+1:vw+df_vars_%nQ))
+!#endif
 
                   ! 2-e exchange contribution - g(mw|vn)
                   mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
                   vn      = df_pq_index(vdf,ndf) * df_vars_%nQ
-#ifdef BLAS
+!#ifdef BLAS
                   ival    = ival - ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(vn+1:vn+df_vars_%nQ),1)
-#else
-                  ival    = ival -      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(vn+1:vn+df_vars_%nQ))
-#endif
+!#else
+!                  ival    = ival -      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(vn+1:vn+df_vars_%nQ))
+!#endif
 
                   ! contract with integral/density matrix elements
                   val     = val + dval * ival
@@ -709,20 +709,20 @@ module focas_gradient
                 ! 2-e coulomb contribution 2 g(mn|vw)
                 ww      = df_pq_index(wdf,wdf) * df_vars_%nQ
 
-#ifdef BLAS
+!#ifdef BLAS
                 ival    = ddot(df_vars_%nQ,int2(mn+1:mn+df_vars_%nQ),1,int2(ww+1:ww+df_vars_%nQ),1)
-#else
-                ival    =      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(ww+1:ww+df_vars_%nQ))
-#endif
+!#else
+!                ival    =      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(ww+1:ww+df_vars_%nQ))
+!#endif
 
                 ! 2-e exchange contribution - g(mw|vn)
                 mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
                 wn      = df_pq_index(wdf,ndf) * df_vars_%nQ
-#ifdef BLAS
+!#ifdef BLAS
                 ival    = ival - 0.5_wp * ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(wn+1:wn+df_vars_%nQ),1)
-#else
-                ival    = ival - 0.5_wp *      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(wn+1:wn+df_vars_%nQ))
-#endif
+!#else
+!                ival    = ival - 0.5_wp *      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(wn+1:wn+df_vars_%nQ))
+!#endif
 
                 ! contract with integral/density matrix elements
                 val     = val + dval * ival
@@ -791,20 +791,20 @@ module focas_gradient
                     ! 2-e coulomb contribution 2 g(mn|vw)
                     vw      = df_pq_index(wdf,vdf) * df_vars_%nQ
 
-#ifdef BLAS
+!#ifdef BLAS
                     ival    = 2.0_wp * ddot(df_vars_%nQ,int2(mn+1:mn+df_vars_%nQ),1,int2(vw+1:vw+df_vars_%nQ),1)
-#else
-                    ival    = 2.0_wp *      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(vw+1:vw+df_vars_%nQ))
-#endif
+!#else
+!                    ival    = 2.0_wp *      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(vw+1:vw+df_vars_%nQ))
+!#endif
 
                     ! 2-e exchange contribution - g(mw|vn)
                     mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
                     vn      = df_pq_index(vdf,ndf) * df_vars_%nQ
-#ifdef BLAS
+!#ifdef BLAS
                     ival    = ival - ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(vn+1:vn+df_vars_%nQ),1)
-#else
-                    ival    = ival -      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(vn+1:vn+df_vars_%nQ))
-#endif
+!#else
+!                    ival    = ival -      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(vn+1:vn+df_vars_%nQ))
+!#endif
 
                     ! contract with integral/density matrix elements
                     val     = val + dval * ival
@@ -820,20 +820,20 @@ module focas_gradient
                   ! 2-e coulomb contribution 2 g(mn|vw)
                   ww      = df_pq_index(wdf,wdf) * df_vars_%nQ
 
-#ifdef BLAS
+!#ifdef BLAS
                   ival    = ddot(df_vars_%nQ,int2(mn+1:mn+df_vars_%nQ),1,int2(ww+1:ww+df_vars_%nQ),1)
-#else
-                  ival    =      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(ww+1:ww+df_vars_%nQ))
-#endif
+!#else
+!                  ival    =      dot_product(int2(mn+1:mn+df_vars_%nQ),  int2(ww+1:ww+df_vars_%nQ))
+!#endif
 
                   ! 2-e exchange contribution - g(mw|vn)
                   mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
                   wn      = df_pq_index(wdf,ndf) * df_vars_%nQ
-#ifdef BLAS
+!#ifdef BLAS
                   ival    = ival - 0.5_wp * ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(wn+1:wn+df_vars_%nQ),1)
-#else
-                  ival    = ival - 0.5_wp *      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(wn+1:wn+df_vars_%nQ))
-#endif
+!#else
+!                  ival    = ival - 0.5_wp *      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(wn+1:wn+df_vars_%nQ))
+!#endif
 
                   ! contract with integral/density matrix elements
                   val     = val + dval * ival
@@ -872,8 +872,9 @@ module focas_gradient
     ! orbital classes.
     ! v and w belong to the active orbital class
     real(wp), intent(in) :: den1(:),int2(:)
-    integer :: m_class,n_class,m_sym,m,n,v,w,v_act,w_act,w_sym,mw_sym
-    integer(ip) :: int_ind,den_ind,mn,vw,mw,vn,sym_offset
+    integer :: m_class,n_class,m_sym,m,n,v,w,w_sym,mw_sym
+    integer :: mn,vw,mw,vn,den_ind
+    integer(ip) :: int_ind,sym_offset
     real(wp) :: val,ival,dval
 
     ! initialize
@@ -1020,8 +1021,9 @@ module focas_gradient
     ! orbital classes. 
     implicit none
     real(wp), intent(in) :: int1(:),int2(:)
-    integer :: m_class,n_class,m_sym,m,n,i,i_sym,mi_sym,mdf,ndf,idf,error
-    integer(ip) :: int_ind,mn,mn_fock,mn_int1,ii,mi,in,sym_offset
+    integer :: m_class,n_class,m_sym,m,n,i,i_sym,mdf,ndf,idf
+    integer :: mn_fock,mn_int1
+    integer(ip) :: mn,ii,mi,in
     real(wp) :: val,int_val,ddot
 !    integer :: first_m(nthread_use_),last_m(nthread_use_)
 
@@ -1095,11 +1097,11 @@ module focas_gradient
                 in         = df_pq_index(idf,ndf) * df_vars_%nQ
 
                 ! 2-e exchange contribution - g(mi|in)
-#ifdef BLAS
+!#ifdef BLAS
                 int_val    = ddot(df_vars_%nQ,int2(mi+1:mi+df_vars_%nQ),1,int2(in+1:in+df_vars_%nQ),1)
-#else
-                int_val    = dot_product(int2(mi+1:mi+df_vars_%nQ),int2(in+1:in+df_vars_%nQ))
-#endif
+!#else
+!                int_val    = dot_product(int2(mi+1:mi+df_vars_%nQ),int2(in+1:in+df_vars_%nQ))
+!#endif
                 val        = val - int_val
 
               end do ! end i loop
@@ -1155,11 +1157,11 @@ module focas_gradient
                   ii         = df_pq_index(idf,idf) * df_vars_%nQ
 
                   ! 2-e coulomb contribution 2 g(mn|ii)
-#ifdef BLAS
+!#ifdef BLAS
                   int_val    = ddot(df_vars_%nQ,int2(ii+1:ii+df_vars_%nQ),1,int2(mn+1:mn+df_vars_%nQ),1)
-#else
-                  int_val    = dot_product(int2(ii+1:ii+df_vars_%nQ),int2(mn+1:mn+df_vars_%nQ))
-#endif
+!#else
+!                  int_val    = dot_product(int2(ii+1:ii+df_vars_%nQ),int2(mn+1:mn+df_vars_%nQ))
+!#endif
                   val        = val + 2.0_wp * int_val
 
                   ! geminal indeces in df order
@@ -1167,11 +1169,11 @@ module focas_gradient
                   in         = df_pq_index(idf,ndf) * df_vars_%nQ
  
                   ! 2-e exchange contribution - g(mi|in)
-#ifdef BLAS
+!#ifdef BLAS
                   int_val    = ddot(df_vars_%nQ,int2(mi+1:mi+df_vars_%nQ),1,int2(in+1:in+df_vars_%nQ),1)
-#else
-                  int_val    = dot_product(int2(mi+1:mi+df_vars_%nQ),int2(in+1:in+df_vars_%nQ))
-#endif
+!#else
+!                  int_val    = dot_product(int2(mi+1:mi+df_vars_%nQ),int2(in+1:in+df_vars_%nQ))
+!#endif
                   val        = val - int_val
 
                 end do ! end i loop
@@ -1213,7 +1215,8 @@ module focas_gradient
     implicit none
     real(wp), intent(in) :: int1(:),int2(:)
     integer :: m_class,n_class,m_sym,m,n,i,i_sym,mi_sym
-    integer(ip) :: int_ind,mn,ii,mi,in,sym_offset
+    integer :: mn,ii,mi,in
+    integer(ip) :: int_ind,sym_offset
     real(wp) :: val
 
     ! initialize

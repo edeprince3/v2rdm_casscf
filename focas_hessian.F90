@@ -41,7 +41,7 @@ module focas_hessian
       real(wp), intent(inout) :: grad(:) 
       real(wp), intent(in) :: f_i(:),f_a(:),q(:,:),z(:,:),den1(:)
 
-      integer :: grad_ind,t,i,u,tt_int,ii_int,tt_den,t_sym
+      integer :: grad_ind,t,i,tt_int,ii_int,tt_den,t_sym
       real(wp) :: h_val,fac
 
       ! loop over all active - doubly-occupied pairs

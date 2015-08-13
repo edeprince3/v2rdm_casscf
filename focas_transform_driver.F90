@@ -31,7 +31,7 @@ module focas_transform_driver
     subroutine allocate_transformation_matrices()
       implicit none
 
-      integer :: npair_i_sym,nmo_i_sym,i,i_sym,j_sym,i_class,i_sym_off,i_in_irrep
+      integer :: nmo_i_sym,i_sym,i_class
 
       ! figure out the total number of mos per irrep
 

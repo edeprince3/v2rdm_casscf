@@ -4,7 +4,7 @@ module focas_data
   ! *** parameters
 
   integer, parameter :: wp = selected_real_kind(10)                ! general working precision kind value
-  integer, parameter :: ip = selected_int_kind(8)                  ! 64-bit integers (integral addressing)
+  integer, parameter :: ip = selected_int_kind(16)                  ! 64-bit integers (integral addressing)
   integer, parameter :: fid_ = 12345                               ! file identifier for output file
   integer, parameter :: max_nirrep_=8                              ! maximum number of irreps
   integer, parameter :: group_mult_tab_(max_nirrep_,max_nirrep_) & ! irrep multiplication table
@@ -32,10 +32,10 @@ module focas_data
   ! *** symmetry data for integrals and densities
 
   type sym_info
-    integer, allocatable :: ngempi(:)                              ! number of geminals per irrep
-    integer, allocatable :: nnzpi(:)                               ! number of nnz matrix elements
-    integer, allocatable :: offset(: )                             ! offset for first matrix element in this irrep
-    integer, allocatable :: gemind(:,:)                            ! symmetry-reduced index of a geminal 
+    integer, allocatable     :: ngempi(:)                          ! number of geminals per irrep
+    integer(ip), allocatable :: nnzpi(:)                           ! number of nnz matrix elements
+    integer(ip), allocatable :: offset(: )                         ! offset for first matrix element in this irrep
+    integer, allocatable     :: gemind(:,:)                        ! symmetry-reduced index of a geminal 
   end type sym_info
 
   ! symmetry data for transformation
@@ -172,10 +172,10 @@ module focas_data
 
     integer function get_nthread()
       ! simple function to set the number of threads to use in the parallel sections of the code
-      integer :: max_thread,omp_get_max_threads
+      integer :: max_thread
       
 # ifdef OMP
-      max_thread = nthread_want_!omp_get_max_threads()
+      max_thread = nthread_want_
 # else
       max_thread = 1
 # endif
