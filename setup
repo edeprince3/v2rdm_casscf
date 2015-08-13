@@ -24,5 +24,6 @@ sed -i -e "s|BINOBJ = |BINOBJ = *.o |g" Makefile
 sed -i -e "s|MY_FCOMPILER|${F90}|g" Makefile.fortran
 sed -i -e "s|MY_FFLAGS|${F90_FLAGS}|g" Makefile.fortran
 
+make clean
 make -f Makefile.fortran
 make
