@@ -6,6 +6,269 @@ module focas_transform_teints
   
   contains
 
+    integer function transform_teints_df(int2)
+      implicit none
+
+      real(wp) :: int2(:)
+
+      type tmp_matrix
+        real(wp), allocatable :: tmp(:,:)
+        real(wp), allocatable :: mat(:,:)
+      end type tmp_matrix
+
+      type(tmp_matrix), allocatable :: aux(:)
+
+      integer :: i_thread,Q,row,col,row_sym,col_sym,int_ind,max_nmopi
+      integer :: col_min,col_max,row_min,row_max,ncol,nrow,row_off,col_off
+      integer :: first_Q(nthread_use_),last_Q(nthread_use_),omp_get_thread_num
+
+      integer :: tmpp(nthread_use_)
+
+      max_nmopi = maxval(trans_%nmopi)
+
+      transform_teints_df = allocate_tmp_matrices()
+
+      transform_teints_df = setup_Q_bounds()
+
+      ! loop over threads
+
+#ifdef OMP
+!$omp parallel shared(first_Q,last_Q,int2,df_vars_,nirrep_) num_threads(nthread_use_)
+!$omp do private(i_thread,Q,col,row,int_ind,col_sym,row_sym,col_min,col_max,row_min,row_max,ncol,nrow,col_off,row_off)
+#endif
+      do i_thread = 1 , nthread_use_
+
+        tmpp(i_thread)=omp_get_thread_num()
+
+        ! loop over Q indeces to be transformed by this thread
+ 
+        do Q = first_Q(i_thread) , last_Q(i_thread)
+
+          ! initialize temporary matrix
+
+          aux(i_thread)%mat = 0.0_wp
+
+          ! *************************************************************
+          ! *** GATHER ( only LT row > col elements are accessed in int2)
+          ! *************************************************************
+
+          ! loop over column indeces
+
+          do col = 1 , nmo_tot_
+
+            ! loop over row indeces
+ 
+            do row = col , nmo_tot_ 
+
+              ! safe off-diagonal elements
+
+              int_ind = df_pq_index(row-1,col-1) * df_vars_%nQ + Q
+
+              aux(i_thread)%mat(row,col) = int2(int_ind)
+
+            end do ! end row loop 
+
+          end do ! end col loop
+
+          ! **************************************************************
+          ! *** TRANSFORM ( only lower triangular blocks are transformed )
+          ! **************************************************************
+
+          ! loop over orbital symmetries in the columns
+
+          do col_sym = 1 , nirrep_
+ 
+            ncol    = trans_%nmopi(col_sym)
+  
+            if ( ncol == 0 ) cycle
+
+            col_off = trans_%offset(col_sym)
+
+            col_min = col_off + 1
+            
+            col_max = col_off + ncol
+
+            ! symmetrize the diagonal block since only the LT elements were saved in the above gather
+
+            call symmetrize_diagonal_block(aux(i_thread)%mat(col_min:col_max,col_min:col_max),ncol)
+
+#ifdef BLAS
+            call dgemm('N','N',ncol,ncol,ncol,1.0_wp,aux(i_thread)%mat(col_min:col_max,col_min:col_max),ncol,&
+                     & trans_%u_irrep_block(col_sym)%val,ncol,0.0_wp,aux(i_thread)%tmp,max_nmopi)
+            call dgemm('T','N',ncol,ncol,ncol,1.0_wp,trans_%u_irrep_block(col_sym)%val,ncol, &
+                     & aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%mat(col_min:col_max,col_min:col_max),ncol)
+#else
+            aux(i_thread)%tmp(1:ncol,1:ncol) = matmul(aux(i_thread)%mat(col_min:col_max,col_min:col_max),&
+                                             & trans_%u_irrep_block(col_sym)%val)
+            aux(i_thread)%mat(col_min:col_max,col_min:col_max) = matmul(transpose(trans_%u_irrep_block(col_sym)%val),&
+                                                               & aux(i_thread)%tmp(1:ncol,1:ncol))
+#endif
+
+            do row_sym = col_sym + 1 , nirrep_
+
+              nrow    = trans_%nmopi(row_sym)
+
+              if ( nrow == 0 ) cycle
+
+              row_off = trans_%offset(row_sym)
+
+              row_min = row_off + 1
+ 
+              row_max = row_off + nrow
+
+#ifdef BLAS
+              call dgemm('N','N',nrow,ncol,ncol,1.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow,&
+                         trans_%u_irrep_block(col_sym)%val,ncol,0.0_wp,aux(i_thread)%tmp,max_nmopi)
+              call dgemm('T','N',nrow,ncol,nrow,1.0_wp,trans_%u_irrep_block(row_sym)%val,nrow, &
+                         aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow)
+#else
+              aux(i_thread)%tmp(1:nrow,1:ncol) = matmul(aux(i_thread)%mat(row_min:row_max,col_min:col_max),&
+                                               & trans_%u_irrep_block(col_sym)%val)
+              aux(i_thread)%mat(row_min:row_max,col_min:col_max) = matmul(transpose(trans_%u_irrep_block(row_sym)%val),&
+                                                                 & aux(i_thread)%tmp(1:nrow,1:ncol))
+#endif
+
+
+            end do ! end row_sym loop
+
+          end do ! end col_sym loop
+
+          ! *************************************************************
+          ! *** SCATTER (only LT row > col elements are accessed in int2)
+          ! *************************************************************
+
+          do col = 1 , nmo_tot_
+
+            ! loop over row indeces
+
+            do row = col , nmo_tot_
+
+              ! safe off-diagonal elements
+
+              int_ind = df_pq_index(row-1,col-1) * df_vars_%nQ + Q
+
+              int2(int_ind) = aux(i_thread)%mat(row,col)
+
+            end do ! end row loop 
+
+          end do ! end col loop
+
+        end do ! end Q loop
+
+      end do ! end i_thread loop
+#ifdef OMP
+!$omp end do
+!$omp end parallel
+#endif
+
+      transform_teints_df = deallocate_tmp_matrices()
+
+      return
+
+      contains
+
+        subroutine symmetrize_diagonal_block(diag_block,ndim)
+        
+         implicit none
+
+         ! simple function to symmetrize a square matrix for which onyl the LT elements 
+         ! were stored
+      
+         integer, intent(in)     :: ndim
+         real(wp), intent(inout) :: diag_block(ndim,ndim)
+
+         integer :: row,col
+
+         do col = 1 , ndim
+
+           do row = col + 1 , ndim
+
+             diag_block(col,row) = diag_block(row,col)
+
+           end do 
+  
+         end do
+
+         return
+
+        end subroutine symmetrize_diagonal_block
+
+        integer function setup_Q_bounds()
+
+          implicit none
+
+          ! simple function to determine first and last auxiliary function index for each thread
+
+          integer :: nQ_ave,i
+
+          nQ_ave = df_vars_%nQ / nthread_use_
+
+          do i = 1 , nthread_use_
+
+            first_Q(i) = ( i - 1 ) * nQ_ave + 1
+ 
+            last_Q(i)  = i * nQ_ave
+
+          end do
+
+          last_Q(nthread_use_) = df_vars_%nQ
+
+          setup_Q_bounds = 0
+
+          return
+
+        end function setup_Q_bounds
+
+        integer function allocate_tmp_matrices()
+
+          implicit none
+
+          ! simple function to allocate temporary matrices for 3-index integral transformation
+
+          integer :: i
+   
+          allocate(aux(nthread_use_))
+         
+          do i = 1 , nthread_use_
+
+            allocate(aux(i)%mat(nmo_tot_,nmo_tot_))
+            allocate(aux(i)%tmp(max_nmopi,max_nmopi))
+
+          end do
+
+          allocate_tmp_matrices = 0
+
+          return
+
+        end function allocate_tmp_matrices
+     
+        integer function deallocate_tmp_matrices()
+
+          implicit none
+
+          ! simple function to deallocate temporary matrices for 3-indes integral transformation
+
+          integer :: i
+
+          if ( .not. allocated(aux) ) return
+ 
+          do i = 1 , size(aux)
+
+            if ( allocated(aux(i)%mat) ) deallocate(aux(i)%mat)
+            if ( allocated(aux(i)%tmp) ) deallocate(aux(i)%tmp)
+
+          end do
+
+          deallocate(aux)
+
+          deallocate_tmp_matrices = 0
+
+          return
+
+        end function deallocate_tmp_matrices
+
+    end function transform_teints_df 
+
     integer function transform_teints(int2)
       implicit none
 

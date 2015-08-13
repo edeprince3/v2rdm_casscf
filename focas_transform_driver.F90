@@ -18,7 +18,11 @@ module focas_transform_driver
       if ( error /= 0 ) stop   
 
       ! 2-e integrals
-      error = transform_teints(int2)
+      if ( df_vars_%use_df_teints == 0 ) then
+        error = transform_teints(int2)
+      else
+        error = transform_teints_df(int2)
+      end if
       if ( error /= 0 ) stop      
 
       return

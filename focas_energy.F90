@@ -8,6 +8,7 @@ module focas_energy
   subroutine compute_energy(int1,int2,den1,den2)
     implicit none
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
+    real(wp) :: t0,t1
 
     ! initialize values
     e1_c_          = 0.0_wp
@@ -58,16 +59,6 @@ module focas_energy
 
     ! total 2-e energy
     e2_total_      = e2_cc_ + e2_ca_ + e2_aa_
-
-!    write(*,'(a,2x,f25.15)')'e_total_:',e_total_
-!    write(*,'(a,2x,f25.15)')'e_frozen_core_:',e_frozen_core_
-!    write(*,'(a,2x,f25.15)')'e_active_:',e_active_
-!    write(*,'(a,2x,f25.15)')'e1_c:',e1_c_ 
-!    write(*,'(a,2x,f25.15)')'e1_a:',e1_a_
-!    write(*,'(a,2x,f25.15)')'e2_cc:',e2_cc_
-!    write(*,'(a,2x,f25.15)')'e2_ca:',e2_ca_
-!    write(*,'(a,2x,f25.15)')'e2_aa:',e2_aa_
-!    stop
 
     return
   end subroutine compute_energy

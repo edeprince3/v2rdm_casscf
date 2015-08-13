@@ -152,12 +152,10 @@ module focas_data
       integer, intent(in) ::i,j
       integer(ip) :: df_pq_index
       if (i.ge.j) then
-        df_pq_index= i + j * nmo_tot_
-!        df_pq_index=ishft(i*(i+1),-1)+j
+        df_pq_index= i * ( i + 1 ) / 2 + j !i + j * nmo_tot_
         return
       else
-        df_pq_index= j + i * nmo_tot_
-!        df_pq_index=ishft(j*(j+1),-1)+i
+        df_pq_index= j * ( j + 1 ) / 2 + i !j + i * nmo_tot_
         return
       end if
     end function df_pq_index
@@ -175,13 +173,13 @@ module focas_data
       ! simple function to set the number of threads to use in the parallel sections of the code
       integer :: max_thread,omp_get_max_threads
       
-#ifdef OMP
-      max_thread = omp_get_max_threads()
-#else
+# ifdef OMP
+      max_thread = nthread_want_!omp_get_max_threads()
+# else
       max_thread = 1
-#endif
+# endif
       get_nthread = min( max_thread , nthread_want_ )
-   
+
       return 
 
     end function get_nthread

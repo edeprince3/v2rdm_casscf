@@ -10,53 +10,35 @@ module focas_gradient
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
     real(wp) :: t0,t1
 
-    t0=timer()
     ! calculate inactive Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_i(int1,int2)
     else
       call compute_f_i_df(int1,int2)
     endif
-    t1=timer()
-    write(*,*)'inactive',t1-t0
 
-    t0=timer()
     ! calculate active Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_a(den1,int2)
     else
       call compute_f_a_df(den1,int2)
     endif
-    t1=timer()
-    write(*,*)'active',t1-t0
 
-    t0=timer()
     ! calculate auxiliary q matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_q(den2,int2)
     else
       call compute_q_df(den2,int2)
     endif
-    t1=timer()
-    write(*,*)'q',t1-t0
  
-    t0=timer()
     ! calculate auxiliary z matrix
     call compute_z(den1)
-    t1=timer()
-    write(*,*)'z',t1-t0
  
-    t0=timer()
     ! build generalized Fock matrix
     call compute_f_gen(den1)
-    t1=timer()
-    write(*,*)'f_gen',t1-t0
 
-    t0=timer()
     ! compute gradient
     call compute_orbital_gradient()
-    t1=timer()
-    write(*,*)'gradient',t1-t0
 
 !    ! print the gradient 
 !    call print_orbital_gradient()
@@ -320,111 +302,313 @@ module focas_gradient
     ! initialize
     q_ = 0.0_wp
 
-    ! loop irreps for m and v
+    ! loop over classes for m
 
-    do m_sym = 1 , nirrep_
+    do m_class = 1 , 3
 
-      ! loop over irreps for w
+      ! loop over symmetries for m
 
-      do w_sym = 1, nirrep_
+      do m_sym = 1 , nirrep_
 
-        ! mw//vw symmetry
-        mw_sym = group_mult_tab_(m_sym,w_sym)
-        ! offsets for integral/density addressing
-        den_sym_offset = dens_%offset(mw_sym)
+        ! loop over orbital index m
 
-        ! loop over irreps for x
+        do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
 
-        do x_sym = 1 , nirrep_
+          ! m index in df order
 
-          ! correspoing irrep for y
-          y_sym = group_mult_tab_(x_sym,mw_sym)
+          mdf = df_vars_%class_to_df_map(m)
 
-          ! at this point, we have mw_sym == xy_sym && m_sym == v_sym
+          ! loop over orbital index v
 
-          ! loop over m_class
+#ifdef OMP
+!$omp parallel shared(m_class,m_sym,m,mdf,first_index_,last_index_,df_vars_,den2,int2,dens_,q_) num_threads(nthread_use_)
+!$omp do private(val,v,vdf,w_sym,mw_sym,den_Sym_offset,w,wdf,mw,vw_den,x_sym,y_sym,x,y,xdf,ydf,xy,xy_den,den_ind,int_val)
+#endif
 
-          do m_class = 1 , 3
+          do v = first_index_(m_sym,2) , last_index_(m_sym,2)
 
-            ! loop over v indeces
+            ! v index in df order
 
-            do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
+            vdf = df_vars_%class_to_df_map(v)
 
-              ! orbital index in df order
-              mdf = df_vars_%class_to_df_map(m)
+            ! initialize matrix element
+  
+            val = 0.0_wp
 
-              ! loop over v \in A
+            ! loop over symmetries for w
 
-              do v = first_index_(m_sym,2) , last_index_(m_sym,2)
+            do w_sym = 1 , nirrep_
 
-                ! orbital index in df order
-                vdf = df_vars_%class_to_df_map(v)
+              ! symmetry of mw geminal
 
-                ! initialize q matrix element
-                val     = 0.0_wp
+              mw_sym = group_mult_tab_(m_sym,w_sym)
 
-                ! loop over w indeces
+              ! vw density offset 
+             
+              den_sym_offset = dens_%offset(mw_sym)
 
-                 do w = first_index_(w_sym,2) , last_index_(w_sym,2)
-
-                  ! orbital index in df order
-                  wdf     = df_vars_%class_to_df_map(w)
-
-                  ! save geminal indeces for integral/density addressing
-                  mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
-                  vw_den  = dens_%gemind(v,w)
-
-                  ! loop over x indeces
-
-                  do x = first_index_(x_sym,2) , last_index_(x_sym,2)
-
-                    ! orbital index in df order
-                    xdf = df_vars_%class_to_df_map(x) 
+              ! loop over w orbital index
  
-                    ! loop over y indeces
+              do w = first_index_(w_sym,2) , last_index_(w_sym,2)
 
-                    do y = first_index_(y_sym,2) , last_index_(y_sym,2)
+                ! w indef in df order
+           
+                wdf    = df_vars_%class_to_df_map(w)
 
-                      ! xy geminal index for density addressing 
-                      xy_den  = dens_%gemind(x,y)
-                      ! density address
-                      den_ind = pq_index(xy_den,vw_den) + den_sym_offset
+                ! mw geminal index in df order
+
+                mw     = df_pq_index(mdf,wdf) * df_vars_%nQ
+
+                ! vw geminal index for density
+
+                vw_den = dens_%gemind(v,w)
+
+                ! loop over x_sym
+
+                do x_sym = 1 , nirrep_
+
+                  ! figure out symmetry of y
+
+                  y_sym = group_mult_tab_(mw_sym,x_sym)
+
+                  if ( y_sym == x_sym ) then
+                 
+                    ! loop over x orbital index
  
-                      ! orbital index in df order
-                      ydf     = df_vars_%class_to_df_map(y)
+                    do x = first_index_(x_sym,2) , last_index_(x_sym,2)
 
-                      ! geminal index in df order
-                      xy      = df_pq_index(xdf,ydf) * df_vars_%nQ
+                      ! x index in df order
+     
+                      xdf = df_vars_%class_to_df_map(x)
+
+                      ! ***********************************************
+                      ! loop over y orbital index (x>y) --> factor of 2
+                      ! ***********************************************
+
+                      do y = first_index_(y_sym,2) , x - 1
+
+                        ! y index in df order
+                        
+                        ydf     = df_vars_%class_to_df_map(y)
+
+                        ! xy geminal index and density index
+
+                        xy_den  = dens_%gemind(x,y)
+                        den_ind = pq_index(vw_den,xy_den) + den_sym_offset
+                    
+                        ! xy geminal index in df order
+                        xy  = df_pq_index(xdf,ydf) * df_vars_%nQ  
 
 #ifdef BLAS
-                      int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)                       
+                        int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)
+#else
+                        int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
+#endif
+
+                        ! update matrix element
+
+                        val = val + 2.0_wp * int_val * den2(den_ind)
+
+                      end do ! end y loop
+
+                      ! **********************
+                      ! x == y --> factor of 1
+                      ! **********************
+
+                      xy_den  = dens_%gemind(x,x)
+                      den_ind = pq_index(vw_den,xy_den) + den_sym_offset
+
+                      ! xy geminal index in df order
+                      xy  = df_pq_index(xdf,xdf) * df_vars_%nQ
+
+#ifdef BLAS
+                      int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)
 #else
                       int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
 #endif
 
-                      ! update temporary value
-                      val     = val + den2(den_ind) * int_val
+                      ! update matrix element
 
-                    end do ! end y loop
+                      val = val + int_val * den2(den_ind)
 
-                  end do ! end x loop
+                    end do ! end x loop
 
-                end do ! end w loop
+                  elseif ( y_sym < x_sym) then
 
-                ! update q matrix element
-                q_( v - ndoc_tot_ , m ) = q_( v - ndoc_tot_ , m ) + val
+                    ! loop over x orbital index
 
-              end do ! end v loop
+                    do x = first_index_(x_sym,2) , last_index_(x_sym,2)
 
-            end do ! end m loop 
+                      ! x index in df order
 
-          end do ! end m_class loop
+                      xdf = df_vars_%class_to_df_map(x)
 
-        end do ! end x_sym loop
+                      ! ***********************************************
+                      ! loop over y orbital index (x>y) --> factor of 2
+                      ! ***********************************************
 
-      end do ! end w_sym loop
+                      do y = first_index_(y_sym,2) , last_index_(y_sym,2)
 
-    end do ! end m_sym loop
+                        ! y index in df order
+
+                        ydf     = df_vars_%class_to_df_map(y)
+
+                        ! xy geminal index and density index
+
+                        xy_den  = dens_%gemind(x,y)
+                        den_ind = pq_index(vw_den,xy_den) + den_sym_offset
+
+                        ! xy geminal index in df order
+                        xy  = df_pq_index(xdf,ydf) * df_vars_%nQ
+
+#ifdef BLAS
+                        int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)
+#else
+                        int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
+#endif
+
+                        ! update matrix element
+
+                        val = val + 2.0_wp * int_val * den2(den_ind)
+
+                      end do ! end y loop
+
+                    end do ! end x loop
+
+                  endif 
+
+                end do ! end x_sym loop
+
+              end do ! end w loop
+
+            end do ! end w_sym loop
+
+            ! save matrix element
+
+            q_( v - ndoc_tot_ , m ) = val
+           
+          end do ! end v loop
+
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
+
+        end do ! end m loop
+
+      end do ! end m_sym loop 
+
+    end do ! end m_class loop
+    
+
+!    ! loop irreps for m and v
+!
+!    do m_sym = 1 , nirrep_
+!
+!      ! loop over irreps for w
+!
+!      do w_sym = 1, nirrep_
+!
+!        ! mw//vw symmetry
+!        mw_sym = group_mult_tab_(m_sym,w_sym)
+!        ! offsets for integral/density addressing
+!        den_sym_offset = dens_%offset(mw_sym)
+!
+!        ! loop over irreps for x
+!
+!        do x_sym = 1 , nirrep_
+!
+!          ! correspoing irrep for y
+!          y_sym = group_mult_tab_(x_sym,mw_sym)
+!
+!          ! at this point, we have mw_sym == xy_sym && m_sym == v_sym
+!
+!          ! loop over m_class
+!!
+!!          do m_class = 1 , 3
+!!
+!!            ! loop over v indeces
+!
+!            do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
+!
+!              ! orbital index in df order
+!              mdf = df_vars_%class_to_df_map(m)
+!
+!              ! loop over v \in A
+!
+!              do v = first_index_(m_sym,2) , last_index_(m_sym,2)
+!
+!                ! orbital index in df order
+!                vdf = df_vars_%class_to_df_map(v)
+!
+!                ! initialize q matrix element
+!                val     = 0.0_wp
+!
+!                ! loop over w indeces
+!
+!                do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+!
+!                  ! orbital index in df order
+!                  wdf     = df_vars_%class_to_df_map(w)
+!
+!                  ! save geminal indeces for integral/density addressing
+!                  mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
+!                  vw_den  = dens_%gemind(v,w)
+!
+!                  ! loop over x indeces
+!
+!                  do x = first_index_(x_sym,2) , last_index_(x_sym,2)
+!
+!                    ! orbital index in df order
+!                    xdf = df_vars_%class_to_df_map(x) 
+! 
+!                    ! loop over y indeces
+!
+!                    do y = first_index_(y_sym,2) , last_index_(y_sym,2)
+!
+!                      ! xy geminal index for density addressing 
+!                      xy_den  = dens_%gemind(x,y)
+!                      ! density address
+!                      den_ind = pq_index(xy_den,vw_den) + den_sym_offset
+! 
+!                      ! orbital index in df order
+!                      ydf     = df_vars_%class_to_df_map(y)
+!
+!                      ! geminal index in df order
+!                      xy      = df_pq_index(xdf,ydf) * df_vars_%nQ
+!
+!#ifdef BLAS
+!                      int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)                       
+!#else
+!                      int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
+!#endif
+!
+!                      ! update temporary value
+!                      val     = val + den2(den_ind) * int_val
+!
+!                    end do ! end y loop
+!
+!                  end do ! end x loop
+!
+!                end do ! end w loop
+!
+!                ! update q matrix element
+!                if ( q_( v - ndoc_tot_ , m ) /= 0.0_wp ) write(*,*)'access again'
+!                q_( v - ndoc_tot_ , m ) = q_( v - ndoc_tot_ , m ) + val
+!
+!              end do ! end v loop
+!
+!            end do ! end m loop 
+!
+!          end do ! end m_class loop
+!
+!        end do ! end x_sym loop
+!
+!      end do ! end w_sym loop
+!
+!    end do ! end m_sym loop
+!
+!    stop
 
     return
 
@@ -475,14 +659,14 @@ module focas_gradient
             do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
 
               ! loop over v \in A
- 
+
               do v = first_index_(m_sym,2) , last_index_(m_sym,2)
 
                 ! initialize q matrix element
                 val     = 0.0_wp
 
                 ! loop over w indeces
- 
+
                 do w = first_index_(w_sym,2) , last_index_(w_sym,2)
                   
                   ! save geminal indeces for integral/density addressing
@@ -562,6 +746,11 @@ module focas_gradient
           mdf = df_vars_%class_to_df_map(m)
 
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
+
+#ifdef OMP
+!$omp parallel shared(ints_,dens_,m_class,m_sym,m,mdf,first_index_,last_index_,df_vars_,den1,int2) num_threads(nthread_use_)
+!$omp do private(n,ndf,mn,val,w_sym,w,wdf,v,den_ind,dval,vdf,vw,ival,ww,mw,wn,vn,mn_fock)
+#endif
 
           do n = first_index_(m_sym,m_class) , m
 
@@ -658,11 +847,21 @@ module focas_gradient
 
           end do ! end n loop
 
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
+
           ! loop over orbital classes for n (n_class < m_class --> n < m) 
 
           do n_class = 1 , m_class - 1
 
             ! loop over n indeces
+
+#ifdef OMP
+!$omp parallel shared(n_class,ints_,dens_,m_class,m_sym,m,mdf,first_index_,last_index_,df_vars_,den1,int2) num_threads(nthread_use_)
+!$omp do private(n,ndf,mn,val,w_sym,w,wdf,v,den_ind,dval,vdf,vw,ival,mw,wn,mn_fock)
+#endif
 
             do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
 
@@ -758,6 +957,11 @@ module focas_gradient
               fock_a_(mn_fock) = val
 
             end do ! end n loop
+
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
 
           end do ! and n_class loop
 
@@ -926,9 +1130,10 @@ module focas_gradient
     ! orbital classes. 
     implicit none
     real(wp), intent(in) :: int1(:),int2(:)
-    integer :: m_class,n_class,m_sym,m,n,i,i_sym,mi_sym,mdf,ndf,idf
+    integer :: m_class,n_class,m_sym,m,n,i,i_sym,mi_sym,mdf,ndf,idf,error
     integer(ip) :: int_ind,mn,mn_fock,mn_int1,ii,mi,in,sym_offset
     real(wp) :: val,int_val,ddot
+!    integer :: first_m(nthread_use_),last_m(nthread_use_)
 
     ! initialize
     fock_i_ = 0.0_wp
@@ -943,12 +1148,21 @@ module focas_gradient
 
         ! loop over m indeces
 
+!#ifdef OMP
+!!$omp parallel shared(first_index_,last_index_,fock_i_,int2,int1,ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
+!!$omp do private(m,mdf,n,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock,n_class)
+!#endif
         do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
 
           ! orbital index in df order
           mdf = df_vars_%class_to_df_map(m)
 
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
+
+#ifdef OMP
+!$omp parallel shared(m,mdf,first_index_,last_index_,fock_i_,int2,int1,ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
+!$omp do private(n,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock,n_class)
+#endif
 
           do n = first_index_(m_sym,m_class) , m
 
@@ -1009,12 +1223,21 @@ module focas_gradient
 
           end do ! end n loop
 
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
+
           ! loop over orbital classes for n (n_class < m_class --> n < m) 
 
           do n_class = 1 , m_class - 1
 
             ! loop over n indeces
 
+#ifdef OMP
+!$omp parallel shared(n_class,m,mdf,first_index_,last_index_,fock_i_,int2,int1,ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
+!$omp do private(n,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock)
+#endif
             do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
 
               mn_int1 = ints_%gemind(m,n)
@@ -1071,15 +1294,25 @@ module focas_gradient
 
             end do ! end n_loop
 
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
+
           end do ! end n_class loop
 
         end do ! end m_loop
+!#ifdef OMP
+!!$omp end do nowait
+!!$omp end parallel
+!#endif
 
       end do ! end m_sym loop
 
     end do ! end m_class loop
 
     return
+
   end subroutine compute_f_i_df
 
   subroutine compute_f_i(int1,int2)

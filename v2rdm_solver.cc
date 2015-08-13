@@ -1752,11 +1752,13 @@ boost::shared_ptr<Matrix> v2RDMSolver::ReadOEI() {
 //build K2 using 3-index integrals 
 void v2RDMSolver::DFK2() {
 
+    // one-electron integrals:  
+    boost::shared_ptr<Matrix> K1 = GetOEI();
+
     outfile->Printf("    ==> Transform three-electron integrals <==\n");
     outfile->Printf("\n");
 
     double start = omp_get_wtime();
-
     ThreeIndexIntegrals();
 
     double end = omp_get_wtime();
@@ -1765,11 +1767,8 @@ void v2RDMSolver::DFK2() {
     outfile->Printf("    Time for integral transformation:  %7.2lf s\n",end-start);
     outfile->Printf("\n");
 
-    // one-electron integrals:  
-    boost::shared_ptr<Matrix> K1 = GetOEI();
-
     // size of the 3-index integral buffer
-    tei_full_dim = nQ_*nso_*nso_;
+    tei_full_dim = nQ_*nso_*(nso_+1)/2;
 
     d2_plus_core_dim = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -1777,7 +1776,7 @@ void v2RDMSolver::DFK2() {
     }
 
     // just point to 3-index integral buffer
-    tei_full_sym      = Qmo_->pointer()[0]; 
+    tei_full_sym      = Qmo_;
 
     d2_plus_core_sym  = (double*)malloc(d2_plus_core_dim*sizeof(double));
     memset((void*)d2_plus_core_sym,'\0',d2_plus_core_dim*sizeof(double));
@@ -4399,8 +4398,8 @@ void v2RDMSolver::RepackIntegralsDF(){
             for (int h2 = 0; h2 < nirrep_; h2++) {
                 for (long int j = 0; j < frzcpi_[h2]; j++) {
                     long int jj = j + offset2;
-                    double dum1 = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+ii],1,Qmo_->pointer()[jj*nso_+jj],1);
-                    double dum2 = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+jj],1,Qmo_->pointer()[ii*nso_+jj],1);
+                    double dum1 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,ii),1,Qmo_+nQ_*INDEX(jj,jj),1);
+                    double dum2 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,jj),1,Qmo_+nQ_*INDEX(ii,jj),1);
                     efrzc2 += 2.0 * dum1 - dum2;
                 }
                 offset2 += nmopi_[h2];
@@ -4434,8 +4433,8 @@ void v2RDMSolver::RepackIntegralsDF(){
 
                     for (long int k = 0; k < frzcpi_[h2]; k++) {
                         int kk = k + offset2;
-                        dum1 += C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+jj],1,Qmo_->pointer()[kk*nso_+kk],1);
-                        dum2 += C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+kk],1,Qmo_->pointer()[jj*nso_+kk],1);
+                        dum1 += C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,jj),1,Qmo_+nQ_*INDEX(kk,kk),1);
+                        dum2 += C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,kk),1);
                     }
                     offset2 += nmopi_[h2];
                 }
@@ -4469,7 +4468,7 @@ void v2RDMSolver::RepackIntegralsDF(){
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                c_p[d2aboff[h] + ij*gems_ab[h]+kl] = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+kk],1,Qmo_->pointer()[jj*nso_+ll],1);
+                c_p[d2aboff[h] + ij*gems_ab[h]+kl] = C_DDOT(nQ_,Qmo_+nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,ll),1);
             }
         }
     }
@@ -4490,8 +4489,8 @@ void v2RDMSolver::RepackIntegralsDF(){
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                double dum1 = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+kk],1,Qmo_->pointer()[jj*nso_+ll],1);
-                double dum2 = C_DDOT(nQ_,Qmo_->pointer()[ii*nso_+ll],1,Qmo_->pointer()[jj*nso_+kk],1);
+                double dum1 = C_DDOT(nQ_,Qmo_+nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,ll),1);
+                double dum2 = C_DDOT(nQ_,Qmo_+nQ_*INDEX(ii,ll),1,Qmo_+nQ_*INDEX(jj,kk),1);
 
                 c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
                 c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;

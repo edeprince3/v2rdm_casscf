@@ -118,7 +118,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   nnz_den2 = sum(nnz_den_new)
   call focas_optimize(integrals_1,nnz_int1,integrals_2,nnz_int2,                    &
                     & density_1(1:nnz_den1),nnz_den1,density_2(1:nnz_den2),nnz_den2,&
-                    & ndocpi,nactpi,nextpi,nirrep,gnorm_tol,dele_tol,gnorm,delrot,converged,df_ints)
+                    & ndocpi,nactpi,nextpi,nirrep,gnorm_tol,dele_tol,gnorm,delrot,converged,df_ints,nproc)
   call final_sort()
   jacobi_data_io(7)=real(1.0_wp,kind=wp)
   jacobi_data_io(8)=real(1.0_wp,kind=wp)

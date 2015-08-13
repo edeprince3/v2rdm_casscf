@@ -9,7 +9,7 @@ if you want to link to fortran functions, do the following.
 
 # fortran tuff
 F90       = ifort
-F90FLAGS  = -O3 -fPIC -DOMP -DBLAS
+F90FLAGS  = -O3 -openmp -fPIC -DOMP -DBLAS
 LDFLAGS  += -lifcore
 #F90       = gfortran
 #F90FLAGS  = -g -C -fPIC
