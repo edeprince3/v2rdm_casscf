@@ -338,6 +338,11 @@ module focas_gradient
 
           ! loop over orbital index v
 
+#ifdef OMP
+!$omp parallel shared(m_class,m_sym,m,mdf,first_index_,last_index_,df_vars_,den2,int2,dens_,q_) num_threads(nthread_use_)
+!$omp do private(val,v,vdf,w_sym,mw_sym,den_Sym_offset,w,wdf,mw,vw_den,x_sym,y_sym,x,y,xdf,ydf,xy,xy_den,den_ind,int_val)
+#endif
+
           do v = first_index_(m_sym,2) , last_index_(m_sym,2)
 
             ! v index in df order
@@ -492,15 +497,20 @@ module focas_gradient
 
                 end do ! end x_sym loop
 
-              end do ! end w_sym loop
+              end do ! end w loop
 
-            end do ! end w loop
+            end do ! end w_sym loop
 
             ! save matrix element
 
             q_( v - ndoc_tot_ , m ) = val
            
-          end do ! end n loop
+          end do ! end v loop
+
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
 
         end do ! end m loop
 
