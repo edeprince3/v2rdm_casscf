@@ -12,6 +12,7 @@ module focas_transform_teints
       real(wp) :: int2(:)
 
       type tmp_matrix
+        real(wp), allocatable :: int_tmp(:)
         real(wp), allocatable :: tmp(:,:)
         real(wp), allocatable :: mat(:,:)
       end type tmp_matrix
@@ -54,17 +55,19 @@ module focas_transform_teints
 
           ! loop over column indeces
 
+          int_ind = Q
+
           do col = 1 , nmo_tot_
 
             ! loop over row indeces
  
-            do row = col , nmo_tot_ 
+            do row = 1 , col
 
-              ! safe off-diagonal elements
+              ! save off-diagonal elements
+ 
+              aux(i_thread)%mat(col,row) = int2(int_ind)
 
-              int_ind = df_pq_index(row-1,col-1) * df_vars_%nQ + Q
-
-              aux(i_thread)%mat(row,col) = int2(int_ind)
+              int_ind = int_ind + df_vars_%nQ
 
             end do ! end row loop 
 
@@ -137,17 +140,19 @@ module focas_transform_teints
           ! *** SCATTER (only LT row > col elements are accessed in int2)
           ! *************************************************************
 
+          int_ind = Q
+
           do col = 1 , nmo_tot_
 
             ! loop over row indeces
 
-            do row = col , nmo_tot_
+            do row = 1 , col
 
-              ! safe off-diagonal elements
+              ! save off-diagonal elements
 
-              int_ind = df_pq_index(row-1,col-1) * df_vars_%nQ + Q
+              int2(int_ind) = aux(i_thread)%mat(col,row)
 
-              int2(int_ind) = aux(i_thread)%mat(row,col)
+              int_ind = int_ind + df_vars_%nQ
 
             end do ! end row loop 
 
