@@ -1,6 +1,6 @@
 # fortran stuff
-F90       = gfortran-mp-4.8
-F90FLAGS  = -O2
+F90       = MY_FCOMPILER 
+F90FLAGS  = MY_FFLAGS
 
 default: 
 	$(F90) $(F90FLAGS) focas_data.F90 -c
