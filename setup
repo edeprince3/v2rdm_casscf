@@ -1,0 +1,16 @@
+#!/bin/bash
+
+psi4 --new-plugin-makefile
+
+F90=gfortran-mp-4.8
+F90_FLAGS=-O2
+F90_LIB='-L/opt/local/lib/gcc48/ -lgfortran'
+
+sed -i -e "s|LDFLAGS +=|LDFLAGS += ${F90_LIB}|g" Makefile
+sed -i -e "s|BINOBJ = |BINOBJ = *.o |g" Makefile
+
+sed -i -e "s|MY_FCOMPILER|${F90}|g" Makefile.fortran
+sed -i -e "s|MY_FFLAGS|${F90_FLAGS}|g" Makefile.fortran
+
+make -f Makefile.fortran
+make
