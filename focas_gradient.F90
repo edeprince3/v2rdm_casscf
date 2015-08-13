@@ -41,7 +41,7 @@ module focas_gradient
     call compute_orbital_gradient()
 
 !    ! print the gradient 
-!    call print_orbital_gradient()
+!    if ( log_print_ == 1 ) call print_orbital_gradient()
 
     return
   end subroutine orbital_gradient
@@ -52,7 +52,7 @@ module focas_gradient
     character(1) :: ityp,jtyp
     ! loop over rotation pairs
 
-    write(*,'(a)')'orbital gradient:'
+    write(fid_,'(a)')'orbital gradient:'
 
     newline=0
 
@@ -101,11 +101,11 @@ module focas_gradient
 
               ij_pair = ij_pair + 1
 
-              write(*,'(a,a,a,a,i3,a,i3,a,1x,es10.3,4x)',advance='no')jtyp,'-',ityp,' (',j,',',i,')',orbital_gradient_(ij_pair)
+              write(fid_,'(a,a,a,a,i3,a,i3,a,1x,es10.3,4x)',advance='no')jtyp,'-',ityp,' (',j,',',i,')',orbital_gradient_(ij_pair)
 
               newline = newline + 1
 
-              if ( mod(newline,4) == 0 ) write(*,*)
+              if ( mod(newline,4) == 0 ) write(fid_,*)
 
             end do
 
@@ -116,9 +116,9 @@ module focas_gradient
       end do 
 
     end do
-    if ( mod(newline,4) /= 0 ) write(*,*)
+    if ( mod(newline,4) /= 0 ) write(fid_,*)
 
-    write(*,'(a,1x,es10.3)')'gradient norm:',grad_norm_
+    write(fid_,'(a,1x,es10.3)')'gradient norm:',grad_norm_
 
     return
 
@@ -499,116 +499,6 @@ module focas_gradient
       end do ! end m_sym loop 
 
     end do ! end m_class loop
-    
-
-!    ! loop irreps for m and v
-!
-!    do m_sym = 1 , nirrep_
-!
-!      ! loop over irreps for w
-!
-!      do w_sym = 1, nirrep_
-!
-!        ! mw//vw symmetry
-!        mw_sym = group_mult_tab_(m_sym,w_sym)
-!        ! offsets for integral/density addressing
-!        den_sym_offset = dens_%offset(mw_sym)
-!
-!        ! loop over irreps for x
-!
-!        do x_sym = 1 , nirrep_
-!
-!          ! correspoing irrep for y
-!          y_sym = group_mult_tab_(x_sym,mw_sym)
-!
-!          ! at this point, we have mw_sym == xy_sym && m_sym == v_sym
-!
-!          ! loop over m_class
-!!
-!!          do m_class = 1 , 3
-!!
-!!            ! loop over v indeces
-!
-!            do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
-!
-!              ! orbital index in df order
-!              mdf = df_vars_%class_to_df_map(m)
-!
-!              ! loop over v \in A
-!
-!              do v = first_index_(m_sym,2) , last_index_(m_sym,2)
-!
-!                ! orbital index in df order
-!                vdf = df_vars_%class_to_df_map(v)
-!
-!                ! initialize q matrix element
-!                val     = 0.0_wp
-!
-!                ! loop over w indeces
-!
-!                do w = first_index_(w_sym,2) , last_index_(w_sym,2)
-!
-!                  ! orbital index in df order
-!                  wdf     = df_vars_%class_to_df_map(w)
-!
-!                  ! save geminal indeces for integral/density addressing
-!                  mw      = df_pq_index(mdf,wdf) * df_vars_%nQ
-!                  vw_den  = dens_%gemind(v,w)
-!
-!                  ! loop over x indeces
-!
-!                  do x = first_index_(x_sym,2) , last_index_(x_sym,2)
-!
-!                    ! orbital index in df order
-!                    xdf = df_vars_%class_to_df_map(x) 
-! 
-!                    ! loop over y indeces
-!
-!                    do y = first_index_(y_sym,2) , last_index_(y_sym,2)
-!
-!                      ! xy geminal index for density addressing 
-!                      xy_den  = dens_%gemind(x,y)
-!                      ! density address
-!                      den_ind = pq_index(xy_den,vw_den) + den_sym_offset
-! 
-!                      ! orbital index in df order
-!                      ydf     = df_vars_%class_to_df_map(y)
-!
-!                      ! geminal index in df order
-!                      xy      = df_pq_index(xdf,ydf) * df_vars_%nQ
-!
-!#ifdef BLAS
-!                      int_val = ddot(df_vars_%nQ,int2(mw+1:mw+df_vars_%nQ),1,int2(xy+1:xy+df_vars_%nQ),1)                       
-!#else
-!                      int_val =      dot_product(int2(mw+1:mw+df_vars_%nQ),  int2(xy+1:xy+df_vars_%nQ))
-!#endif
-!
-!                      ! update temporary value
-!                      val     = val + den2(den_ind) * int_val
-!
-!                    end do ! end y loop
-!
-!                  end do ! end x loop
-!
-!                end do ! end w loop
-!
-!                ! update q matrix element
-!                if ( q_( v - ndoc_tot_ , m ) /= 0.0_wp ) write(*,*)'access again'
-!                q_( v - ndoc_tot_ , m ) = q_( v - ndoc_tot_ , m ) + val
-!
-!              end do ! end v loop
-!
-!            end do ! end m loop 
-!
-!          end do ! end m_class loop
-!
-!        end do ! end x_sym loop
-!
-!      end do ! end w_sym loop
-!
-!    end do ! end m_sym loop
-!
-!    stop
 
     return
 

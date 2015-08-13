@@ -70,10 +70,6 @@ module focas_transform_oeints
 
         end do ! end i_irrep loop
 
-        ! debug
-        ! call print_block(irrep_block_1,num_i,i_sym)
-        ! end debug
-
         ! *****************
         ! *** TRANSFORM ***
         ! *****************
@@ -81,10 +77,6 @@ module focas_transform_oeints
         irrep_block_2(1:num_i,1:num_i) = matmul(irrep_block_1(1:num_i,1:num_i),trans_%u_irrep_block(i_sym)%val)
 
         irrep_block_1(1:num_i,1:num_i) = matmul(transpose(trans_%u_irrep_block(i_sym)%val),irrep_block_2(1:num_i,1:num_i))
-
-        ! debug
-        ! call print_block(irrep_block_1,num_i,i_sym)
-        ! end debug
 
         ! ***************
         ! *** SCATTER ***
@@ -129,18 +121,5 @@ module focas_transform_oeints
       return
   
     end function transform_oeints
-
-    subroutine print_block(mat,ncol,isym)
-      implicit none
-      real(wp) :: mat(:,:)
-      integer :: ncol,isym,i,j
-      write(*,'(a,1x,i1,1x,a,i2)')'new irrep block',isym,'nmo = ',ncol
-      do i = 1 , ncol
-        do j = 1 , i
-          write(*,'(2(i2,1x),f12.8)')i,j,mat(j,i)
-        end do
-      end do
-      return
-    end subroutine print_block
 
 end module focas_transform_oeints

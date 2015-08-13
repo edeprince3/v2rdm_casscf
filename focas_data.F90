@@ -5,7 +5,7 @@ module focas_data
 
   integer, parameter :: wp = selected_real_kind(10)                ! general working precision kind value
   integer, parameter :: ip = selected_int_kind(8)                  ! 64-bit integers (integral addressing)
-  integer, parameter :: fid = 12345                                ! file identifier for output file
+  integer, parameter :: fid_ = 12345                               ! file identifier for output file
   integer, parameter :: max_nirrep_=8                              ! maximum number of irreps
   integer, parameter :: group_mult_tab_(max_nirrep_,max_nirrep_) & ! irrep multiplication table
       & = reshape( (/    &  
@@ -109,6 +109,7 @@ module focas_data
   integer :: include_aa_rot_                                       ! 1/0 = include/do not include rotations between active-active orbtials
   integer :: nthread_use_                                          ! number of threads to use in parallel parts of the code (this is the actuaal number of threads used)
   integer :: nthread_want_                                         ! number of threads to use in parallel parts of the code ( as specified by user )
+  integer :: log_print_                                            ! 1/0 = flag for printing iteration/info for orbtial optimization
 
   ! *** doubles
   real(wp) :: e1_c_                                                ! core contribution to 1-e energy

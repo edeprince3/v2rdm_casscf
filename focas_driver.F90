@@ -11,7 +11,7 @@ module focas_driver
   contains
 
   subroutine focas_optimize(int1,nnz_int1,int2,nnz_int2,den1,nnz_den1,den2,nnz_den2,ndocpi,nactpi,nextpi,nirrep, &
-                           & gnorm_tol,dele_tol,gnorm_last,dele_last,converged,df_ints_in,nthread)
+                           & gnorm_tol,dele_tol,gnorm_last,dele_last,converged,df_ints_in,nthread,fname,print_fl)
  
     ! integer input
     integer, intent(in)     :: nthread         ! number of threads to use
@@ -25,6 +25,7 @@ module focas_driver
     integer, intent(in)     :: ndocpi(nirrep)  ! number of doubly occupied orbitals per irrep (includes frozen doubly occupied orbitals)
     integer, intent(in)     :: nactpi(nirrep)  ! number of active orbitals per irrep
     integer, intent(in)     :: nextpi(nirrep)  ! number of virtual orbitals per irrep (excluding forzen virtual orbitals) 
+    integer, intent(in)     :: print_fl        ! flag for printing output information
     ! real input
     real(wp), intent(inout) :: dele_last       ! final energy change
     real(wp), intent(inout) :: gnorm_last      ! final gradient norm
@@ -34,19 +35,35 @@ module focas_driver
     real(wp), intent(in)    :: int2(nnz_int2)  ! nonzero 2-e integral matrix elements 
     real(wp), intent(in)    :: den1(nnz_den1)  ! nonzero 1-e density matrix elements
     real(wp), intent(in)    :: den2(nnz_den2)  ! nonzero 2-e density matrix elements
+    ! character
+    character(*), intent(in) :: fname          ! name of file to print output
 
     ! timing variables
     real(wp) :: t0,t1,t_ene,t_gh,t_exp,t_trans
 
     ! iteration variables
     real(wp) :: current_energy,last_energy,delta_energy,gradient_norm_tolerance,delta_energy_tolerance
-    real(wp) :: step_size
-    integer :: iter,max_iter,error
+    real(wp) :: step_size,initial_energy
+    integer  :: iter,max_iter,error
+  
+    ! other variables
+    logical :: fexist
 
     ! orbitals should be sorted accoring to 
     ! 1) class (doubly occupied, active, virtual)
     ! 2) within each class, orbitals should be sorted accoring to irrep
     ! 3) within each class and irrep, orbitals are sorted according to energy
+
+    log_print_ = print_fl
+    if ( log_print_ == 1 ) then
+      inquire(file=fname,exist=fexist)
+      if (fexist) then
+        open(fid_,file=fname,status='old',position='append')
+      else
+        open(fid_,file=fname,status='new')
+      endif
+    endif
+
 
     ! set df integral flag
     df_vars_%use_df_teints  = df_ints_in
@@ -62,7 +79,7 @@ module focas_driver
     ! figure out maxmimum number of threads to use
     nthread_want_ = nthread
     nthread_use_  =get_nthread()
-    
+
     ! allocate indexing arrays
     call allocate_indexing_arrays(nirrep)
 
@@ -90,33 +107,42 @@ module focas_driver
     if ( error /= 0 ) stop
 
     ! print information
-    ! call print_info()    
+    if ( log_print_ == 1 ) call print_info()    
 
     ! **********************************************************************************
     ! *** at this point, everything is allocated and we are ready to do the optimization
     ! **********************************************************************************
 
 
-    last_energy = 0.0_wp
+    last_energy             = 0.0_wp
     gradient_norm_tolerance = gnorm_tol
-    delta_energy_tolerance = dele_tol
-    max_iter = 20
-    iter = 0
-    kappa_ = 0.0_wp
-    converged = 0
+    delta_energy_tolerance  = dele_tol
+    max_iter                = 20
+    iter                    = 0
+    kappa_                  = 0.0_wp
+    converged               = 0
 
     do 
       
       ! transform integrals
       t0 = timer()
+
       if ( iter /= 0 ) call transform_driver(int1,int2)      
+
       t1 = timer()
       t_trans = t1 - t0
 
+      ! calculate the current energy
       t0=timer()
+
       call compute_energy(int1,int2,den1,den2)
+
       current_energy = e_total_
+
+      if ( iter == 0 ) initial_energy = current_energy
+
       delta_energy = last_energy - current_energy
+
       t1=timer()
       t_ene = t1 - t0
 
@@ -130,19 +156,26 @@ module focas_driver
       ! update kappa_
       step_size=1.0_wp
       kappa_ = - step_size * orbital_gradient_
-      
+
       t1 = timer()
       t_gh = t1 - t0
 
       ! from kappa, construct unitary transformation matrix ( U = exp(kappa) )
       t0 = timer()
+
       call compute_exponential(kappa_)
+
       t1 = timer()
-      t_exp = t1 - t0 
-      write(*,'(a,1x,i5,1x,1(a,1x,f15.8,3x),2(a,1x,es11.3,2x),4(a,1x,f6.2,1x))')'iter:',iter,'E(k):',current_energy,&
-                   & 'E(k)-E(k-1)',-delta_energy,'||g||',grad_norm_,'t(g+h):',t_gh,'t(E):',t_ene,&
-                   & 't(e^U):',t_exp,'t(tran):',t_trans
+      t_exp = t1 - t0
+
+      if ( log_print_ ) then  
+        write(fid_,'(a,1x,i5,1x,1(a,1x,f15.8,3x),2(a,1x,es11.3,2x),4(a,1x,f6.2,1x))')'iter:',iter,&
+                   & 'E(k):',current_energy,'E(k)-E(k-1)',-delta_energy,'||g||',grad_norm_,       &
+                   & 't(g+h):',t_gh,'t(E):',t_ene,'t(e^U):',t_exp,'t(tran):',t_trans
+      endif
+
       last_energy = current_energy
+
       iter = iter + 1
 
       if ( iter == max_iter ) exit
@@ -155,13 +188,15 @@ module focas_driver
 
     end do
 
-    if ( converged == 1 ) then
-      write(*,'(a)')'gradient descent converged'
-    else
-      write(*,'(a)')'gradient descent did not converge'
+    if ( log_print_ == 1 ) then
+      if ( converged == 1 ) then
+        write(fid_,'(a)')'gradient descent converged'
+      else
+        write(fid_,'(a)')'gradient descent did not converge'
+      endif
     endif
 
-    dele_last      = delta_energy
+    dele_last      = last_energy - initial_energy
     gnorm_last     = grad_norm_
 
     ! debug
@@ -172,6 +207,8 @@ module focas_driver
 
     ! final deallocation
     call deallocate_final()
+
+    if ( log_print_ == 1 ) close(fid_)
 
     return
   end subroutine focas_optimize
@@ -214,7 +251,7 @@ module focas_driver
     npair        = nmo_tot_* ( nmo_tot_ + 1 ) / 2
 
     if ( mod(nnz_int2,npair) /= 0 ) then
-      write(*,'(a)')'mod(nnz_int2,nmo_tot_^2) /= 0'
+      if ( log_print_ == 1) write(fid_,'(a)')'mod(nnz_int2,nmo_tot_^2) /= 0'
       return 
     endif
  
@@ -243,7 +280,7 @@ module focas_driver
 
     if ( minval(df_vars_%class_to_df_map) < 0 ) then
 
-      write(*,'(a)')'error ... min(class_to_df_map(:)) < 0 )'
+      if ( log_print_ == 1 ) write(fid_,'(a)')'error ... min(class_to_df_map(:)) < 0 )'
       return
 
     end if
@@ -488,27 +525,24 @@ module focas_driver
   subroutine print_info()
     integer :: irrep,i
     ! print the information gathered so far
-    write(*,'(a5,2x,3(3(a3,1x),5x))')'irrep','d_f','d_l','n_d','a_f','a_l','n_a','e_f','e_l','n_e'
+    write(fid_,'(a5,2x,3(3(a3,1x),5x))')'irrep','d_f','d_l','n_d','a_f','a_l','n_a','e_f','e_l','n_e'
     do irrep=1,nirrep_
-      write(*,'(i5,2x,3(3(i3,1x),5x))')irrep,(first_index_(irrep,i),last_index_(irrep,i),&
+      write(fid_,'(i5,2x,3(3(i3,1x),5x))')irrep,(first_index_(irrep,i),last_index_(irrep,i),&
                & last_index_(irrep,i)-first_index_(irrep,i)+1,i=1,3)
     end do
-    write(*,'(a)')'density information'
-    write(*,'(a,8(i9,1x))')'ngempi(:)=',dens_%ngempi
-    write(*,'(a,8(i9,1x))')' nnzpi(:)=',dens_%nnzpi
-    write(*,'(a,8(i9,1x))')'offset(:)=',dens_%offset
-    write(*,'(a)')'integral information'
-    write(*,'(a,8(i9,1x))')'ngempi(:)=',ints_%ngempi
-    write(*,'(a,8(i9,1x))')' nnzpi(:)=',ints_%nnzpi
-    write(*,'(a,8(i9,1x))')'offset(:)=',ints_%offset
-    write(*,'(a)')'rotation pair information:'
-    write(*,'(4(a,1x,i6,2x),a,1x,i9)')'act-doc pairs:',rot_pair_%n_ad,'ext-doc pairs:',rot_pair_%n_ed,&
+    write(fid_,'(a)')'density information'
+    write(fid_,'(a,8(i9,1x))')'ngempi(:)=',dens_%ngempi
+    write(fid_,'(a,8(i9,1x))')' nnzpi(:)=',dens_%nnzpi
+    write(fid_,'(a,8(i9,1x))')'offset(:)=',dens_%offset
+    write(fid_,'(a)')'integral information'
+    write(fid_,'(a,8(i9,1x))')'ngempi(:)=',ints_%ngempi
+    write(fid_,'(a,8(i9,1x))')' nnzpi(:)=',ints_%nnzpi
+    write(fid_,'(a,8(i9,1x))')'offset(:)=',ints_%offset
+    write(fid_,'(a)')'rotation pair information:'
+    write(fid_,'(4(a,1x,i6,2x),a,1x,i9)')'act-doc pairs:',rot_pair_%n_ad,'ext-doc pairs:',rot_pair_%n_ed,&
                              &'act-act pairs:',rot_pair_%n_aa,'ext-act pairs:',rot_pair_%n_ea,&
                              &'total orbital pairs:',rot_pair_%n_tot
-    write(*,*)
-!    write(*,'(a,i0,a)')'orbital pairs rotated (',rot_pair_%n_tot,')'
-!
-!    write(*,'(7(a,2(i3,a),4x))')('(',rot_pair_%inds(1,i),',',rot_pair_%inds(2,i),')',i=1,rot_pair_%n_tot)
+    write(fid_,*)
 !
     return
   end subroutine print_info

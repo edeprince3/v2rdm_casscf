@@ -250,11 +250,13 @@ module focas_exponential
  
       end do
 
-      if ( ( max_normalization_error > max_error_tolerance ) .or. &
-         & ( max_orthogonality_error > max_error_tolerance ) ) then
-        write(*,'(a,1x,i1,5x,a,1x,i3,5x,a,1x,es10.3,5x,a,1x,es10.3)')'irrep:',block_sym,'nmo:',block_dim,&
-             & 'max(normalization_error):',max_normalization_error,'max(orthogonality_error):',max_orthogonality_error
-      endif 
+      if ( log_print_ == 1 ) then
+        if ( ( max_normalization_error > max_error_tolerance ) .or. &
+           & ( max_orthogonality_error > max_error_tolerance ) ) then
+          write(fid_,'(a,1x,i1,5x,a,1x,i3,5x,a,1x,es10.3,5x,a,1x,es10.3)')'irrep:',block_sym,'nmo:',block_dim,&
+               & 'max(normalization_error):',max_normalization_error,'max(orthogonality_error):',max_orthogonality_error
+        endif 
+      endif
 
       ! ******************************
       ! deallocate tempporary matrices
