@@ -1,10 +1,22 @@
 #!/bin/bash
 
-psi4 --new-plugin-makefile
+# setup and compilation script for v2rdm-casscf plugin to Psi4
+# 
+# 1. specify your fortran compiler
+F90=ifort
 
-F90=gfortran-mp-4.8
-F90_FLAGS=-O2
-F90_LIB='-L/opt/local/lib/gcc48/ -lgfortran'
+# 2. specify fortran flags.  the default flags below should work
+F90_FLAGS='-O2 -fPIC'
+
+# 3. specify fortran libraries.
+
+# for ifort:
+F90_LIB=-lifcore                              
+
+# for gfortran ... but use the correct gcc directory
+#F90_LIB='-L/opt/local/lib/gcc48/ -lgfortran' 
+
+psi4 --new-plugin-makefile
 
 sed -i -e "s|LDFLAGS +=|LDFLAGS += ${F90_LIB}|g" Makefile
 sed -i -e "s|BINOBJ = |BINOBJ = *.o |g" Makefile
