@@ -168,7 +168,7 @@ module focas_driver
       t1 = timer()
       t_exp = t1 - t0
 
-      if ( log_print_ ) then  
+      if ( log_print_ == 1 ) then  
         write(fid_,'(a,1x,i5,1x,1(a,1x,f15.8,3x),2(a,1x,es11.3,2x),4(a,1x,f6.2,1x))')'iter:',iter,&
                    & 'E(k):',current_energy,'E(k)-E(k-1)',-delta_energy,'||g||',grad_norm_,       &
                    & 't(g+h):',t_gh,'t(E):',t_ene,'t(e^U):',t_exp,'t(tran):',t_trans

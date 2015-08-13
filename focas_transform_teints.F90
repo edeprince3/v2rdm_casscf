@@ -21,7 +21,7 @@ module focas_transform_teints
 
       integer :: i_thread,Q,row,col,row_sym,col_sym,int_ind,max_nmopi
       integer :: col_min,col_max,row_min,row_max,ncol,nrow,row_off,col_off
-      integer :: first_Q(nthread_use_),last_Q(nthread_use_),omp_get_thread_num
+      integer :: first_Q(nthread_use_),last_Q(nthread_use_)
 
       integer :: tmpp(nthread_use_)
 
@@ -38,8 +38,6 @@ module focas_transform_teints
 !$omp do private(i_thread,Q,col,row,int_ind,col_sym,row_sym,col_min,col_max,row_min,row_max,ncol,nrow,col_off,row_off)
 #endif
       do i_thread = 1 , nthread_use_
-
-        tmpp(i_thread)=omp_get_thread_num()
 
         ! loop over Q indeces to be transformed by this thread
  
