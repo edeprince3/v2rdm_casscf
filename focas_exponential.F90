@@ -81,18 +81,18 @@ module focas_exponential
       ! compute and K^2
       ! ***************
 
-#ifdef BLAS
-
+!#ifdef BLAS
+!
       do i = 1 , block_dim
         call dcopy(block_dim,K(1:block_dim,i),1,X(:,i),1)
       end do
       call dgemm('n','n',block_dim,block_dim,block_dim,1.0_wp,K,max_dim,X,block_dim,0.0_wp,K2,block_dim)
-
-#else
-
-      K2 = matmul(K(1:block_dim,1:block_dim),K(1:block_dim,1:block_dim))
-
-#endif         
+!
+!#else
+!
+!      K2 = matmul(K(1:block_dim,1:block_dim),K(1:block_dim,1:block_dim))
+!
+!#endif         
 
       ! ***************
       ! diagonalize K^2
@@ -143,16 +143,16 @@ module focas_exponential
         val = 1.0_wp
         if ( d(i) /= 0.0_wp ) val = sin(d(i)) / d(i) 
 
-#ifdef BLAS
-
+!#ifdef BLAS
+!
         call dcopy(block_dim,X(:,i),1,tmp_mat_1(:,i),1)
         call dscal(block_dim,val,tmp_mat_1(:,i),1)
-
-#else
-
-        tmp_mat_1(:,i) = val * X(:,i)
-
-#endif      
+!
+!#else
+!
+!        tmp_mat_1(:,i) = val * X(:,i)
+!
+!#endif      
 
       end do
 
@@ -160,19 +160,19 @@ module focas_exponential
       ! tmp_mat_2 = X * tmp_mat_1^T
       ! U = K * tmp_mat_2
 
-#ifdef BLAS
-
+!#ifdef BLAS
+!
       call dgemm('n','t',block_dim,block_dim,block_dim,1.0_wp,X,block_dim,tmp_mat_1, &
                 & block_dim,0.0_wp,tmp_mat_2,block_dim)
       call dgemm('n','n',block_dim,block_dim,block_dim,1.0_wp,K,max_dim,tmp_mat_2, &
                 & block_dim,0.0_wp,trans_%u_irrep_block(block_sym)%val,block_dim)
-
-#else
-
-      tmp_mat_2                           = matmul(X,transpose(tmp_mat_1))
-      trans_%u_irrep_block(block_sym)%val = matmul(K(1:block_dim,1:block_dim),tmp_mat_2)
-
-#endif        
+!
+!#else
+!
+!      tmp_mat_2                           = matmul(X,transpose(tmp_mat_1))
+!      trans_%u_irrep_block(block_sym)%val = matmul(K(1:block_dim,1:block_dim),tmp_mat_2)
+!
+!#endif        
      
       ! ****************************
       ! *** COMPUTE X * cos(d) * X^T
@@ -183,32 +183,32 @@ module focas_exponential
       do i = 1 , block_dim
         val = cos(d(i))
 
-#ifdef BLAS
-
+!#ifdef BLAS
+!
         call dcopy(block_dim,X(:,i),1,tmp_mat_1(:,i),1)
         call dscal(block_dim,val,tmp_mat_1(:,i),1)        
-
-#else
-
-       tmp_mat_1(:,i) = val * X(:,i)
-
-#endif  
+!
+!#else
+!
+!       tmp_mat_1(:,i) = val * X(:,i)
+!
+!#endif  
       end do 
 
       ! tmp_mat_2 = X * (tmp_mat_1)^T
       ! U = U + tmp_mat_2
 
-#ifdef BLAS
-
+!#ifdef BLAS
+!
       call dgemm('n','t',block_dim,block_dim,block_dim,1.0_wp,X,block_dim,tmp_mat_1, & 
                 & block_dim,1.0_wp,trans_%u_irrep_block(block_sym)%val,block_dim)
-
-#else
-
-      tmp_mat_2                           = matmul(X,transpose(tmp_mat_1))
-      trans_%u_irrep_block(block_sym)%val = trans_%u_irrep_block(block_sym)%val + tmp_mat_2
-
-#endif
+!
+!#else
+!
+!      tmp_mat_2                           = matmul(X,transpose(tmp_mat_1))
+!      trans_%u_irrep_block(block_sym)%val = trans_%u_irrep_block(block_sym)%val + tmp_mat_2
+!
+!#endif
 
       ! check orthonormality error
 
@@ -219,30 +219,30 @@ module focas_exponential
 
         ! compute norm of vector
 
-#ifdef BLAS
-
+!#ifdef BLAS
+!
         val = ddot(block_dim,trans_%u_irrep_block(block_sym)%val(:,i),1,&
               trans_%u_irrep_block(block_sym)%val(:,i),1)
-
-#else
-
-        val = dot_product(trans_%u_irrep_block(block_sym)%val(:,i),trans_%u_irrep_block(block_sym)%val(:,i))
-
-#endif
+!
+!#else
+!
+!        val = dot_product(trans_%u_irrep_block(block_sym)%val(:,i),trans_%u_irrep_block(block_sym)%val(:,i))
+!
+!#endif
         if ( abs( 1.0_wp - val ) > max_normalization_error ) max_normalization_error = abs ( 1.0_wp - val )
 
         do j = 1 , i - 1
 
-#ifdef BLAS
-
+!#ifdef BLAS
+!
           val = ddot(block_dim,trans_%u_irrep_block(block_sym)%val(:,i),1,&
               trans_%u_irrep_block(block_sym)%val(:,j),1)
-
-#else
-
-          val = dot_product(trans_%u_irrep_block(block_sym)%val(:,i),trans_%u_irrep_block(block_sym)%val(:,j))
-
-#endif         
+!
+!#else
+!
+!          val = dot_product(trans_%u_irrep_block(block_sym)%val(:,i),trans_%u_irrep_block(block_sym)%val(:,j))
+!
+!#endif         
 
           if ( abs( val ) > max_orthogonality_error ) max_orthogonality_error = abs ( val )
            

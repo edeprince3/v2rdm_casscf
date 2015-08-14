@@ -6,7 +6,7 @@
 F90=gfortran-mp-4.8
 
 # 2. specify fortran flags.  the default flags below should work
-F90_FLAGS='-O2 -fPIC'
+F90_FLAGS='-openmp -O2 -fPIC -DOMP'
 
 # 3. specify fortran libraries.
 

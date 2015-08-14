@@ -19,11 +19,10 @@ module focas_transform_teints
 
       type(tmp_matrix), allocatable :: aux(:)
 
-      integer :: i_thread,Q,row,col,row_sym,col_sym,int_ind,max_nmopi
+      integer :: i_thread,Q,row,col,row_sym,col_sym,max_nmopi
       integer :: col_min,col_max,row_min,row_max,ncol,nrow,row_off,col_off
       integer :: first_Q(nthread_use_),last_Q(nthread_use_)
-
-      integer :: tmpp(nthread_use_)
+      integer(ip) :: int_ind
 
       max_nmopi = maxval(trans_%nmopi)
 
@@ -93,17 +92,17 @@ module focas_transform_teints
 
             call symmetrize_diagonal_block(aux(i_thread)%mat(col_min:col_max,col_min:col_max),ncol)
 
-#ifdef BLAS
+!#ifdef BLAS
             call dgemm('N','N',ncol,ncol,ncol,1.0_wp,aux(i_thread)%mat(col_min:col_max,col_min:col_max),ncol,&
                      & trans_%u_irrep_block(col_sym)%val,ncol,0.0_wp,aux(i_thread)%tmp,max_nmopi)
             call dgemm('T','N',ncol,ncol,ncol,1.0_wp,trans_%u_irrep_block(col_sym)%val,ncol, &
                      & aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%mat(col_min:col_max,col_min:col_max),ncol)
-#else
-            aux(i_thread)%tmp(1:ncol,1:ncol) = matmul(aux(i_thread)%mat(col_min:col_max,col_min:col_max),&
-                                             & trans_%u_irrep_block(col_sym)%val)
-            aux(i_thread)%mat(col_min:col_max,col_min:col_max) = matmul(transpose(trans_%u_irrep_block(col_sym)%val),&
-                                                               & aux(i_thread)%tmp(1:ncol,1:ncol))
-#endif
+!#else
+!            aux(i_thread)%tmp(1:ncol,1:ncol) = matmul(aux(i_thread)%mat(col_min:col_max,col_min:col_max),&
+!                                             & trans_%u_irrep_block(col_sym)%val)
+!            aux(i_thread)%mat(col_min:col_max,col_min:col_max) = matmul(transpose(trans_%u_irrep_block(col_sym)%val),&
+!                                                               & aux(i_thread)%tmp(1:ncol,1:ncol))
+!#endif
 
             do row_sym = col_sym + 1 , nirrep_
 
@@ -117,17 +116,17 @@ module focas_transform_teints
  
               row_max = row_off + nrow
 
-#ifdef BLAS
+!#ifdef BLAS
               call dgemm('N','N',nrow,ncol,ncol,1.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow,&
                          trans_%u_irrep_block(col_sym)%val,ncol,0.0_wp,aux(i_thread)%tmp,max_nmopi)
               call dgemm('T','N',nrow,ncol,nrow,1.0_wp,trans_%u_irrep_block(row_sym)%val,nrow, &
                          aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow)
-#else
-              aux(i_thread)%tmp(1:nrow,1:ncol) = matmul(aux(i_thread)%mat(row_min:row_max,col_min:col_max),&
-                                               & trans_%u_irrep_block(col_sym)%val)
-              aux(i_thread)%mat(row_min:row_max,col_min:col_max) = matmul(transpose(trans_%u_irrep_block(row_sym)%val),&
-                                                                 & aux(i_thread)%tmp(1:nrow,1:ncol))
-#endif
+!#else
+!              aux(i_thread)%tmp(1:nrow,1:ncol) = matmul(aux(i_thread)%mat(row_min:row_max,col_min:col_max),&
+!                                               & trans_%u_irrep_block(col_sym)%val)
+!              aux(i_thread)%mat(row_min:row_max,col_min:col_max) = matmul(transpose(trans_%u_irrep_block(row_sym)%val),&
+!                                                                 & aux(i_thread)%tmp(1:nrow,1:ncol))
+!#endif
 
 
             end do ! end row_sym loop
@@ -280,8 +279,9 @@ module focas_transform_teints
 
       real(wp) :: int2(:)
 
-      integer :: ij_sym,first_ij,last_ij
-      integer :: irrep_block_transformed(nirrep_)
+      integer     :: ij_sym
+      integer(ip) :: first_ij,last_ij
+      integer     :: irrep_block_transformed(nirrep_)
 
       ! initialize error flag
 
@@ -354,7 +354,7 @@ module focas_transform_teints
 
       real(wp), allocatable :: A_tilde(:,:),B_tilde(:,:)
 
-      integer :: nnz_ij,ij,max_nmopi,error
+      integer :: nnz_ij,max_nmopi
 
       integer :: i_class,j_class,k_class,l_class,t_class,u_class,tu_class,kl_class,ij_class
       integer :: i_irrep,j_irrep,k_irrep,l_irrep,t_irrep,u_irrep
@@ -465,15 +465,15 @@ module focas_transform_teints
 
           if ( ( num_k == 0 ) .or. ( num_l == 0 ) ) cycle
 
-# ifdef BLAS
+!# ifdef BLAS
           call dgemm('N','N',num_k,num_l,num_l,1.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k,&
                      trans_%u_irrep_block(l_sym)%val,num_l,0.0_wp,A_tilde,max_nmopi)
           call dgemm('T','N',num_k,num_l,num_k,1.0_wp,trans_%u_irrep_block(k_sym)%val,num_k, &
                      A_tilde,max_nmopi,0.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k)
-# else
-          A_tilde(1:num_k,1:num_l)       = matmul(A(ij_class)%irrep(k_sym)%mat,trans_%u_irrep_block(l_sym)%val)
-          A(ij_class)%irrep(k_sym)%mat   = matmul(transpose(trans_%u_irrep_block(k_sym)%val),A_tilde(1:num_k,1:num_l))
-# endif
+!# else
+!          A_tilde(1:num_k,1:num_l)       = matmul(A(ij_class)%irrep(k_sym)%mat,trans_%u_irrep_block(l_sym)%val)
+!          A(ij_class)%irrep(k_sym)%mat   = matmul(transpose(trans_%u_irrep_block(k_sym)%val),A_tilde(1:num_k,1:num_l))
+!# endif
           
         end do ! end k_sym loop
 
@@ -593,16 +593,16 @@ module focas_transform_teints
 
               if ( ( num_i == 0 ) .or. ( num_j == 0 ) ) cycle 
  
-# ifdef BLAS
+!# ifdef BLAS
               call dgemm('N','N',num_i,num_j,num_j,1.0_wp,B_tilde,max_nmopi,&
                      trans_%u_irrep_block(j_sym)%val,num_j,0.0_wp,A_tilde,max_nmopi)
               call dgemm('T','N',num_i,num_j,num_i,1.0_wp,trans_%u_irrep_block(i_sym)%val,num_i, &
                      A_tilde,max_nmopi,0.0_wp,B_tilde,max_nmopi)
-# else
-              A_tilde(1:num_i,1:num_j) = matmul(B_tilde(1:num_i,1:num_j),trans_%u_irrep_block(j_sym)%val)
-              B_tilde(1:num_i,1:num_j) = matmul(transpose(trans_%u_irrep_block(i_sym)%val),A_tilde(1:num_i,1:num_j))
-
-# endif
+!# else
+!              A_tilde(1:num_i,1:num_j) = matmul(B_tilde(1:num_i,1:num_j),trans_%u_irrep_block(j_sym)%val)
+!              B_tilde(1:num_i,1:num_j) = matmul(transpose(trans_%u_irrep_block(i_sym)%val),A_tilde(1:num_i,1:num_j))
+!
+!# endif
               ! ***********
               ! *** SCATTER
               ! ***********
@@ -783,17 +783,15 @@ module focas_transform_teints
 
       real(wp), allocatable :: A_tilde(:,:),B_tilde(:,:)
 
-      integer :: nnz_ij,ij,max_nmopi,error
+      integer :: nnz_ij,max_nmopi
 
       integer :: i_class,j_class,k_class,l_class,t_class,u_class,tu_class,kl_class,ij_class
       integer :: i_irrep,j_irrep,k_irrep,l_irrep,t_irrep,u_irrep
-      integer :: i_sym,j_sym,k_sym,l_sym,t_sym,u_sym 
-      integer :: num_i,num_j,num_k,num_l,num_t,num_u
-      integer :: i_offset,j_offset,k_offset,l_offset,t_offset,u_offset
+      integer :: i_sym,k_sym,t_sym 
+      integer :: num_i,num_k,num_t
+      integer :: i_offset,k_offset,t_offset
 
       integer(ip) :: ijkl_class,rstu_class
-
-      integer :: first_ij(nthread_use_),last_ij_(nthread_use_)
 
       ! initialize error flag
 
@@ -886,15 +884,15 @@ module focas_transform_teints
 
           if ( num_k == 0 )  cycle
 
-# ifdef BLAS
+!# ifdef BLAS
           call dgemm('N','N',num_k,num_k,num_k,1.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k,&
                      trans_%u_irrep_block(k_sym)%val,num_k,0.0_wp,A_tilde,max_nmopi)
           call dgemm('T','N',num_k,num_k,num_k,1.0_wp,trans_%u_irrep_block(k_sym)%val,num_k, &
                      A_tilde,max_nmopi,0.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k)
-# else
-          A_tilde(1:num_k,1:num_k)       = matmul(A(ij_class)%irrep(k_sym)%mat,trans_%u_irrep_block(k_sym)%val)
-          A(ij_class)%irrep(k_sym)%mat   = matmul(transpose(trans_%u_irrep_block(k_sym)%val),A_tilde(1:num_k,1:num_k))
-# endif
+!# else
+!          A_tilde(1:num_k,1:num_k)       = matmul(A(ij_class)%irrep(k_sym)%mat,trans_%u_irrep_block(k_sym)%val)
+!          A(ij_class)%irrep(k_sym)%mat   = matmul(transpose(trans_%u_irrep_block(k_sym)%val),A_tilde(1:num_k,1:num_k))
+!# endif
 
         end do ! end k_sym loop
 
@@ -992,15 +990,15 @@ module focas_transform_teints
  
               if ( num_i == 0 )  cycle
 
-# ifdef BLAS
+!# ifdef BLAS
               call dgemm('N','N',num_i,num_i,num_i,1.0_wp,B_tilde,max_nmopi,&
                      trans_%u_irrep_block(i_sym)%val,num_i,0.0_wp,A_tilde,max_nmopi)
               call dgemm('T','N',num_i,num_i,num_i,1.0_wp,trans_%u_irrep_block(i_sym)%val,num_i, &
                      A_tilde,max_nmopi,0.0_wp,B_tilde,max_nmopi)
-# else
-              A_tilde(1:num_i,1:num_i) = matmul(B_tilde(1:num_i,1:num_i),trans_%u_irrep_block(i_sym)%val)
-              B_tilde(1:num_i,1:num_i) = matmul(transpose(trans_%u_irrep_block(i_sym)%val),A_tilde(1:num_i,1:num_i))
-# endif
+!# else
+!              A_tilde(1:num_i,1:num_i) = matmul(B_tilde(1:num_i,1:num_i),trans_%u_irrep_block(i_sym)%val)
+!              B_tilde(1:num_i,1:num_i) = matmul(transpose(trans_%u_irrep_block(i_sym)%val),A_tilde(1:num_i,1:num_i))
+!# endif
 
               ! ***********
               ! *** SCATTER

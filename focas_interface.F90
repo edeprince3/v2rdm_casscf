@@ -17,14 +17,13 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       & 7,8,5,6,3,4,1,2, &
       & 8,7,6,5,4,3,2,1  /), (/8,8/) )
 
-  integer :: nirrep_in,ncore_in,nact_in,nvirt_in,aarot_in,nnz_d1,nnz_d2,nnz_i1,nnz_i2
-  integer :: nproc,aarot,nfrozen,angtol,detol,mcetol,print_flag
+  integer :: nirrep_in,ncore_in,nact_in,nvirt_in,nnz_d1,nnz_d2,nnz_i1,nnz_i2
+  integer :: nproc,aarot,nfrozen,print_flag
   real(wp) :: integrals_1(nnz_i1),integrals_2(nnz_i2),density_1(nnz_d1),density_2(nnz_d2)
   real(wp) :: mo_coeff_out(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   real(wp) :: jacobi_data_io(11) 
   character(120) :: jacobi_log_file
   integer  :: syms(ncore_in+nact_in+nvirt_in)
-  logical :: fexist
 
   real(wp) :: delrot
 
@@ -36,7 +35,6 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer :: gemind_int_new(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: energy_to_class_map(ncore_in+nact_in+nvirt_in)
   integer :: class_to_energy_map(ncore_in+nact_in+nvirt_in)
-  integer :: irrep_to_class_map(ncore_in+nact_in+nvirt_in)
   integer :: class_to_irrep_map(ncore_in+nact_in+nvirt_in)
   integer :: first_index(nirrep_in,3)
   integer :: last_index(nirrep_in,3)
@@ -50,7 +48,6 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer :: offset_irrep_den1(nirrep_in)
   real(wp) :: dele_tol,gnorm_tol,gnorm
  
-
 !  jacobi_data_io:
 !  1) nproc
 !  2) aarot
@@ -121,7 +118,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       implicit none
 
       integer :: p_sym,q_sym,r_sym,s_sym,pq_sym
-      integer :: pq_c,rs_c,pq_i,rs_i,pqrs_c,pqrs_i,pp_c,qq_c
+      integer :: pq_c,rs_c,pq_i,rs_i,pqrs_c,pqrs_i
       integer :: p_class,q_class,r_class,s_class,q_max,s_max
       integer :: p_c,q_c,r_c,s_c
       integer :: p_i,q_i,r_i,s_i
@@ -382,8 +379,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
     subroutine setup_symmetry_arrays(syms)
       implicit none
       integer :: syms(:)
-      integer :: p,q,p_class,q_class,p_sym,pq_sym
-      integer :: p_c,q_c,p_i,q_i
+      integer :: p,q,p_class,p_sym,pq_sym,p_c
       integer :: dims(nirrep),sym_class(nmo)
 
       ! determine the number of mos per irrep for each class
