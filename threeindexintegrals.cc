@@ -42,6 +42,7 @@
 
 #include <libtrans/integraltransform.h>
 
+#include <lib3index/dftensor.h>
 using namespace psi;
 using namespace fnocc;
 
@@ -59,8 +60,13 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     // read integrals that were written to disk in the scf
     nQ_ = Process::environment.globals["NAUX (SCF)"];
     if ( options_.get_str("SCF_TYPE") == "DF" ) {
+        boost::shared_ptr<BasisSet> primary = BasisSet::pyconstruct_orbital(molecule_,
+            "BASIS", options_.get_str("BASIS"));
+
         boost::shared_ptr<BasisSet> auxiliary = BasisSet::pyconstruct_auxiliary(molecule_,
-              "DF_BASIS_SCF", options_.get_str("DF_BASIS_SCF"), "JKFIT", options_.get_str("BASIS"));
+            "DF_BASIS_SCF", options_.get_str("DF_BASIS_SCF"), "JKFIT",
+            options_.get_str("BASIS"), primary->has_puream());
+
         nQ_ = auxiliary->nbf();
         Process::environment.globals["NAUX (SCF)"] = nQ_;
     }
@@ -87,7 +93,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         }
     }
 
-    boost::shared_ptr<Matrix> myCa_ (new Matrix(reference_wavefunction_->Cb_subset("AO","ALL")));
+    boost::shared_ptr<Matrix> myCa_ (new Matrix(reference_wavefunction_->Ca_subset("AO","ALL")));
 
     F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp1,nso_,&(myCa_->pointer()[0][0]),nso_,0.0,tmp2,nso_*nQ_);
     F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp2,nso_,&(myCa_->pointer()[0][0]),nso_,0.0,tmp1,nso_*nQ_);
