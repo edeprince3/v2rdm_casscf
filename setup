@@ -3,7 +3,7 @@
 # setup and compilation script for v2rdm-casscf plugin to Psi4
 # 
 # 1. specify your fortran compiler
-F90=ifort
+F90=gfortran-mp-4.8
 
 # 2. specify fortran flags.  the default flags below should work
 F90_FLAGS='-O2 -fPIC'
@@ -11,19 +11,28 @@ F90_FLAGS='-O2 -fPIC'
 # 3. specify fortran libraries.
 
 # for ifort:
-F90_LIB=-lifcore                              
+#F90_LIB=-lifcore                              
 
 # for gfortran ... but use the correct gcc directory
-#F90_LIB='-L/opt/local/lib/gcc48/ -lgfortran' 
+F90_LIB='-L/opt/local/lib/gcc48/ -lgfortran' 
 
 psi4 --new-plugin-makefile
 
 sed -i -e "s|LDFLAGS +=|LDFLAGS += ${F90_LIB}|g" Makefile
 sed -i -e "s|BINOBJ = |BINOBJ = *.o |g" Makefile
 
-sed -i -e "s|MY_FCOMPILER|${F90}|g" Makefile.fortran
-sed -i -e "s|MY_FFLAGS|${F90_FLAGS}|g" Makefile.fortran
-
 make clean
-make -f Makefile.fortran
+
+${F90} ${F90_FLAGS} focas_data.F90 -c
+${F90} ${F90_FLAGS} focas_gradient.F90 focas_data.o -c
+${F90} ${F90_FLAGS} focas_energy.F90 focas_data.o -c
+${F90} ${F90_FLAGS} focas_hessian.F90 focas_data.o -c
+${F90} ${F90_FLAGS} focas_exponential.F90 focas_data.o -c
+${F90} ${F90_FLAGS} focas_transform_teints.F90 focas_data.o -c
+${F90} ${F90_FLAGS} focas_transform_oeints.F90 focas_data.o -c
+${F90} ${F90_FLAGS} focas_transform_driver.F90 focas_transform_teints.o focas_transform_oeints.o -c
+${F90} ${F90_FLAGS} focas_driver.F90 focas_exponential.o focas_transform_driver.o focas_energy.o focas_gradient.o focas_hessian.o -c
+${F90} ${F90_FLAGS} focas_interface.F90 focas_driver.o -c
+rm *.mod
+
 make
