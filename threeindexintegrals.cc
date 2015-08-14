@@ -79,8 +79,14 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->read_entry(PSIF_DFSCF_BJ, "(Q|mn) Integrals", (char*) tmp2, sizeof(double) * ntri * nQ_);
     psio->close(PSIF_DFSCF_BJ,1);
 
-    // unpack
+    //psio->open(PSIF_DCC_QSO,PSIO_OPEN_OLD);
+    //psio_address addr = PSIO_ZERO;
+    //for (int row = 0; row < nrows; row++) {
+    //    psio->write(PSIF_DCC_QSO, "(Q|mn) Integrals", (char*) tmp1, sizeof(double) * rowsize[row] * nQ_);
+    //}
+    //psio->close(PSIF_DCC_QSO,1);
 
+    // unpack
     #pragma omp parallel for schedule (static)
     for (long int Q = 0; Q < nQ_; Q++) {
         for (long int mn = 0; mn < ntri; mn++) {

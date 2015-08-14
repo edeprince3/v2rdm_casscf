@@ -568,7 +568,6 @@ void v2RDMSolver::BuildBasis() {
 // compute the energy!
 double v2RDMSolver::compute_energy() {
 
-    PrintHeader();
     Guess();
 
     if ( is_df_ ) {
@@ -1692,6 +1691,44 @@ void  v2RDMSolver::common_init(){
         }
     }
 
+    // memory check happens here
+    PrintHeader();
+
+    // if using 3-index integrals, transform them before allocating any memory integrals, transform 
+    if ( is_df_ ) {
+        outfile->Printf("    ==> Transform three-electron integrals <==\n");
+        outfile->Printf("\n");
+
+        double start = omp_get_wtime();
+        ThreeIndexIntegrals();
+        double end = omp_get_wtime();
+
+        outfile->Printf("\n");
+        outfile->Printf("        Time for integral transformation:  %7.2lf s\n",end-start);
+        outfile->Printf("\n");
+    } else {
+        // transform integrals
+        outfile->Printf("    ==> Transform two-electron integrals <==\n");
+        outfile->Printf("\n");
+        
+        double start = omp_get_wtime();
+        boost::shared_ptr<Wavefunction> wfn = Process::environment.wavefunction();
+        std::vector<shared_ptr<MOSpace> > spaces;
+        spaces.push_back(MOSpace::all);
+        boost::shared_ptr<IntegralTransform> ints(new IntegralTransform(wfn, spaces, IntegralTransform::Restricted,
+            				      IntegralTransform::IWLOnly, IntegralTransform::PitzerOrder, IntegralTransform::None, false));
+        ints->set_dpd_id(0);
+        ints->set_keep_iwl_so_ints(true);
+        ints->set_keep_dpd_so_ints(true);
+        ints->initialize();
+        ints->transform_tei(MOSpace::all, MOSpace::all, MOSpace::all, MOSpace::all);
+        double end = omp_get_wtime();
+        outfile->Printf("\n");
+        outfile->Printf("        Time for integral transformation:  %7.2lf s\n",end-start);
+        outfile->Printf("\n");
+    
+    }
+
     // allocate vectors
     Ax     = SharedVector(new Vector("A . x",nconstraints));
     ATy    = SharedVector(new Vector("A^T . y",dimx));
@@ -1784,18 +1821,6 @@ void v2RDMSolver::DFK2() {
     // one-electron integrals:  
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
-    outfile->Printf("    ==> Transform three-electron integrals <==\n");
-    outfile->Printf("\n");
-
-    double start = omp_get_wtime();
-    ThreeIndexIntegrals();
-
-    double end = omp_get_wtime();
-
-    outfile->Printf("\n");
-    outfile->Printf("    Time for integral transformation:  %7.2lf s\n",end-start);
-    outfile->Printf("\n");
-
     // size of the 3-index integral buffer
     tei_full_dim = nQ_*nso_*(nso_+1)/2;
 
@@ -1847,26 +1872,6 @@ void v2RDMSolver::K2() {
     double * temptei = (double*)malloc(full*full*full*full*sizeof(double));
     memset((void*)temptei,'\0',full*full*full*full*sizeof(double));
       
-    // transform integrals
-    outfile->Printf("    ==> Transform two-electron integrals <==\n");
-    outfile->Printf("\n");
-    
-    double start = omp_get_wtime();
-    boost::shared_ptr<Wavefunction> wfn = Process::environment.wavefunction();
-    std::vector<shared_ptr<MOSpace> > spaces;
-    spaces.push_back(MOSpace::all);
-    boost::shared_ptr<IntegralTransform> ints(new IntegralTransform(wfn, spaces, IntegralTransform::Restricted,
-	  						      IntegralTransform::IWLOnly, IntegralTransform::PitzerOrder, IntegralTransform::None, false));
-    ints->set_dpd_id(0);
-    ints->set_keep_iwl_so_ints(true);
-    ints->set_keep_dpd_so_ints(true);
-    ints->initialize();
-    ints->transform_tei(MOSpace::all, MOSpace::all, MOSpace::all, MOSpace::all);
-    double end = omp_get_wtime();
-    outfile->Printf("\n");
-    outfile->Printf("    Time for integral transformation:  %7.2lf s\n",end-start);
-    outfile->Printf("\n");
-    
     // read two-electron integrals from disk
     ReadIntegrals(temptei,full);
     
