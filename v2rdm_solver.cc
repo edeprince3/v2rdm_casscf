@@ -1034,6 +1034,35 @@ void  v2RDMSolver::common_init(){
         ndocc    += doccpi_[h];
         amopi_[h] = nmopi_[h]-frzcpi_[h]-frzvpi_[h];
     }
+
+    // sanity check for orbital occupancies:
+    for (int h = 0; h < nirrep_; h++) {
+        int tot = doccpi_[h] + soccpi_[h] + frzvpi_[h];
+        if (doccpi_[h] + soccpi_[h] + frzvpi_[h] > nsopi_[h] ) {
+            outfile->Printf("\n");
+            outfile->Printf("    <<< WARNING >>> irrep %5i has too many orbitals:\n",h);
+            outfile->Printf("\n");
+            outfile->Printf("                    docc = %5i\n",doccpi_[h]);
+            outfile->Printf("                    socc = %5i\n",soccpi_[h]);
+            outfile->Printf("                    frzv = %5i\n",frzvpi_[h]);
+            outfile->Printf("                    tot  = %5i\n",doccpi_[h] + soccpi_[h] + frzvpi_[h]);
+            outfile->Printf("\n");
+            outfile->Printf("                    total no. orbitals should be %5i\n",nsopi_[h]);
+            outfile->Printf("\n");
+            throw PsiException("at least one irrep has too many orbitals",__FILE__,__LINE__);
+        }
+        if (frzcpi_[h] > doccpi_[h] ) {
+            outfile->Printf("\n");
+            outfile->Printf("    <<< WARNING >>> irrep %5i has too many frozen core orbitals:\n",h);
+            outfile->Printf("                    frzc = %5i\n",frzcpi_[h]);
+            outfile->Printf("                    docc = %5i\n",doccpi_[h]);
+            outfile->Printf("\n");
+            throw PsiException("at least one irrep has too many frozen core orbitals",__FILE__,__LINE__);
+        }
+    }
+    
+
+
     ndoccact = ndocc - nfrzc;
     nvirt    = nmo - ndoccact;
     //if (nfrzv > 0) {

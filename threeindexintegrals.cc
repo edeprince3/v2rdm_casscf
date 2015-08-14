@@ -93,10 +93,10 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         }
     }
 
-    boost::shared_ptr<Matrix> myCa_ (new Matrix(reference_wavefunction_->Ca_subset("AO","ALL")));
+    boost::shared_ptr<Matrix> myCa (new Matrix(reference_wavefunction_->Ca_subset("AO","ALL")));
 
-    F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp1,nso_,&(myCa_->pointer()[0][0]),nso_,0.0,tmp2,nso_*nQ_);
-    F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp2,nso_,&(myCa_->pointer()[0][0]),nso_,0.0,tmp1,nso_*nQ_);
+    F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp1,nso_,&(myCa->pointer()[0][0]),nso_,0.0,tmp2,nso_*nQ_);
+    F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp2,nso_,&(myCa->pointer()[0][0]),nso_,0.0,tmp1,nso_*nQ_);
 
     free(tmp2);
 
