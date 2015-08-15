@@ -3015,11 +3015,18 @@ void v2RDMSolver::PrintHeader(){
     tot += d2_plus_core_dim;
     if ( is_df_ ) {
         nQ_ = Process::environment.globals["NAUX (SCF)"];
-        // for 3-index integrals.  the factor of 2 comes from the AO/MO 
-        // transformation.  TODO: transform these before allocating the
-        // other memory so the factor of 2 doesn't affect the overall
-        // memory footprint
-        tot += nQ_*nso_*nso_*2;
+        if ( options_.get_str("SCF_TYPE") == "DF" ) {
+            boost::shared_ptr<BasisSet> primary = BasisSet::pyconstruct_orbital(molecule_,
+                "BASIS", options_.get_str("BASIS"));
+
+            boost::shared_ptr<BasisSet> auxiliary = BasisSet::pyconstruct_auxiliary(molecule_,
+                "DF_BASIS_SCF", options_.get_str("DF_BASIS_SCF"), "JKFIT",
+                options_.get_str("BASIS"), primary->has_puream());
+
+            nQ_ = auxiliary->nbf();
+            Process::environment.globals["NAUX (SCF)"] = nQ_;
+        }
+        tot += nQ_*nso_*(nso_+1)/2;
     }else {
         tei_full_dim = 0;
         for (int h = 0; h < nirrep_; h++) {
