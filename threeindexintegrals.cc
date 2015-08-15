@@ -124,6 +124,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     long int * rowdims = new long int [nrows];
     for (int i = 0; i < nrows-1; i++) rowdims[i] = rowsize;
     rowdims[nrows-1] = lastrowsize;
+
     double * tmp1 = (double*)malloc(rowdims[0]*nso_*nso_*sizeof(double));
     double * tmp2 = (double*)malloc(rowdims[0]*nso_*nso_*sizeof(double));
 
@@ -235,6 +236,8 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->close(PSIF_DCC_QMO,1);
     psio->close(PSIF_DCC_QSO,1);
 
+    delete rowdims;
+
     //F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp1,nso_,&(myCa->pointer()[0][0]),nso_,0.0,tmp2,nso_*nQ_);
     //F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp2,nso_,&(myCa->pointer()[0][0]),nso_,0.0,tmp1,nso_*nQ_);
 
@@ -247,19 +250,41 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     Qmo_ = (double*)malloc(nn1*nQ_*sizeof(double));
     memset((void*)Qmo_,'\0',nn1*nQ_*sizeof(double));
 
-    // TODO: read larger chunks
-    double * tmp3 = (double*)malloc(nn1*sizeof(double));
-    memset((void*)tmp3,'\0',nn1*sizeof(double));
+    // with 3-index integrals in memory, how much else can we hold?
+    ndoubles -= nn1*nQ_;
+
+    nrows = 1;
+    rowsize = nQ_;
+    while ( rowsize*nn1 > ndoubles ) {
+        nrows++;
+        rowsize = nQ_ / nrows;
+        if (nrows * rowsize < nQ_) rowsize++;
+        if (rowsize == 1) break;
+    }
+
+    lastrowsize = nQ_ - (nrows - 1L) * rowsize;
+    long int * rowdims2 = new long int [nrows];
+    for (int i = 0; i < nrows-1; i++) rowdims2[i] = rowsize;
+    rowdims2[nrows-1] = lastrowsize;
+
+    double * tmp3 = (double*)malloc(rowdims2[0] * nn1*sizeof(double));
+    memset((void*)tmp3,'\0',rowdims2[0] * nn1*sizeof(double));
     addr = PSIO_ZERO;
     psio->open(PSIF_DCC_QMO,PSIO_OPEN_OLD);
-    for (long int Q = 0; Q < nQ_; Q++) {
-        psio->read(PSIF_DCC_QMO,"(Q|mn) Integrals",(char*)tmp3,sizeof(double)*nn1,addr,&addr);
-        for (long int mn = 0; mn < nn1; mn++) {
-            Qmo_[mn*nQ_+Q] = tmp3[mn];
+
+    long int totalQ = 0;
+    for (int row = 0; row < nrows; row++) {
+        psio->read(PSIF_DCC_QMO,"(Q|mn) Integrals",(char*)tmp3,sizeof(double)*rowdims2[row] * nn1,addr,&addr);
+        for (long int Q = 0; Q < rowdims2[row]; Q++) {
+            for (long int mn = 0; mn < nn1; mn++) {
+                Qmo_[mn*nQ_+totalQ] = tmp3[Q*nn1+mn];
+            }
+            totalQ++;
         }
     }
     psio->close(PSIF_DCC_QMO,1);
 
+    delete rowdims2;
     free(tmp3);
 }
 
