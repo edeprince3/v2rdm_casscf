@@ -30,6 +30,9 @@
 // greg
 #include"fortran.h"
 
+// TODO: move to psifiles.h
+#define PSIF_DCC_QMO 268
+
 namespace boost {
   template<class T> class shared_ptr;
 }
