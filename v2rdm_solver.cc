@@ -147,15 +147,15 @@ void v2RDMSolver::BuildBasis() {
     symmetry               = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
     symmetry_full          = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
     symmetry_plus_core     = (int*)malloc((nmo+nfrzc)*sizeof(int));
-    symmetry_energy_order  = (myint*)malloc((nmo+nfrzc+nfrzv)*sizeof(myint));
-    pitzer_to_energy_order = (myint*)malloc((nmo+nfrzc+nfrzv)*sizeof(myint));
-    energy_to_pitzer_order = (myint*)malloc((nmo+nfrzc+nfrzv)*sizeof(myint));
+    symmetry_energy_order  = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
+    pitzer_to_energy_order = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
+    energy_to_pitzer_order = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
     memset((void*)symmetry,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
     memset((void*)symmetry_full,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
     memset((void*)symmetry_plus_core,'\0',(nmo+nfrzc)*sizeof(int));
-    memset((void*)symmetry_energy_order,'\0',(nmo+nfrzc+nfrzv)*sizeof(myint));
-    memset((void*)pitzer_to_energy_order,'\0',(nmo+nfrzc+nfrzv)*sizeof(myint));
-    memset((void*)energy_to_pitzer_order,'\0',(nmo+nfrzc+nfrzv)*sizeof(myint));
+    memset((void*)symmetry_energy_order,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
+    memset((void*)pitzer_to_energy_order,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
+    memset((void*)energy_to_pitzer_order,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
     full_basis = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
     int count = 0;
     int count_full = 0;
@@ -1691,6 +1691,16 @@ void  v2RDMSolver::common_init(){
         }
     }
 
+    // bpsdp convergence thresholds:
+    r_conv  = options_.get_double("R_CONVERGENCE");
+    e_conv  = options_.get_double("E_CONVERGENCE");
+    maxiter = options_.get_int("MAXITER");
+
+    // conjugate gradient solver thresholds:
+    cg_conv    = options_.get_double("CG_CONVERGENCE");
+    cg_maxiter = options_.get_double("CG_MAXITER");
+
+
     // memory check happens here
     PrintHeader();
 
@@ -1737,15 +1747,6 @@ void  v2RDMSolver::common_init(){
     y      = SharedVector(new Vector("dual solution",nconstraints));
     z      = SharedVector(new Vector("dual solution 2",dimx));
     b      = SharedVector(new Vector("constraints",nconstraints));
-
-    // bpsdp convergence thresholds:
-    r_conv  = options_.get_double("R_CONVERGENCE");
-    e_conv  = options_.get_double("E_CONVERGENCE");
-    maxiter = options_.get_int("MAXITER");
-
-    // conjugate gradient solver thresholds:
-    cg_conv    = options_.get_double("CG_CONVERGENCE");
-    cg_maxiter = options_.get_double("CG_MAXITER");
 
     // input/output array for jacobi sweeps
     jacobi_data_    = (double*)malloc(11*sizeof(double));
@@ -2922,8 +2923,8 @@ void v2RDMSolver::PrintHeader(){
     outfile->Printf("        r_convergence:                  %5.3le\n",r_conv);
     outfile->Printf("        e_convergence:                  %5.3le\n",e_conv);
     outfile->Printf("        cg_convergence:                 %5.3le\n",cg_conv);
-    outfile->Printf("        maxiter:                            %5i\n",maxiter);
-    outfile->Printf("        cg_maxiter:                         %5i\n",cg_maxiter);
+    outfile->Printf("        maxiter:                         %8i\n",maxiter);
+    outfile->Printf("        cg_maxiter:                      %8i\n",cg_maxiter);
     outfile->Printf("\n");
     outfile->Printf("  ==> Memory requirements <==\n");
     outfile->Printf("\n");

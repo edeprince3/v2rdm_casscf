@@ -15,44 +15,39 @@
 #define F77NAME(x) x##_
 #endif
 
-typedef int myint;
-// gidofalvi -- added this to pass 8-byte integers to fortran routines
-typedef long int mylongint;
-typedef double doublereal;
-
 // for greg
 extern "C" {
     void F77NAME(focas_interface)(double*jacobi_transformation_matrix,
                                    double*oei_full_sym,
-                                   myint &oei_full_sym_dim,
+                                   int &oei_full_sym_dim,
                                    double*tei_full_sym,
-                                   mylongint &tei_full_sym_dim,
+                                   long int &tei_full_sym_dim,
                                    double*d1_full_sym,
-                                   myint &d1_full_sym_dim,
+                                   int &d1_full_sym_dim,
                                    double*d2_full_sym,
-                                   myint &d2_full_sym_dim,
-                                   myint *symmetry_energy_order,
-                                   myint &nfrzc,
-                                   myint &nmo,
-                                   myint &nfrzv,
-                                   myint &nirrep_,
+                                   int &d2_full_sym_dim,
+                                   int *symmetry_energy_order,
+                                   int &nfrzc,
+                                   int &nmo,
+                                   int &nfrzv,
+                                   int &nirrep_,
                                    double*jacobi_data,
                                    char*jacobi_file);
 };
 inline void Jacobi(double*jacobi_transformation_matrix,
                    double*oei_full_sym,
-                   myint &oei_full_sym_dim,
+                   int &oei_full_sym_dim,
                    double*tei_full_sym,
-                   mylongint &tei_full_sym_dim,
+                   long int &tei_full_sym_dim,
                    double*d1_full_sym,
-                   myint &d1_full_sym_dim,
+                   int &d1_full_sym_dim,
                    double*d2_full_sym,
-                   myint &d2_full_sym_dim,
-                   myint *symmetry_energy_order,
-                   myint &nfrzc,
-                   myint &nmo,
-                   myint &nfrzv,
-                   myint &nirrep_,
+                   int &d2_full_sym_dim,
+                   int *symmetry_energy_order,
+                   int &nfrzc,
+                   int &nmo,
+                   int &nfrzv,
+                   int &nirrep_,
                    double*jacobi_data,
                    char*jacobi_file){
     F77NAME(focas_interface)(jacobi_transformation_matrix,oei_full_sym,oei_full_sym_dim,tei_full_sym,tei_full_sym_dim,d1_full_sym,d1_full_sym_dim,d2_full_sym,d2_full_sym_dim,symmetry_energy_order,nfrzc,nmo,nfrzv,nirrep_,jacobi_data,jacobi_file);
