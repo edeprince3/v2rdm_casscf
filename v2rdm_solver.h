@@ -273,7 +273,8 @@ class v2RDMSolver: public Wavefunction{
     /// full space of integrals for MO gradient / Hessian, blocked by symmetry
     double * tei_full_sym;
     double * oei_full_sym;
-    int tei_full_dim;
+   // gidofalvi -- modified the type of tei_full_dim so that it is correct for large bases 
+   long int tei_full_dim;
     int oei_full_dim;
 
     /// full space D2, blocked by symmetry

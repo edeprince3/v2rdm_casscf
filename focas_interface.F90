@@ -2,11 +2,13 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
            &density_2,nnz_d2,syms,ncore_in,nact_in,nvirt_in,nirrep_in,jacobi_data_io, &
            &jacobi_log_file)
 
+  
   use focas_driver, only : focas_optimize
 
   implicit none
   integer, parameter :: fid=99
   integer, parameter :: wp = selected_real_kind(10)
+  integer, parameter :: ip = selected_int_kind(16)                  ! 64-bit integers (integral addressing)
   integer, parameter :: mult_tab(8,8) = reshape( (/ &  ! irrep multiplication table
       & 1,2,3,4,5,6,7,8, &
       & 2,1,4,3,6,5,8,7, &
@@ -17,7 +19,9 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       & 7,8,5,6,3,4,1,2, &
       & 8,7,6,5,4,3,2,1  /), (/8,8/) )
 
-  integer :: nirrep_in,ncore_in,nact_in,nvirt_in,nnz_d1,nnz_d2,nnz_i1,nnz_i2
+  integer :: nirrep_in,ncore_in,nact_in,nvirt_in
+  integer :: nnz_d1,nnz_d2,nnz_i1
+  integer(ip) :: nnz_i2
   integer :: nproc,aarot,nfrozen,print_flag
   real(wp) :: integrals_1(nnz_i1),integrals_2(nnz_i2),density_1(nnz_d1),density_2(nnz_d2)
   real(wp) :: mo_coeff_out(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
@@ -29,7 +33,8 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
 
   integer :: nactpi(nirrep_in),ndocpi(nirrep_in),nextpi(nirrep_in)
   integer :: ndoc,nact,next,nmo,nirrep,converged
-  integer :: nnz_int1,nnz_int2,nnz_den1,nnz_den2,df_ints
+  integer :: nnz_int1,nnz_den1,nnz_den2,df_ints
+  integer(ip) :: nnz_int2
   integer :: gemind_int(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: gemind_den_new(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: gemind_int_new(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
@@ -40,13 +45,14 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer :: last_index(nirrep_in,3)
   integer :: nnz_den_psi4(nirrep_in)
   integer :: nnz_den_new(nirrep_in)
-  integer :: nnz_int(nirrep_in)
+  integer(ip) :: nnz_int(nirrep_in)
   integer :: offset_den_psi4(nirrep_in)
   integer :: offset_den_new(nirrep_in)
-  integer :: offset_int(nirrep_in)
+  integer(ip) :: offset_int(nirrep_in)
   integer :: offset_irrep_int1(nirrep_in)
   integer :: offset_irrep_den1(nirrep_in)
   real(wp) :: dele_tol,gnorm_tol,gnorm
+
  
 !  jacobi_data_io:
 !  1) nproc
@@ -91,7 +97,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   if (df_ints == 0 ) then
     nnz_int2 = sum(nnz_int)  
   else
-    nnz_int2 = size(integrals_2,dim=1)
+    nnz_int2 = nnz_i2 !size(integrals_2,dim=1)
   endif
   nnz_den2 = sum(nnz_den_new)
 
