@@ -16,6 +16,8 @@
 #endif
 
 typedef int myint;
+// gidofalvi -- added this to pass 8-byte integers to fortran routines
+typedef long int mylongint;
 typedef double doublereal;
 
 // for greg
@@ -24,7 +26,7 @@ extern "C" {
                                    double*oei_full_sym,
                                    myint &oei_full_sym_dim,
                                    double*tei_full_sym,
-                                   myint &tei_full_sym_dim,
+                                   mylongint &tei_full_sym_dim,
                                    double*d1_full_sym,
                                    myint &d1_full_sym_dim,
                                    double*d2_full_sym,
@@ -41,7 +43,7 @@ inline void Jacobi(double*jacobi_transformation_matrix,
                    double*oei_full_sym,
                    myint &oei_full_sym_dim,
                    double*tei_full_sym,
-                   myint &tei_full_sym_dim,
+                   mylongint &tei_full_sym_dim,
                    double*d1_full_sym,
                    myint &d1_full_sym_dim,
                    double*d2_full_sym,

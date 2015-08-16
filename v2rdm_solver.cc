@@ -1822,7 +1822,10 @@ void v2RDMSolver::DFK2() {
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
     // size of the 3-index integral buffer
-    tei_full_dim = nQ_*nso_*(nso_+1)/2;
+    // tei_full_dim = nQ_*nso_*(nso_+1)/2;
+
+    // gidofalvi -- modified this so that number of nnz 2-e integrals is correct for large bases
+    tei_full_dim = (long int) nQ_ * (long int) nso_ * ( (long int) nso_ + 1 ) /2 ;
 
     d2_plus_core_dim = 0;
     for (int h = 0; h < nirrep_; h++) {

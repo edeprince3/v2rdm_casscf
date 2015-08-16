@@ -19,7 +19,7 @@ module focas_driver
     integer, intent(in)     :: df_ints_in      ! flag for using density-fitted 2-e integrals (0--> 4-index integrals, 1--> 3-index DF integrals)
     integer, intent(in)     :: nirrep          ! number of irreps in point group
     integer, intent(in)     :: nnz_int1        ! total number of nonzero 1-e integrals
-    integer, intent(in)     :: nnz_int2        ! total number of nonzero 2-e integrals
+    integer(ip), intent(in)     :: nnz_int2        ! total number of nonzero 2-e integrals
     integer, intent(in)     :: nnz_den1        ! total number of nonzero 1-e density elements
     integer, intent(in)     :: nnz_den2        ! total number of nonzero 2-e density elements
     integer, intent(in)     :: ndocpi(nirrep)  ! number of doubly occupied orbitals per irrep (includes frozen doubly occupied orbitals)
@@ -242,7 +242,8 @@ module focas_driver
 
   integer function df_map_setup(nnz_int2)
     implicit none
-    integer, intent(in) :: nnz_int2
+    integer(ip), intent(in) :: nnz_int2
+    integer(ip) :: num
     integer :: npair,i_sym,i_class,ic,idf
 
     df_map_setup = 1
@@ -250,8 +251,11 @@ module focas_driver
     ! check to make sure that input integral array is of reasonable size
     npair        = nmo_tot_* ( nmo_tot_ + 1 ) / 2
 
-    if ( mod(nnz_int2,npair) /= 0 ) then
-      if ( log_print_ == 1) write(fid_,'(a)')'mod(nnz_int2,nmo_tot_^2) /= 0'
+    num = nnz_int2/int(npair,kind=ip)
+    num = num * int(npair,kind=ip)
+
+    if ( num /= nnz_int2 ) then
+      if ( log_print_ == 1) write(fid_,'(a)')'mod(nnz_int2,nmo_tot_*(nmo_tot_+1)/2) /= 0'
       return 
     endif
  
