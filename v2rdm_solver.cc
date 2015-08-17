@@ -939,7 +939,7 @@ int v2RDMSolver::TotalSym(int i,int j,int k, int l) {
 double v2RDMSolver::compute_energy() {
 
     // hartree-fock guess
-    //Guess();
+    Guess();
 
     // get integrals
     if ( is_df_ ) {
@@ -947,7 +947,6 @@ double v2RDMSolver::compute_energy() {
     }else {
         TEI();
     }
-    Guess();
 
     // generate constraint vector
     BuildConstraints();
