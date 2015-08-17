@@ -577,7 +577,7 @@ double v2RDMSolver::compute_energy() {
     }
 
     BuildConstraints();
-    
+
     // AATy = A(c-z)+tu(b-Ax) rearange w.r.t cg solver
     // Ax   = AATy and b=A(c-z)+tu(b-Ax)
     SharedVector B   = SharedVector(new Vector("compound B",nconstraints));
@@ -666,6 +666,15 @@ double v2RDMSolver::compute_energy() {
             mu = mu*ep/ed;
         }
         if ( oiter % 200 == 0 && oiter > 0) {
+
+            // gidofalvi debug
+            //outfile->Printf("current nuclear repulsion energy is %20.13lf \n",enuc);
+            //outfile->Printf("             current core energy is %20.13lf \n",efrzc);
+            //double current_energy_tmp = C_DDOT(dimx,c->pointer(),1,x->pointer(),1);
+            //outfile->Printf("           current active energy is %20.13lf \n",current_energy_tmp);
+            //outfile->Printf("            current total energy is %20.13lf \n",current_energy_tmp+efrzc+enuc);
+            // end debug
+
             RotateOrbitals();
         }
 
@@ -1781,6 +1790,7 @@ void  v2RDMSolver::common_init(){
         FILE * fp = fopen(jacobi_outfile_,"w");
         fclose(fp);
     }
+
 }
 
 boost::shared_ptr<Matrix> v2RDMSolver::GetOEI() {
@@ -1960,8 +1970,8 @@ void v2RDMSolver::K2() {
         offset += nmopi_[h];
     }
     efrzc = efrzc1 + efrzc2;
-    printf("efrzc1       %20.12lf\n",efrzc1);
-    printf("efrzc2       %20.12lf\n",efrzc2);
+    //printf("efrzc1       %20.12lf\n",efrzc1);
+    //printf("efrzc2       %20.12lf\n",efrzc2);
     
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -3030,7 +3040,8 @@ void v2RDMSolver::PrintHeader(){
             nQ_ = auxiliary->nbf();
             Process::environment.globals["NAUX (SCF)"] = nQ_;
         }
-        tot += nQ_*nso_*(nso_+1)/2;
+        // gidofalvi -- added long int cast so that total memory count remains accurate for large systems
+        tot += (long int)nQ_*(long int)nso_*((long int)nso_+1)/2;
     }else {
         tei_full_dim = 0;
         for (int h = 0; h < nirrep_; h++) {
@@ -4454,6 +4465,7 @@ void v2RDMSolver::RepackIntegralsDF(){
         offset3 += nmopi_[h] * (nmopi_[h] + 1 ) / 2;
     }
     efrzc = efrzc1 + efrzc2;
+
     //printf("%20.12lf\n",efrzc1);
     //printf("%20.12lf\n",efrzc2);
     //printf("%20.12lf\n",efrzc);
@@ -4477,7 +4489,8 @@ void v2RDMSolver::RepackIntegralsDF(){
                 for (int h2 = 0; h2 < nirrep_; h2++) {
 
                     for (long int k = 0; k < frzcpi_[h2]; k++) {
-                        int kk = k + offset2;
+                        // gidofalvi modified int to long int so that addressing is correct for large systems
+                        long int kk = k + offset2;
                         dum1 += C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,jj),1,Qmo_+nQ_*INDEX(kk,kk),1);
                         dum2 += C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,kk),1);
                     }
@@ -4542,6 +4555,7 @@ void v2RDMSolver::RepackIntegralsDF(){
             }
         }
     }
+
 }
 
 // repack rotated full-space integrals into active-space integrals
