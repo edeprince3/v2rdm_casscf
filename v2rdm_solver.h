@@ -206,11 +206,18 @@ class v2RDMSolver: public Wavefunction{
     int **** ibas_aab_sym;
     int **** ibas_aba_sym;
 
-    void Guess();
     void PrintHeader();
     void TEI();
     void DF_TEI();
     void BuildConstraints();
+
+    void Guess();
+    void T1_constraints_guess(SharedVector u);
+    void T2_constraints_guess(SharedVector u);
+    void Q2_constraints_guess(SharedVector u);
+    void Q2_constraints_guess_spin_adapted(SharedVector u);
+    void G2_constraints_guess(SharedVector u);
+    void G2_constraints_guess_spin_adapted(SharedVector u);
 
     void bpsdp_Au(SharedVector A, SharedVector u);
     void bpsdp_Au_slow(SharedVector A, SharedVector u);
@@ -238,9 +245,6 @@ class v2RDMSolver: public Wavefunction{
     void T2_tilde_constraints_ATu(SharedVector A,SharedVector u);
     void D3_constraints_ATu(SharedVector A,SharedVector u);
 
-    // guesses
-    void T1_constraints_guess(SharedVector u);
-    void T2_constraints_guess(SharedVector u);
 
     double g2timeAu,q2timeAu,d2timeAu;
     double g2timeATu,q2timeATu,d2timeATu;

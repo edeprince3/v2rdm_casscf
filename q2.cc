@@ -60,6 +60,209 @@ using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
+void v2RDMSolver::Q2_constraints_guess_spin_adapted(SharedVector u){
+
+    double * u_p = u->pointer();
+
+    // map D2ab to Q2s
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ij = 0; ij < gems_00[h]; ij++) {
+            int i = bas_00_sym[h][ij][0];
+            int j = bas_00_sym[h][ij][1];
+            int ijd = ibas_ab_sym[h][i][j];
+            int jid = ibas_ab_sym[h][j][i];
+            for (int kl = 0; kl < gems_00[h]; kl++) {
+                int k = bas_00_sym[h][kl][0];
+                int l = bas_00_sym[h][kl][1];
+
+                double dum  = 0.0;
+
+                int kld = ibas_ab_sym[h][k][l];
+                int lkd = ibas_ab_sym[h][l][k];
+                dum        +=  0.5 * u_p[d2aboff[h] + kld*gems_ab[h]+ijd];          // +D2(kl,ij)
+                dum        +=  0.5 * u_p[d2aboff[h] + lkd*gems_ab[h]+ijd];          // +D2(lk,ij)
+                dum        +=  0.5 * u_p[d2aboff[h] + kld*gems_ab[h]+jid];          // +D2(kl,ji)
+                dum        +=  0.5 * u_p[d2aboff[h] + lkd*gems_ab[h]+jid];          // +D2(lk,ji)
+
+                if ( j==l ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        +=  0.5 * u_p[q1aoff[h2] + ii*amopi_[h2]+kk]; // +Q1(i,k) djl
+                    dum        -=  0.5 * u_p[d1boff[h2] + ii*amopi_[h2]+kk]; // -D1(i,k) djl
+                }
+                if ( i==k ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        +=  0.5 * u_p[q1aoff[h2] + ll*amopi_[h2]+jj]; // +Q1(l,j) dik
+                    dum        -=  0.5 * u_p[d1boff[h2] + ll*amopi_[h2]+jj]; // -D1(l,j) dik
+                }
+                if ( j==k ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        +=  0.5 * u_p[q1aoff[h2] + ll*amopi_[h2]+ii]; // +Q1(l,i) djk
+                    dum        -=  0.5 * u_p[d1boff[h2] + ll*amopi_[h2]+ii]; // -D1(l,i) djk
+                }
+                if ( i==l ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        +=  0.5 * u_p[q1aoff[h2] + kk*amopi_[h2]+jj]; // +Q1(k,j) dil
+                    dum        -=  0.5 * u_p[d1boff[h2] + kk*amopi_[h2]+jj]; // -D1(k,j) dil
+                }
+                u_p[q2soff[h] + ij*gems_00[h]+kl] = dum;
+            }
+        }
+        offset += gems_00[h]*gems_00[h];
+    }
+    // map D2ab to Q210
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i   =  bas_aa_sym[h][ij][0];
+            int j   =  bas_aa_sym[h][ij][1];
+            int ijd = ibas_ab_sym[h][i][j];
+            int jid = ibas_ab_sym[h][j][i];
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int   k =  bas_aa_sym[h][kl][0];
+                int   l =  bas_aa_sym[h][kl][1];
+
+                double dum  = 0.0;
+
+                // not spin adapted
+                int kld = ibas_ab_sym[h][k][l];
+                int lkd = ibas_ab_sym[h][l][k];
+                dum        +=  0.5 * u_p[d2aboff[h] + kld*gems_ab[h]+ijd];          // +D2(kl,ij)
+                dum        -=  0.5 * u_p[d2aboff[h] + lkd*gems_ab[h]+ijd];          // -D2(lk,ij)
+                dum        -=  0.5 * u_p[d2aboff[h] + kld*gems_ab[h]+jid];          // -D2(kl,ji)
+                dum        +=  0.5 * u_p[d2aboff[h] + lkd*gems_ab[h]+jid];          // +D2(lk,ji)
+
+                if ( j==l ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        +=  0.5 * u_p[q1aoff[h2] + ii*amopi_[h2]+kk]; // +Q1(i,k) djl
+                    dum        -=  0.5 * u_p[d1boff[h2] + ii*amopi_[h2]+kk]; // -D1(i,k) djl
+                }
+                if ( i==k ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        +=  0.5 * u_p[q1aoff[h2] + ll*amopi_[h2]+jj]; // +Q1(l,j) dik
+                    dum        -=  0.5 * u_p[d1boff[h2] + ll*amopi_[h2]+jj]; // -D1(l,j) dik
+                }
+                if ( j==k ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        -=  0.5 * u_p[q1aoff[h2] + ll*amopi_[h2]+ii]; // -Q1(l,i) djk
+                    dum        +=  0.5 * u_p[d1boff[h2] + ll*amopi_[h2]+ii]; // +D1(l,i) djk
+                }
+                if ( i==l ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        -=  0.5 * u_p[q1aoff[h2] + kk*amopi_[h2]+jj]; // -Q1(k,j) dil
+                    dum        +=  0.5 * u_p[d1boff[h2] + kk*amopi_[h2]+jj]; // +D1(k,j) dil
+                }
+
+                u_p[q2toff[h] + ij*gems_aa[h]+kl] = dum;
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h];
+    }
+    // map D2aa to Q211
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i = bas_aa_sym[h][ij][0];
+            int j = bas_aa_sym[h][ij][1];
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int k = bas_aa_sym[h][kl][0];
+                int l = bas_aa_sym[h][kl][1];
+
+                double dum  = 0.0;
+                dum        +=  u_p[d2aaoff[h] + kl*gems_aa[h]+ij];    // +D2(kl,ij)
+
+                if ( j==l ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        +=  u_p[q1aoff[h2] + ii*amopi_[h2]+kk];  // +Q1(i,k) djl
+                }
+                if ( j==k ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        +=  u_p[d1aoff[h2] + ll*amopi_[h2]+ii];  // +D1(l,i) djk
+                }
+                if ( i==l ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        -=  u_p[q1aoff[h2] + jj*amopi_[h2]+kk];  // -Q1(j,k) dil
+                }
+                if ( i==k ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        -=  u_p[d1aoff[h2] + ll*amopi_[h2]+jj];  // -D1(l,j) dkl
+                }
+
+                u_p[q2toff_p1[h] + ij*gems_aa[h]+kl] = dum;
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h];
+    }
+    // map D2bb to Q21-1
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i = bas_aa_sym[h][ij][0];
+            int j = bas_aa_sym[h][ij][1];
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int k = bas_aa_sym[h][kl][0];
+                int l = bas_aa_sym[h][kl][1];
+
+                double dum  = 0.0;
+
+                dum        +=  u_p[d2bboff[h] + kl*gems_aa[h]+ij];    // +D2(kl,ij)
+
+                if ( j==l ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        +=  u_p[q1boff[h2] + ii*amopi_[h2]+kk];  // +Q1(i,k) djl
+                }
+                if ( j==k ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        +=  u_p[d1boff[h2] + ll*amopi_[h2]+ii];  // +D1(l,i) djk
+                }
+                if ( i==l ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        -=  u_p[q1boff[h2] + jj*amopi_[h2]+kk];  // -Q1(j,k) dil
+                }
+                if ( i==k ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        -=  u_p[d1boff[h2] + ll*amopi_[h2]+jj];  // -D1(l,j) dkl
+                }
+
+                u_p[q2toff_m1[h] + ij*gems_aa[h]+kl] = dum;
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h];
+    }
+}
+
 void v2RDMSolver::Q2_constraints_Au_spin_adapted(SharedVector A,SharedVector u){
 
     double * A_p = A->pointer();
@@ -466,6 +669,135 @@ void v2RDMSolver::Q2_constraints_ATu_spin_adapted(SharedVector A,SharedVector u)
                     int ll = l - pitzer_offset[h2];
                     A_p[d1boff[h2]  + ll*amopi_[h2]+jj]      -= val;
                 }
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h];
+    }
+}
+
+// Q2 guess
+void v2RDMSolver::Q2_constraints_guess(SharedVector u){
+
+    double * u_p = u->pointer();
+
+    // map D2ab to Q2ab
+
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ij = 0; ij < gems_ab[h]; ij++) {
+            int i = bas_ab_sym[h][ij][0];
+            int j = bas_ab_sym[h][ij][1];
+            for (int kl = 0; kl < gems_ab[h]; kl++) {
+                int k = bas_ab_sym[h][kl][0];
+                int l = bas_ab_sym[h][kl][1];
+
+                double dum  = 0.0;
+
+                dum        +=  u_p[d2aboff[h] + kl*gems_ab[h]+ij];          // +D2(kl,ij)
+
+                if ( j==l ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        +=  u_p[q1aoff[h2] + ii*amopi_[h2]+kk]; // +Q1(i,k) djl
+                }
+                if ( i==k ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        -=  u_p[d1boff[h2] + ll*amopi_[h2]+jj]; // -D1(l,j) dik
+                }
+
+                u_p[q2aboff[h] + ij*gems_ab[h]+kl] = dum;
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h];
+    }
+
+    // map D2aa to Q2aa
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i = bas_aa_sym[h][ij][0];
+            int j = bas_aa_sym[h][ij][1];
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int k = bas_aa_sym[h][kl][0];
+                int l = bas_aa_sym[h][kl][1];
+
+                double dum  = 0.0;
+
+                dum        +=  u_p[d2aaoff[h] + kl*gems_aa[h]+ij];    // +D2(kl,ij)
+
+                if ( j==l ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        +=  u_p[q1aoff[h2] + ii*amopi_[h2]+kk];  // +Q1(i,k) djl
+                }
+                if ( j==k ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        +=  u_p[d1aoff[h2] + ll*amopi_[h2]+ii];  // +D1(l,i) djk
+                }
+                if ( i==l ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        -=  u_p[q1aoff[h2] + jj*amopi_[h2]+kk];  // -Q1(j,k) dil
+                }
+                if ( i==k ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        -=  u_p[d1aoff[h2] + ll*amopi_[h2]+jj];  // -D1(l,j) dkl
+                }
+
+                u_p[q2aaoff[h] + ij*gems_aa[h]+kl] = dum;
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h];
+    }
+    // map D2bb to Q2bb
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i = bas_aa_sym[h][ij][0];
+            int j = bas_aa_sym[h][ij][1];
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int k = bas_aa_sym[h][kl][0];
+                int l = bas_aa_sym[h][kl][1];
+
+                double dum  = 0.0;
+
+                dum        +=  u_p[d2bboff[h] + kl*gems_aa[h]+ij];    // +D2(kl,ij)
+
+                if ( j==l ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        +=  u_p[q1boff[h2] + ii*amopi_[h2]+kk];  // +Q1(i,k) djl
+                }
+                if ( j==k ) {
+                    int h2 = symmetry[i];
+                    int ii = i - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        +=  u_p[d1boff[h2] + ll*amopi_[h2]+ii];  // +D1(l,i) djk
+                }
+                if ( i==l ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int kk = k - pitzer_offset[h2];
+                    dum        -=  u_p[q1boff[h2] + jj*amopi_[h2]+kk];  // -Q1(j,k) dil
+                }
+                if ( i==k ) {
+                    int h2 = symmetry[j];
+                    int jj = j - pitzer_offset[h2];
+                    int ll = l - pitzer_offset[h2];
+                    dum        -=  u_p[d1boff[h2] + ll*amopi_[h2]+jj];  // -D1(l,j) dkl
+                }
+
+                u_p[q2bboff[h] + ij*gems_aa[h]+kl] = dum;
             }
         }
         offset += gems_aa[h]*gems_aa[h];

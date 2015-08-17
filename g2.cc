@@ -60,6 +60,185 @@ using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
+void v2RDMSolver::G2_constraints_guess_spin_adapted(SharedVector u){
+
+    double * u_p = u->pointer();
+
+    // G200
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                double dum = 0.0;
+
+                if ( j == l ) {
+                    int h3 = symmetry[i];
+                    int ii = i - pitzer_offset[h3];
+                    int kk = k - pitzer_offset[h3];
+                    dum       +=  u_p[d1aoff[h3] + ii*amopi_[h3]+kk] * 0.5; //   D1(i,k) djl
+                    dum       +=  u_p[d1boff[h3] + ii*amopi_[h3]+kk] * 0.5; //   D1(i,k) djl
+                }
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+
+                if ( i != l && k != j ) {
+
+                    int sil = ( i < l ? 1 : -1 );
+                    int skj = ( k < j ? 1 : -1 );
+
+
+                    int ild = ibas_aa_sym[h2][i][l];
+                    int kjd = ibas_aa_sym[h2][k][j];
+                    dum       -=  u_p[d2aaoff[h2] + ild*gems_aa[h2]+kjd] * sil * skj * 0.5; // -D2aa(il,kj)
+                    dum       -=  u_p[d2bboff[h2] + ild*gems_aa[h2]+kjd] * sil * skj * 0.5; // -D2bb(il,kj)
+
+                }
+
+                int ild = ibas_ab_sym[h2][i][l];
+                int jkd = ibas_ab_sym[h2][j][k];
+
+                dum       +=  u_p[d2aboff[h2] + ild*gems_ab[h2]+jkd] * 0.5; // D2ab(il,jk)
+
+                int lid = ibas_ab_sym[h2][l][i];
+                int kjd = ibas_ab_sym[h2][k][j];
+
+                dum       +=  u_p[d2aboff[h2] + lid*gems_ab[h2]+kjd] * 0.5; // D2ab(li,kj)
+
+                u_p[g2soff[h] + ijg*gems_ab[h]+klg] = dum;
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h];
+    }
+    // G210
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                double dum = 0.0;
+
+                if ( j == l ) {
+                    int h3 = symmetry[i];
+                    int ii = i - pitzer_offset[h3];
+                    int kk = k - pitzer_offset[h3];
+                    dum       +=  u_p[d1aoff[h3] + ii*amopi_[h3]+kk] * 0.5; //   D1(i,k) djl
+                    dum       +=  u_p[d1boff[h3] + ii*amopi_[h3]+kk] * 0.5; //   D1(i,k) djl
+                }
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+
+                if ( i != l && k != j ) {
+
+                    int sil = ( i < l ? 1 : -1 );
+                    int skj = ( k < j ? 1 : -1 );
+
+                    int ild = ibas_aa_sym[h2][i][l];
+                    int kjd = ibas_aa_sym[h2][k][j];
+                    dum       -=  u_p[d2aaoff[h2] + ild*gems_aa[h2]+kjd] * sil * skj * 0.5; // -D2aa(il,kj)
+                    dum       -=  u_p[d2bboff[h2] + ild*gems_aa[h2]+kjd] * sil * skj * 0.5; // -D2bb(il,kj)
+                }
+
+                int ild = ibas_ab_sym[h2][i][l];
+                int jkd = ibas_ab_sym[h2][j][k];
+
+                dum       -=  u_p[d2aboff[h2] + ild*gems_ab[h2]+jkd] * 0.5; // D2ab(il,jk)
+
+                int lid = ibas_ab_sym[h2][l][i];
+                int kjd = ibas_ab_sym[h2][k][j];
+
+                dum       -=  u_p[d2aboff[h2] + lid*gems_ab[h2]+kjd] * 0.5; // D2ab(li,kj)
+
+                u_p[g2toff[h] + ijg*gems_ab[h]+klg] = dum;
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h];
+    }
+       
+    // G211 constraints:
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                double dum = 0.0;
+
+                if ( j==l ) {
+                    int h3 = symmetry[i];
+                    int ii = i - pitzer_offset[h3];
+                    int kk = k - pitzer_offset[h3];
+                    dum   +=  u_p[d1aoff[h3] + ii*amopi_[h3]+kk];      //   D1(i,k) djl
+                }
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+
+                int ild = ibas_ab_sym[h2][i][l];
+                int kjd = ibas_ab_sym[h2][k][j];
+
+                dum       -=  u_p[d2aboff[h2] + ild*gems_ab[h2]+kjd];   // - D2ab(il,kj)
+
+                u_p[g2toff_p1[h] + ijg*gems_ab[h]+klg] = dum;
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h];
+    }
+
+    // G21-1 constraints:
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                double dum = 0.0;
+
+                if ( j == l ) {
+                    int h3 = symmetry[i];
+                    int ii = i - pitzer_offset[h3];
+                    int kk = k - pitzer_offset[h3];
+                    dum   +=  u_p[d1boff[h3] + ii*amopi_[h3]+kk];      //   D1(i,k) djl
+                }
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+
+                int ild = ibas_ab_sym[h2][l][i];
+                int kjd = ibas_ab_sym[h2][j][k];
+
+                dum       -=  u_p[d2aboff[h2] + ild*gems_ab[h2]+kjd];   // - D2ab(il,kj)
+
+                u_p[g2toff_m1[h] + ijg*gems_ab[h]+klg] = dum;
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h];
+    }
+}
 void v2RDMSolver::G2_constraints_Au_spin_adapted(SharedVector A,SharedVector u){
 
     double * A_p = A->pointer();
@@ -681,6 +860,208 @@ void v2RDMSolver::G2_constraints_ATu_spin_adapted(SharedVector A,SharedVector u)
         }
     }
     offset += nmo*nmo;*/
+}
+
+void v2RDMSolver::G2_constraints_guess(SharedVector u){
+
+    double* u_p = u->pointer();
+
+    // G2ab constraints:
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                double dum = 0.0;
+
+                if ( j==l ) {
+                    int h3 = symmetry[i];
+                    int ii = i - pitzer_offset[h3];
+                    int kk = k - pitzer_offset[h3];
+                    dum   +=  u_p[d1aoff[h3] + ii*amopi_[h3]+kk];      //   D1(i,k) djl
+                }
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+                int ild = ibas_ab_sym[h2][i][l];
+                int kjd = ibas_ab_sym[h2][k][j];
+
+                dum       -=  u_p[d2aboff[h2] + ild*gems_ab[h2]+kjd];   // - D2ab(il,kj)
+
+                u_p[g2aboff[h] + ijg*gems_ab[h]+klg] = dum;
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h];
+    }
+    // G2ba constraints:
+    for (int h = 0; h < nirrep_; h++) {
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                double dum = 0.0;
+
+                if ( j==l ) {
+                    int h3 = symmetry[i];
+                    int ii = i - pitzer_offset[h3];
+                    int kk = k - pitzer_offset[h3];
+                    dum       +=  u_p[d1boff[h3] + ii*amopi_[h3]+kk];      //   D1(i,k) djl
+                }
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+                int lid = ibas_ab_sym[h2][l][i];
+                int jkd = ibas_ab_sym[h2][j][k];
+
+                dum    -=  u_p[d2aboff[h2] + lid*gems_ab[h2]+jkd];       //   -D2ab(li,jk)
+
+                u_p[g2baoff[h] + ijg*gems_ab[h]+klg] = dum;
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h];
+    }
+    // G2aaaa / G2aabb / G2bbaa / G2bbbb
+    for (int h = 0; h < nirrep_; h++) {
+        // G2aaaa
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+
+                double dum = 0.0;
+
+                if ( j == l ) {
+                    int h3 = symmetry[i];
+                    int ii = i - pitzer_offset[h3];
+                    int kk = k - pitzer_offset[h3];
+                    dum       +=  u_p[d1aoff[h3] + ii*amopi_[h3]+kk];    //   D1(i,k) djl
+                }
+
+                if ( i != l && k != j ) {
+
+                    int sil = ( i < l ? 1 : -1 );
+                    int skj = ( k < j ? 1 : -1 );
+
+                    int ild = ibas_aa_sym[h2][i][l];
+                    int kjd = ibas_aa_sym[h2][k][j];
+
+                    dum       -=  u_p[d2aaoff[h2] + ild*gems_aa[h2]+kjd] * sil * skj; // -D2aa(il,kj)
+
+                }
+
+                u_p[g2aaoff[h] + ijg*2*gems_ab[h]+klg] = dum;
+            }
+        }
+        // G2bbbb
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+
+                double dum = 0.0;
+
+                if ( j == l ) {
+                    int h3 = symmetry[i];
+                    int ii = i - pitzer_offset[h3];
+                    int kk = k - pitzer_offset[h3];
+                    dum       +=  u_p[d1boff[h3] + ii*amopi_[h3]+kk];    //   D1(i,k) djl
+                }
+
+                if ( i != l && k != j ) {
+
+                    int sil = ( i < l ? 1 : -1 );
+                    int skj = ( k < j ? 1 : -1 );
+
+                    int ild = ibas_aa_sym[h2][i][l];
+                    int kjd = ibas_aa_sym[h2][k][j];
+
+                    dum       -=  u_p[d2bboff[h2] + ild*gems_aa[h2]+kjd] * sil * skj; // -D2bb(il,kj)
+
+                }
+
+                u_p[g2aaoff[h] + (gems_ab[h] + ijg)*2*gems_ab[h] + (gems_ab[h] + klg)] = dum;
+
+            }
+        }
+        // G2aabb
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+
+                double dum = 0.0;
+
+                int ild = ibas_ab_sym[h2][i][l];
+                int jkd = ibas_ab_sym[h2][j][k];
+
+                dum       +=  u_p[d2aboff[h2] + ild*gems_ab[h2]+jkd]; // D2ab(il,jk)
+
+                u_p[g2aaoff[h] + (ijg)*2*gems_ab[h] + (gems_ab[h] + klg)] = dum;
+
+            }
+        }
+        // G2bbaa
+        #pragma omp parallel for schedule (static)
+        for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
+
+            int i = bas_ab_sym[h][ijg][0];
+            int j = bas_ab_sym[h][ijg][1];
+
+            for (int klg = 0; klg < gems_ab[h]; klg++) {
+
+                int k = bas_ab_sym[h][klg][0];
+                int l = bas_ab_sym[h][klg][1];
+
+                int h2 = SymmetryPair(symmetry[i],symmetry[l]);
+
+                double dum = 0.0;
+
+                int lid = ibas_ab_sym[h2][l][i];
+                int kjd = ibas_ab_sym[h2][k][j];
+
+                dum       +=  u_p[d2aboff[h2] + lid*gems_ab[h2]+kjd]; // D2ab(li,kj)
+
+                u_p[g2aaoff[h] + (gems_ab[h] + ijg)*2*gems_ab[h] + (klg)] = dum;
+            }
+        }
+        offset += 2*gems_ab[h]*2*gems_ab[h];
+    }
 }
 
 // G2 portion of A.x (with symmetry)
