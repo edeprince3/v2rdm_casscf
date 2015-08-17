@@ -208,8 +208,8 @@ class v2RDMSolver: public Wavefunction{
 
     void Guess();
     void PrintHeader();
-    void K2();
-    void DFK2();
+    void TEI();
+    void DF_TEI();
     void BuildConstraints();
 
     void bpsdp_Au(SharedVector A, SharedVector u);
