@@ -939,7 +939,7 @@ int v2RDMSolver::TotalSym(int i,int j,int k, int l) {
 double v2RDMSolver::compute_energy() {
 
     // hartree-fock guess
-    Guess();
+    //Guess();
 
     // get integrals
     if ( is_df_ ) {
@@ -947,6 +947,7 @@ double v2RDMSolver::compute_energy() {
     }else {
         TEI();
     }
+    Guess();
 
     // generate constraint vector
     BuildConstraints();
@@ -980,8 +981,6 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("      mu");
     outfile->Printf("     eps(p)");
     outfile->Printf("     eps(d)\n");
-    //outfile->Printf("    t(CG)");
-    //outfile->Printf("  t(Diag)\n");
 
     double energy_dual,egap;
     double denergy_primal = fabs(energy_primal);
@@ -1272,40 +1271,74 @@ void v2RDMSolver::MullikenPopulations() {
 
 void v2RDMSolver::Guess(){
 
-    srand(0);//time(NULL));
-
     double* x_p = x->pointer();
     double* z_p = z->pointer();
 
-    x->zero();
-    z->zero();
+    memset((void*)x_p,'\0',dimx*sizeof(double));
+    memset((void*)z_p,'\0',dimx*sizeof(double));
 
     // Hartree-Fock guess for D2, D1, Q1, Q2, and G2
 
-    // D2ab
-    for (int h = 0; h < nirrep_; h++) {
-        for (int ij = 0; ij < gems_ab[h]; ij++) {
-            int i = bas_ab_sym[h][ij][0];
-            int j = bas_ab_sym[h][ij][1];
-            if ( i < nalpha_ - nfrzc && j < nbeta_ - nfrzc ) {
-                x_p[d2aboff[h] + ij*gems_ab[h]+ij] = 1.0;
+double * c_p = c->pointer();
+    double en = 0.0;
 
+    // D2ab
+    int poff1 = 0;
+    for (int h1 = 0; h1 < nirrep_; h1++) {
+        for (int i = 0; i < soccpi_[h1] + doccpi_[h1] - frzcpi_[h1]; i++){
+            int poff2 = 0;
+            for (int h2 = 0; h2 < nirrep_; h2++) {
+                for (int j = 0; j < doccpi_[h2] - frzcpi_[h2]; j++){
+                    int ii = i + poff1;
+                    int jj = j + poff2;
+                    int h3 = SymmetryPair(symmetry[ii],symmetry[jj]);
+                    int ij = ibas_ab_sym[h3][ii][jj];
+                    x_p[d2aboff[h3] + ij*gems_ab[h3]+ij] = 1.0;
+                }
+                poff2   += nmopi_[h2] - frzcpi_[h2] - frzvpi_[h2];
             }
         }
+        poff1   += nmopi_[h1] - frzcpi_[h1] - frzvpi_[h1];
     }
-  
-    // D2aa/D2bb
-    for (int h = 0; h < nirrep_; h++) {
-        for (int ij = 0; ij < gems_aa[h]; ij++) {
-            int i = bas_aa_sym[h][ij][0];
-            int j = bas_aa_sym[h][ij][1];
-            if ( i < nalpha_-nfrzc && j < nalpha_-nfrzc ) {
-                x_p[d2aaoff[h] + ij*gems_aa[h]+ij] = 1.0;
-            }
-            if ( i < nbeta_-nfrzc && j < nbeta_-nfrzc ) {
-                x_p[d2bboff[h] + ij*gems_aa[h]+ij] = 1.0;
+
+    // d2aa
+    poff1 = 0;
+    for (int h1 = 0; h1 < nirrep_; h1++) {
+        for (int i = 0; i < soccpi_[h1] + doccpi_[h1] - frzcpi_[h1]; i++){
+            int poff2 = 0;
+            for (int h2 = 0; h2 < nirrep_; h2++) {
+                for (int j = 0; j < soccpi_[h2] + doccpi_[h2] - frzcpi_[h2]; j++){
+                    int ii = i + poff1;
+                    int jj = j + poff2;
+                    if ( jj >= ii ) continue;
+                    int h3 = SymmetryPair(symmetry[ii],symmetry[jj]);
+                    int ij = ibas_aa_sym[h3][ii][jj];
+                    x_p[d2aaoff[h3] + ij*gems_aa[h3]+ij] = 1.0;
+                }
+                poff2   += nmopi_[h2] - frzcpi_[h2] - frzvpi_[h2];
             }
         }
+        poff1   += nmopi_[h1] - frzcpi_[h1] - frzvpi_[h1];
+    }
+
+    // d2bb
+    poff1 = 0;
+    for (int h1 = 0; h1 < nirrep_; h1++) {
+        for (int i = 0; i < doccpi_[h1] - frzcpi_[h1]; i++){
+            int poff2 = 0;
+            for (int h2 = 0; h2 < nirrep_; h2++) {
+                for (int j = 0; j < doccpi_[h2] - frzcpi_[h2]; j++){
+                    int ii = i + poff1;
+                    int jj = j + poff2;
+                    if ( jj >= ii ) continue;
+                    int h3 = SymmetryPair(symmetry[ii],symmetry[jj]);
+                    int ij = ibas_aa_sym[h3][ii][jj];
+                    x_p[d2bboff[h3] + ij*gems_aa[h3]+ij] = 1.0;
+                }
+                poff2   += nmopi_[h2] - frzcpi_[h2] - frzvpi_[h2];
+            }
+        }
+        poff1   += nmopi_[h1] - frzcpi_[h1] - frzvpi_[h1];
     }
 
     // D1
@@ -1488,7 +1521,6 @@ void v2RDMSolver::PrintHeader(){
             nQ_ = auxiliary->nbf();
             Process::environment.globals["NAUX (SCF)"] = nQ_;
         }
-        // gidofalvi -- added long int cast so that total memory count remains accurate for large systems
         tot += (long int)nQ_*(long int)nso_*((long int)nso_+1)/2;
     }else {
         tei_full_dim = 0;
@@ -2481,37 +2513,6 @@ void v2RDMSolver::UnpackDensityPlusCore() {
         }
         offset += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
     }
-
-    // check energy:
-
-    // two-electron part:
-    //double en2 = 0.0;
-    //int offset_full      = 0;
-    //int offset_plus_core = 0;
-    //for (int h = 0; h < nirrep_; h++) {
-    //    en2 += C_DDOT(gems_plus_core[h]*(gems_plus_core[h]+1)/2,tei_full_sym+offset_full,1,d2_plus_core_sym+offset_plus_core,1);
-    //    offset_full += gems_full[h] * ( gems_full[h] + 1 ) / 2;
-    //    offset_plus_core += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
-    //}
-
-    // one-electron part:
-    //double en1 = 0.0;
-    //offset_full      = 0;
-    //offset_plus_core = 0;
-    //for (int h = 0; h < nirrep_; h++) {
-    //    en1 += C_DDOT( ( frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2 ,oei_full_sym + offset_full,1,d1_plus_core_sym + offset_plus_core,1);
-    //    offset_full      += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
-    //    offset_plus_core += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
-    //}
-
-    //printf("\n");
-    //printf("efrzc1       %20.12lf\n",efrzc1);
-    //printf("efrzc2       %20.12lf\n",efrzc2);
-    //printf("\n");
-    //printf("en1          %20.12lf\n",en1);
-    //printf("en2          %20.12lf\n",en2);
-    //printf("en1+en2      %20.12lf\n",en1+en2);
-    //printf("en1+en2+enuc %20.12lf\n",en1+en2 + enuc);
 }
 
 // repack rotated full-space integrals into active-space integrals
@@ -2545,11 +2546,6 @@ void v2RDMSolver::RepackIntegralsDF(){
     }
     efrzc = efrzc1 + efrzc2;
 
-    //printf("%20.12lf\n",efrzc1);
-    //printf("%20.12lf\n",efrzc2);
-    //printf("%20.12lf\n",efrzc);
-    //exit(0);
-
     double* c_p = c->pointer();
 
     // adjust oeis
@@ -2568,7 +2564,6 @@ void v2RDMSolver::RepackIntegralsDF(){
                 for (int h2 = 0; h2 < nirrep_; h2++) {
 
                     for (long int k = 0; k < frzcpi_[h2]; k++) {
-                        // gidofalvi modified int to long int so that addressing is correct for large systems
                         long int kk = k + offset2;
                         dum1 += C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,jj),1,Qmo_+nQ_*INDEX(kk,kk),1);
                         dum2 += C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,kk),1);
