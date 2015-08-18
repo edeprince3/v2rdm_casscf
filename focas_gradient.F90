@@ -276,7 +276,8 @@ module focas_gradient
 
             grad_ind = grad_ind + 1
 
-            orbital_gradient_(grad_ind) = 2.0_wp * ( q_(u - ndoc_tot_,t) + z_(u - ndoc_tot_,t) - q_(t - ndoc_tot_,u) - z_(t - ndoc_tot_,u))
+            orbital_gradient_(grad_ind) = 2.0_wp * ( q_(u - ndoc_tot_,t) + &
+                 & z_(u - ndoc_tot_,t) - q_(t - ndoc_tot_,u) - z_(t - ndoc_tot_,u))
 
           end do
  

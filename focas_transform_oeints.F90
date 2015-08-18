@@ -16,9 +16,10 @@ module focas_transform_oeints
       transform_mocoeff = 1
 
       if ( size(mo_coeff,dim = 1) /= nmo_tot_ ) then
-        if ( log_print_ ) then
-          write(fid_,'(a)')'dimension of mo_coeff(:,:) and nmo_tot_ do not match'
-        end if
+        !AED commented
+        !if ( log_print_ ) then
+        !  write(fid_,'(a)')'dimension of mo_coeff(:,:) and nmo_tot_ do not match'
+        !end if
         return
       end if
 
