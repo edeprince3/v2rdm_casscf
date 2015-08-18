@@ -6,6 +6,64 @@ module focas_transform_oeints
 
   contains
 
+    integer function transform_mocoeff(mo_coeff)
+
+      implicit none
+      real(wp) :: mo_coeff(:,:)
+      integer :: i_sym,num_i,i_offset,max_nmopi,first_i,last_i
+      real(wp), allocatable :: block_tmp(:,:)
+
+      transform_mocoeff = 1
+
+      if ( size(mo_coeff,dim = 1) /= nmo_tot_ ) then
+        if ( log_print_ ) then
+          write(fid_,'(a)')'dimension of mo_coeff(:,:) and nmo_tot_ do not match'
+        end if
+        return
+      end if
+
+      max_nmopi = maxval(trans_%nmopi)
+   
+      allocate(block_tmp(max_nmopi,max_nmopi))
+
+      do i_sym = 1 , nirrep_
+
+        num_i    = trans_%nmopi(i_sym)
+
+        if ( num_i == 0 ) cycle
+
+        i_offset = trans_%offset(i_sym)
+
+        first_i  = i_offset + 1
+        last_i   = i_offset + num_i
+
+!#ifdef BLAS
+!
+        call dgemm('N','N',num_i,num_i,num_i,1.0_wp,mo_coeff(first_i:last_i,first_i:last_i),num_i,&
+                     trans_%u_irrep_block(i_sym)%val,num_i,0.0_wp,block_tmp,max_nmopi)
+        call dgemm('T','N',num_i,num_i,num_i,1.0_wp,trans_%u_irrep_block(i_sym)%val,num_i, &
+                     block_tmp,max_nmopi,0.0_wp,mo_coeff(first_i:last_i,first_i:last_i),num_i)
+!
+!#else
+!
+!        block_tmp(1:num_i,1:num_i) = matmul(mo_coeff(first_i:last_i,first_i:last_i),&
+!                                          & trans_%u_irrep_block(i_sym)%val)
+!
+!        mo_coeff(first_i:last_i,first_i:last_i) = matmul(transpose(trans_%u_irrep_block(i_sym)%val), &
+!                                                       & block_tmp(1:num_i,1:num_i))
+!
+!#endif
+
+      end do
+
+      deallocate(block_tmp)
+
+      transform_mocoeff = 0
+
+      return
+
+    end function transform_mocoeff
+
     integer function transform_oeints(int1)
       implicit none
   
@@ -35,6 +93,9 @@ module focas_transform_oeints
         ! number of orbitals in this block as well as offset for indexing
 
         num_i    = trans_%nmopi(i_sym)
+
+        if ( num_i == 0 ) cycle
+
         i_offset = trans_%offset(i_sym)
 
         ! **************
@@ -74,9 +135,20 @@ module focas_transform_oeints
         ! *** TRANSFORM ***
         ! *****************
 
-        irrep_block_2(1:num_i,1:num_i) = matmul(irrep_block_1(1:num_i,1:num_i),trans_%u_irrep_block(i_sym)%val)
-
-        irrep_block_1(1:num_i,1:num_i) = matmul(transpose(trans_%u_irrep_block(i_sym)%val),irrep_block_2(1:num_i,1:num_i))
+!#ifdef BLAS
+!
+        call dgemm('N','N',num_i,num_i,num_i,1.0_wp,irrep_block_1,max_nmopi,&
+                     trans_%u_irrep_block(i_sym)%val,num_i,0.0_wp,irrep_block_2,max_nmopi)
+        call dgemm('T','N',num_i,num_i,num_i,1.0_wp,trans_%u_irrep_block(i_sym)%val,num_i, &
+                     irrep_block_2,max_nmopi,0.0_wp,irrep_block_1,max_nmopi)
+!
+!#else
+!
+!        irrep_block_2(1:num_i,1:num_i) = matmul(irrep_block_1(1:num_i,1:num_i),trans_%u_irrep_block(i_sym)%val)
+!
+!        irrep_block_1(1:num_i,1:num_i) = matmul(transpose(trans_%u_irrep_block(i_sym)%val),irrep_block_2(1:num_i,1:num_i))
+!
+!#endif
 
         ! ***************
         ! *** SCATTER ***

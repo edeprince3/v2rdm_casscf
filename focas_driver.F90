@@ -10,8 +10,9 @@ module focas_driver
 
   contains
 
-  subroutine focas_optimize(int1,nnz_int1,int2,nnz_int2,den1,nnz_den1,den2,nnz_den2,ndocpi,nactpi,nextpi,nirrep, &
-                           & gnorm_tol,dele_tol,gnorm_last,dele_last,converged,df_ints_in,nthread,fname,print_fl)
+  subroutine focas_optimize(mo_coeff,int1,nnz_int1,int2,nnz_int2,den1,nnz_den1,den2,nnz_den2,    &
+                           & ndocpi,nactpi,nextpi,nirrep,gnorm_tol,dele_tol,gnorm_last,dele_last,&
+                           & converged,df_ints_in,nthread,fname,print_fl)
  
     ! integer input
     integer, intent(in)     :: nthread         ! number of threads to use
@@ -27,6 +28,7 @@ module focas_driver
     integer, intent(in)     :: nextpi(nirrep)  ! number of virtual orbitals per irrep (excluding forzen virtual orbitals) 
     integer, intent(in)     :: print_fl        ! flag for printing output information
     ! real input
+    real(wp), intent(inout) :: mo_coeff(:,:)   ! mo coefficient matrix
     real(wp), intent(inout) :: dele_last       ! final energy change
     real(wp), intent(inout) :: gnorm_last      ! final gradient norm
     real(wp), intent(in)    :: dele_tol        ! final energy change threshold
@@ -127,7 +129,7 @@ module focas_driver
       ! transform integrals
       t0 = timer()
 
-      if ( iter /= 0 ) call transform_driver(int1,int2)      
+      if ( iter /= 0 ) call transform_driver(int1,int2,mo_coeff)      
 
       t1 = timer()
       t_trans = t1 - t0
@@ -500,7 +502,7 @@ module focas_driver
       end do
     end do
     do irrep=1,nirrep_
-      ints_%nnzpi(irrep) = ints_%ngempi(irrep) * ( ints_%ngempi(irrep) + 1 ) /2
+      ints_%nnzpi(irrep) = ints_%ngempi(irrep) * ( ints_%ngempi(irrep) + 1 ) / 2
     end do
     do irrep=2,nirrep_
       ints_%offset(irrep) = ints_%offset(irrep-1) + ints_%nnzpi(irrep-1)
@@ -517,7 +519,7 @@ module focas_driver
       end do
     end do
     do irrep=1,nirrep_
-      dens_%nnzpi(irrep) = dens_%ngempi(irrep) * ( dens_%ngempi(irrep) + 1 ) /2
+      dens_%nnzpi(irrep) = dens_%ngempi(irrep) * ( dens_%ngempi(irrep) + 1 ) / 2
     end do
     do irrep=2,nirrep_
       dens_%offset(irrep) = dens_%offset(irrep-1) + dens_%nnzpi(irrep-1)
@@ -529,9 +531,9 @@ module focas_driver
   subroutine print_info()
     integer :: irrep,i
     ! print the information gathered so far
-    write(fid_,'(a5,2x,3(3(a3,1x),5x))')'irrep','d_f','d_l','n_d','a_f','a_l','n_a','e_f','e_l','n_e'
+    write(fid_,'(a5,2x,3(3(a4,1x),5x))')'irrep','d_f','d_l','n_d','a_f','a_l','n_a','e_f','e_l','n_e'
     do irrep=1,nirrep_
-      write(fid_,'(i5,2x,3(3(i3,1x),5x))')irrep,(first_index_(irrep,i),last_index_(irrep,i),&
+      write(fid_,'(i5,2x,3(3(i4,1x),5x))')irrep,(first_index_(irrep,i),last_index_(irrep,i),&
                & last_index_(irrep,i)-first_index_(irrep,i)+1,i=1,3)
     end do
     write(fid_,'(a)')'density information'
@@ -540,8 +542,12 @@ module focas_driver
     write(fid_,'(a,8(i9,1x))')'offset(:)=',dens_%offset
     write(fid_,'(a)')'integral information'
     write(fid_,'(a,8(i9,1x))')'ngempi(:)=',ints_%ngempi
-    write(fid_,'(a,8(i9,1x))')' nnzpi(:)=',ints_%nnzpi
-    write(fid_,'(a,8(i9,1x))')'offset(:)=',ints_%offset
+    if ( df_vars_%use_df_teints == 0 ) then
+      write(fid_,'(a,8(i12,1x))')' nnzpi(:)=',ints_%nnzpi
+      write(fid_,'(a,8(i12,1x))')'offset(:)=',ints_%offset
+    else
+      write(fid_,'(a,8(i12,1x))')' nnzpi(:)=',int(ints_%ngempi,kind=ip)*int(df_vars_%nQ,kind=ip)
+    endif
     write(fid_,'(a)')'rotation pair information:'
     write(fid_,'(4(a,1x,i6,2x),a,1x,i9)')'act-doc pairs:',rot_pair_%n_ad,'ext-doc pairs:',rot_pair_%n_ed,&
                              &'act-act pairs:',rot_pair_%n_aa,'ext-act pairs:',rot_pair_%n_ea,&

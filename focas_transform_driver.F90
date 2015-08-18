@@ -8,9 +8,9 @@ module focas_transform_driver
 
   contains
 
-    subroutine transform_driver(int1,int2)
+    subroutine transform_driver(int1,int2,mo_coeff)
       implicit none
-      real(wp) :: int2(:),int1(:)
+      real(wp) :: int2(:),int1(:),mo_coeff(:,:)
       integer :: error
 
       ! 1-e integrals
@@ -24,6 +24,10 @@ module focas_transform_driver
         error = transform_teints_df(int2)
       end if
       if ( error /= 0 ) stop      
+
+      ! mo_coeff matrix
+      error = transform_mocoeff(mo_coeff)
+      if ( error /= 0 ) stop
 
       return
     end subroutine transform_driver

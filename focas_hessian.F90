@@ -13,6 +13,8 @@ module focas_hessian
       real(wp), intent(in) :: q(:,:),z(:,:)
       integer :: error
 
+      num_negative_diagonal_hessian_ = 0 
+
       ! active-doubly occupied pairs
 
       if ( rot_pair_%n_ad > 0 ) error=diagonal_hessian_ad(grad,f_i,f_a,q,z,den1)
@@ -42,7 +44,7 @@ module focas_hessian
       real(wp), intent(in) :: f_i(:),f_a(:),q(:,:),z(:,:),den1(:)
 
       integer :: grad_ind,t,i,tt_int,ii_int,tt_den,t_sym
-      real(wp) :: h_val,fac
+      real(wp) :: h_val
 
       ! loop over all active - doubly-occupied pairs
 
@@ -67,10 +69,12 @@ module focas_hessian
                        2.0_wp * ( ( f_i(tt_int) + f_a(tt_int) ) - ( f_i(ii_int) + f_a(ii_int) ) ) &
                      + den1(tt_den) * ( f_i(ii_int) + f_a(ii_int) ) - q(t-ndoc_tot_,t) - z(t-ndoc_tot_,t) )
             
-            fac = 0.0_wp
-            if ( h_val > 0.0_wp ) fac = 1.0_wp/h_val
-
-            grad(grad_ind) = fac * grad(grad_ind)
+            if ( h_val > 0.0_wp ) then
+              grad(grad_ind) = grad(grad_ind) / h_val
+            else
+              grad(grad_ind) = 0.0_wp
+              num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1 
+            endif
 
           end do
 
@@ -90,7 +94,7 @@ module focas_hessian
       ! currently, this is not implemented, so just set to 1.0 for now
       real(wp),intent(inout) :: grad(:)
       integer :: t,u,t_sym,grad_ind
-      real(wp) :: h_val,fac
+      real(wp) :: h_val
 
       ! loop over all active - active pairs
 
@@ -107,10 +111,12 @@ module focas_hessian
             ! compute Hessian value
             h_val    = 50.0_wp
 
-            fac = 0.0_wp
-            if ( h_val > 0.0_wp ) fac = 1.0_wp/h_val
-
-            grad(grad_ind) = fac * grad(grad_ind)
+            if ( h_val > 0.0_wp ) then
+              grad(grad_ind) = grad(grad_ind) / h_val
+            else
+              grad(grad_ind) = 0.0_wp
+              num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
+            endif
 
           end do
       
@@ -134,7 +140,7 @@ module focas_hessian
       real(wp), intent(in) :: f_i(:),f_a(:)
 
       integer :: a,i,grad_ind,aa,ii,a_sym
-      real(wp) :: h_val,fac
+      real(wp) :: h_val
 
       ! loop over all external - doubly-occupied pairs
 
@@ -159,10 +165,12 @@ module focas_hessian
 
             h_val    = 4.0 * ( f_i(aa) + f_a(aa) - f_i(ii) - f_a(ii) )
 
-            fac = 0.0_wp
-            if ( h_val > 0.0_wp ) fac = 1.0_wp/h_val
-
-            grad(grad_ind) = fac * grad(grad_ind)
+            if ( h_val > 0.0_wp ) then
+              grad(grad_ind) = grad(grad_ind) / h_val
+            else
+              grad(grad_ind) = 0.0_wp
+              num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
+            endif
 
           end do
 
@@ -186,7 +194,7 @@ module focas_hessian
       real(wp), intent(in) :: f_i(:),f_a(:),z(:,:),q(:,:),den1(:)
 
       integer :: a,t,grad_ind,tt_den,aa_int,a_sym
-      real(wp) :: h_val,fac
+      real(wp) :: h_val
 
       ! loop over all external - doubly-occupied pairs
 
@@ -211,10 +219,12 @@ module focas_hessian
 
             h_val    = 2.0_wp * ( den1(tt_den) * ( f_i(aa_int) + f_a(aa_int) ) - q(t-ndoc_tot_,t) - z(t-ndoc_tot_,t) )
 
-            fac = 0.0_wp
-            if ( h_val > 0.0_wp ) fac = 1.0_wp/h_val
-
-            grad(grad_ind) = fac * grad(grad_ind)
+            if ( h_val > 0.0_wp ) then
+              grad(grad_ind) = grad(grad_ind) / h_val
+            else
+              grad(grad_ind) = 0.0_wp
+              num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
+            endif
 
           end do
 

@@ -31,6 +31,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
 
   real(wp) :: delrot
 
+  real(wp) :: mo_coeff(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: nactpi(nirrep_in),ndocpi(nirrep_in),nextpi(nirrep_in)
   integer :: ndoc,nact,next,nmo,nirrep,converged
   integer :: nnz_int1,nnz_den1,nnz_den2,df_ints
@@ -39,6 +40,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer :: gemind_den_new(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: gemind_int_new(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: energy_to_class_map(ncore_in+nact_in+nvirt_in)
+  integer :: energy_to_irrep_map(ncore_in+nact_in+nvirt_in)
   integer :: class_to_energy_map(ncore_in+nact_in+nvirt_in)
   integer :: class_to_irrep_map(ncore_in+nact_in+nvirt_in)
   integer :: first_index(nirrep_in,3)
@@ -48,6 +50,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer(ip) :: nnz_int(nirrep_in)
   integer :: offset_den_psi4(nirrep_in)
   integer :: offset_den_new(nirrep_in)
+  integer :: offset_irrep(nirrep_in)
   integer(ip) :: offset_int(nirrep_in)
   integer :: offset_irrep_int1(nirrep_in)
   integer :: offset_irrep_den1(nirrep_in)
@@ -101,7 +104,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   endif
   nnz_den2 = sum(nnz_den_new)
 
-  call focas_optimize(integrals_1,nnz_int1,integrals_2,nnz_int2,                    &
+  call focas_optimize(mo_coeff,integrals_1,nnz_int1,integrals_2,nnz_int2,               &
                     & density_1(1:nnz_den1),nnz_den1,density_2(1:nnz_den2),nnz_den2,&
                     & ndocpi,nactpi,nextpi,nirrep,gnorm_tol,dele_tol,gnorm,delrot,converged,&
                     & df_ints,nproc,jacobi_log_file,print_flag)
@@ -128,6 +131,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       integer :: p_class,q_class,r_class,s_class,q_max,s_max
       integer :: p_c,q_c,r_c,s_c
       integer :: p_i,q_i,r_i,s_i
+      integer :: p,q
       integer :: pq_off,max_dim
       real(wp), allocatable :: block(:)
 
@@ -156,6 +160,20 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
         end do
       end do
       integrals_1 = block(1:size(integrals_1,dim=1))
+
+      ! copy mo coefficient matrix
+      mo_coeff_out=0.0_wp
+
+      do p = 1 ,nmo
+        p_sym=syms(p)
+        p_i=energy_to_irrep_map(p) + offset_irrep(p_sym)
+        do q = 1,nmo
+          q_sym=syms(q)
+          if (q_sym/=p_sym) cycle
+          q_i=energy_to_irrep_map(q) + offset_irrep(q_sym)
+          mo_coeff_out(p,q)=mo_coeff(p_i,q_i)
+        end do
+      end do
 
       ! copy 2-e integrals
 
@@ -222,6 +240,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       integer :: p_c,q_c,r_c,s_c
       integer :: p_i,q_i,r_i,s_i
       integer :: pq_off,max_dim
+      integer :: p,q
       real(wp), allocatable :: block(:)
       real(wp) :: tr_d2
 
@@ -272,6 +291,20 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       end do
       p_sym = gemind_den_new(last_index(nirrep,2),last_index(nirrep,2))
       density_1(1:p_sym) = block(1:p_sym)
+
+      ! copy mo coefficient matrix
+      mo_coeff=0.0_wp
+
+      do p = 1 ,nmo
+        p_sym=syms(p)
+        p_i=energy_to_irrep_map(p) + offset_irrep(p_sym)
+        do q = 1,nmo
+          q_sym=syms(q)
+          if (q_sym/=p_sym) cycle
+          q_i=energy_to_irrep_map(q) + offset_irrep(q_sym)
+          mo_coeff(p_i,q_i)=mo_coeff_out(p,q)
+        end do
+      end do
 
       ! copy 2-e integrals
       if ( df_ints == 0 ) then
@@ -424,6 +457,19 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       offset_int = 0
       do pq_sym = 2 , nirrep
         offset_int(pq_sym) = nnz_int(pq_sym-1) + offset_int(pq_sym-1)
+      end do
+
+      ! determine energy --> irrep map
+      dims=0
+      do p=1,nmo
+        p_sym = syms(p)
+        dims(p_sym) = dims(p_sym) + 1
+        energy_to_irrep_map(p) = dims(p_sym)
+      end do
+ 
+      offset_irrep = 0
+      do p_sym = 2 , nirrep
+        offset_irrep(p_sym) = offset_irrep(p_sym-1) + dims(p_sym-1)
       end do
 
       ! determine dimensions for density arrays

@@ -22,9 +22,11 @@ module focas_transform_teints
       integer :: i_thread,Q,row,col,row_sym,col_sym,max_nmopi
       integer :: col_min,col_max,row_min,row_max,ncol,nrow,row_off,col_off
       integer :: first_Q(nthread_use_),last_Q(nthread_use_)
-      integer(ip) :: int_ind
+      integer(ip) :: int_ind,nQ
 
-      max_nmopi = maxval(trans_%nmopi)
+      nQ                  = int(df_vars_%nQ,kind=ip)
+
+      max_nmopi           = maxval(trans_%nmopi)
 
       transform_teints_df = allocate_tmp_matrices()
 
@@ -52,7 +54,7 @@ module focas_transform_teints
 
           ! loop over column indeces
 
-          int_ind = Q
+          int_ind = int(Q,kind=ip)
 
           do col = 1 , nmo_tot_
 
@@ -64,7 +66,7 @@ module focas_transform_teints
  
               aux(i_thread)%mat(col,row) = int2(int_ind)
 
-              int_ind = int_ind + df_vars_%nQ
+              int_ind = int_ind + nQ
 
             end do ! end row loop 
 
@@ -137,7 +139,7 @@ module focas_transform_teints
           ! *** SCATTER (only LT row > col elements are accessed in int2)
           ! *************************************************************
 
-          int_ind = Q
+          int_ind = int(Q,kind=ip)
 
           do col = 1 , nmo_tot_
 
@@ -149,7 +151,7 @@ module focas_transform_teints
 
               int2(int_ind) = aux(i_thread)%mat(col,row)
 
-              int_ind = int_ind + df_vars_%nQ
+              int_ind = int_ind + nQ
 
             end do ! end row loop 
 
@@ -280,7 +282,7 @@ module focas_transform_teints
       real(wp) :: int2(:)
 
       integer     :: ij_sym
-      integer(ip) :: first_ij,last_ij
+      integer     :: first_ij,last_ij
       integer     :: irrep_block_transformed(nirrep_)
 
       ! initialize error flag
@@ -362,7 +364,7 @@ module focas_transform_teints
       integer :: num_i,num_j,num_k,num_l,num_t,num_u
       integer :: i_offset,j_offset,k_offset,l_offset,t_offset,u_offset
 
-      integer(ip) :: ijkl_class,rstu_class
+      integer :: ijkl_class,rstu_class
 
       ! initialize error flag
 
@@ -791,7 +793,7 @@ module focas_transform_teints
       integer :: num_i,num_k,num_t
       integer :: i_offset,k_offset,t_offset
 
-      integer(ip) :: ijkl_class,rstu_class
+      integer :: ijkl_class,rstu_class
 
       ! initialize error flag
 

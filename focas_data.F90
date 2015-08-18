@@ -24,7 +24,7 @@ module focas_data
   real(wp), allocatable :: fock_a_(:)                              ! active Fock matrix (symmetric, LT nmo*(nmo+1)/2 storage)
   real(wp), allocatable :: q_(:,:)                                 ! auxiliary matrix (asymmetric, nact*nmo storage) 
   real(wp), allocatable :: z_(:,:)                                 ! auxiliary matrix that contains cotractions of the fock_i with den1 ( nact*nmo storage)
-  real(wp), allocatable :: fock_gen_(:,:)                          ! generalized Fock matrix (nmo*nmo storage)
+!  real(wp), allocatable :: fock_gen_(:,:)                          ! generalized Fock matrix (nmo*nmo storage)
   real(wp), allocatable :: orbital_gradient_(:)                    ! orbital gradient
   real(wp), allocatable :: diagonal_orbital_hessian_(:)            ! diagonal elements of the orbital hessian
   real(wp), allocatable :: kappa_(:)                               ! orbital rotation parameters (lt elements of skew-symmetric matrix, npair_ storage)
@@ -33,8 +33,8 @@ module focas_data
 
   type sym_info
     integer, allocatable     :: ngempi(:)                          ! number of geminals per irrep
-    integer(ip), allocatable :: nnzpi(:)                           ! number of nnz matrix elements
-    integer(ip), allocatable :: offset(: )                         ! offset for first matrix element in this irrep
+    integer, allocatable     :: nnzpi(:)                           ! number of nnz matrix elements
+    integer, allocatable     :: offset(: )                         ! offset for first matrix element in this irrep
     integer, allocatable     :: gemind(:,:)                        ! symmetry-reduced index of a geminal 
   end type sym_info
 
@@ -110,6 +110,7 @@ module focas_data
   integer :: nthread_use_                                          ! number of threads to use in parallel parts of the code (this is the actuaal number of threads used)
   integer :: nthread_want_                                         ! number of threads to use in parallel parts of the code ( as specified by user )
   integer :: log_print_                                            ! 1/0 = flag for printing iteration/info for orbtial optimization
+  integer :: num_negative_diagonal_hessian_                        ! numbe of negative diagonal Hessian matrix elements
 
   ! *** doubles
   real(wp) :: e1_c_                                                ! core contribution to 1-e energy
@@ -151,12 +152,17 @@ module focas_data
 ! faster than the regular human-readable expression
       implicit none
       integer, intent(in) ::i,j
+      integer(ip) :: i_long,j_long
       integer(ip) :: df_pq_index
-      if (i.ge.j) then
-        df_pq_index= i * ( i + 1 ) / 2 + j !i + j * nmo_tot_
+      i_long = int(i,kind=ip)
+      j_long = int(j,kind=ip)
+      if (i_long.ge.j_long) then
+        df_pq_index = i_long * ( i_long + 1 ) / 2 + j_long
+        df_pq_index = df_pq_index * int(df_vars_%nQ,kind=ip)
         return
       else
-        df_pq_index= j * ( j + 1 ) / 2 + i !j + i * nmo_tot_
+        df_pq_index= j_long * ( j_long + 1 ) / 2 + i_long
+        df_pq_index = df_pq_index * int(df_vars_%nQ,kind=ip)
         return
       end if
     end function df_pq_index
