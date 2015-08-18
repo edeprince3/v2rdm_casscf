@@ -78,7 +78,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
             for (int lm = 0; lm < gems_aa[h]; lm++) {
                 int l = bas_aa_sym[h][lm][0];
                 int m = bas_aa_sym[h][lm][1];
-                for (int k = 0; k < nmo; k++) {
+                for (int k = 0; k < amo_; k++) {
                     int h2 = SymmetryPair(h,symmetry[k]);
                     int myoffset = saveoff;
                     for (int myh = 0; myh < h2; myh++) {
@@ -98,7 +98,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
             int k = bas_aab_sym[h][ijk][2];
 
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 if ( i >= m ) continue;
                 int l = i;
                 int hmk = SymmetryPair(symmetry[k],symmetry[m]);
@@ -113,7 +113,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 if ( j >= m ) continue;
                 int l = j;
                 int hmk = SymmetryPair(symmetry[k],symmetry[m]);
@@ -128,7 +128,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int m = i;
                 if ( l >= m ) continue;
                 int hlk = SymmetryPair(symmetry[k],symmetry[l]);
@@ -144,7 +144,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int m = j;
                 if ( l >= m ) continue;
                 int hlk = SymmetryPair(symmetry[k],symmetry[l]);
@@ -160,7 +160,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int n = 0; n < nmo; n++) {
+            for (int n = 0; n < amo_; n++) {
                 int m = j;
                 int l = i;
                 if ( l >= m ) continue;
@@ -263,7 +263,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
             for (int lm = 0; lm < gems_aa[h]; lm++) {
                 int l = bas_aa_sym[h][lm][0];
                 int m = bas_aa_sym[h][lm][1];
-                for (int k = 0; k < nmo; k++) {
+                for (int k = 0; k < amo_; k++) {
                     int h2 = SymmetryPair(h,symmetry[k]);
                     int myoffset = saveoff;
                     for (int myh = 0; myh < h2; myh++) {
@@ -283,7 +283,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
             int k = bas_aab_sym[h][ijk][2];
 
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 if ( i >= m ) continue;
                 int l = i;
                 int hmk = SymmetryPair(symmetry[k],symmetry[m]);
@@ -298,7 +298,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 if ( j >= m ) continue;
                 int l = j;
                 int hmk = SymmetryPair(symmetry[k],symmetry[m]);
@@ -313,7 +313,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int m = i;
                 if ( l >= m ) continue;
                 int hlk = SymmetryPair(symmetry[k],symmetry[l]);
@@ -329,7 +329,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int m = j;
                 if ( l >= m ) continue;
                 int hlk = SymmetryPair(symmetry[k],symmetry[l]);
@@ -345,7 +345,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int n = 0; n < nmo; n++) {
+            for (int n = 0; n < amo_; n++) {
                 int m = j;
                 int l = i;
                 if ( l >= m ) continue;
@@ -447,7 +447,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
             int ij = ibas_aa_sym[hij][i][j];
             int ijk_id = offset + ijk*(trip_aab[h]+trip_aba[h]);
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int n = k;
                 int hln  = SymmetryPair(symmetry[n],symmetry[l]);
                 int hm  = SymmetryPair(h,hln);
@@ -459,7 +459,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int m = i+1; m < nmo; m++) {
+            for (int m = i+1; m < amo_; m++) {
                 if ( k == m ) continue;
                 int l = i;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);
@@ -478,7 +478,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                     A_p[ijk_id + lmn] -= s2 * u_p[d2aaoff[hkm] + nj*gems_aa[hkm]+km]; // - D2(nj,km) dil
                 }
             }
-            for (int m = j+1; m < nmo; m++) {
+            for (int m = j+1; m < amo_; m++) {
                 if ( k == m ) continue;
                 int l = j;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);
@@ -653,7 +653,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
 
             int ijk_id = offset + ijk*(trip_aab[h]+trip_aba[h]);
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 int l = i;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);
                 int hkm = SymmetryPair(symmetry[m],symmetry[k]);
@@ -666,7 +666,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                     A_p[offset + (trip_aab[h] + lmn)*(trip_aab[h]+trip_aba[h]) + ijk] += u_p[d2aboff[hkm]+jn*gems_ab[hkm]+km]; // D2(jn,km) dil
                 }
             }
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 int l = j;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);
                 int hkm = SymmetryPair(symmetry[m],symmetry[k]);
@@ -771,7 +771,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 A_p[ijk_id + (trip_aab[h] + lmn)] += u_p[d2aboff[hij] + ij*gems_ab[hij]+lm]; // + D2(ij,lm) dkn
             }
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int hlk = SymmetryPair(symmetry[k],symmetry[l]);
                 int lk = ibas_ab_sym[hlk][l][k];
                 int m = j;
@@ -783,7 +783,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                     A_p[ijk_id + (trip_aab[h] + lmn)] -= u_p[d2aboff[hlk] + ni*gems_ab[hlk]+lk]; // -D2(ni,kl) djm
                 }
             }
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 if ( k == m ) continue;
                 int hkm = SymmetryPair(symmetry[k],symmetry[m]);
                 int km = ibas_aa_sym[hkm][k][m];
@@ -887,7 +887,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
             int ij = ibas_aa_sym[hij][i][j];
             int ijk_id = offset + ijk*(trip_aab[h]+trip_aba[h]);
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int n = k;
                 int hln  = SymmetryPair(symmetry[n],symmetry[l]);
                 int hm  = SymmetryPair(h,hln);
@@ -899,7 +899,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int m = i+1; m < nmo; m++) {
+            for (int m = i+1; m < amo_; m++) {
                 if ( k == m ) continue;
                 int l = i;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);
@@ -918,7 +918,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                     A_p[ijk_id + lmn] -= s2 * u_p[d2bboff[hkm] + nj*gems_aa[hkm]+km]; // - D2(nj,km) dil
                 }
             }
-            for (int m = j+1; m < nmo; m++) {
+            for (int m = j+1; m < amo_; m++) {
                 if ( k == m ) continue;
                 int l = j;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);
@@ -1093,7 +1093,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
 
             int ijk_id = offset + ijk*(trip_aab[h]+trip_aba[h]);
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 int l = i;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);
                 int hkm = SymmetryPair(symmetry[m],symmetry[k]);
@@ -1106,7 +1106,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                     A_p[offset + (trip_aab[h] + lmn)*(trip_aab[h]+trip_aba[h]) + ijk] += u_p[d2aboff[hkm]+jn*gems_ab[hkm]+km]; // D2(jn,km) dil
                 }
             }
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 int l = j;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);
                 int hkm = SymmetryPair(symmetry[m],symmetry[k]);
@@ -2495,7 +2495,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
             for (int lm = 0; lm < gems_aa[h]; lm++) {
                 int l = bas_aa_sym[h][lm][0];
                 int m = bas_aa_sym[h][lm][1];
-                for (int k = 0; k < nmo; k++) {
+                for (int k = 0; k < amo_; k++) {
                     int h2 = SymmetryPair(h,symmetry[k]);
                     int myoffset = saveoff;
                     for (int myh = 0; myh < h2; myh++) {
@@ -2514,7 +2514,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
             int k = bas_aab_sym[h][ijk][2];
 
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 if ( i >= m ) continue;
                 int l = i;
                 int hmk = SymmetryPair(symmetry[k],symmetry[m]);
@@ -2529,7 +2529,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 if ( j >= m ) continue;
                 int l = j;
                 int hmk = SymmetryPair(symmetry[k],symmetry[m]);
@@ -2544,7 +2544,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int m = i;
                 if ( l >= m ) continue;
                 int hlk = SymmetryPair(symmetry[k],symmetry[l]);
@@ -2560,7 +2560,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int m = j;
                 if ( l >= m ) continue;
                 int hlk = SymmetryPair(symmetry[k],symmetry[l]);
@@ -2576,7 +2576,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int n = 0; n < nmo; n++) {
+            for (int n = 0; n < amo_; n++) {
                 int m = j;
                 int l = i;
                 if ( l >= m ) continue;
@@ -2673,7 +2673,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
             for (int lm = 0; lm < gems_aa[h]; lm++) {
                 int l = bas_aa_sym[h][lm][0];
                 int m = bas_aa_sym[h][lm][1];
-                for (int k = 0; k < nmo; k++) {
+                for (int k = 0; k < amo_; k++) {
                     int h2 = SymmetryPair(h,symmetry[k]);
                     int myoffset = saveoff;
                     for (int myh = 0; myh < h2; myh++) {
@@ -2692,7 +2692,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
             int k = bas_aab_sym[h][ijk][2];
 
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 if ( i >= m ) continue;
                 int l = i;
                 int hmk = SymmetryPair(symmetry[k],symmetry[m]);
@@ -2707,7 +2707,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int m = 0; m < nmo; m++) {
+            for (int m = 0; m < amo_; m++) {
                 if ( j >= m ) continue;
                 int l = j;
                 int hmk = SymmetryPair(symmetry[k],symmetry[m]);
@@ -2722,7 +2722,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int m = i;
                 if ( l >= m ) continue;
                 int hlk = SymmetryPair(symmetry[k],symmetry[l]);
@@ -2738,7 +2738,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int m = j;
                 if ( l >= m ) continue;
                 int hlk = SymmetryPair(symmetry[k],symmetry[l]);
@@ -2754,7 +2754,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int n = 0; n < nmo; n++) {
+            for (int n = 0; n < amo_; n++) {
                 int m = j;
                 int l = i;
                 if ( l >= m ) continue;
@@ -2853,7 +2853,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
             int ij = ibas_aa_sym[hij][i][j];
             int ijk_id = offset + ijk*(trip_aab[h]+trip_aba[h]);
 
-            for (int l = 0; l < nmo; l++) {
+            for (int l = 0; l < amo_; l++) {
                 int n = k;
                 int hln  = SymmetryPair(symmetry[n],symmetry[l]);
                 int hm  = SymmetryPair(h,hln);
@@ -2865,7 +2865,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
 
-            for (int m = i+1; m < nmo; m++) {
+            for (int m = i+1; m < amo_; m++) {
                 if ( k == m ) continue;
                 int l = i;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);
@@ -2884,7 +2884,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                     A_p[d2aaoff[hkm] + nj*gems_aa[hkm]+km] -= s2 * u_p[ijk_id + lmn]; // - D2(nj,km) dil
                 }
             }
-            for (int m = j+1; m < nmo; m++) {
+            for (int m = j+1; m < amo_; m++) {
                 if ( k == m ) continue;
                 int l = j;
                 int hml = SymmetryPair(symmetry[m],symmetry[l]);

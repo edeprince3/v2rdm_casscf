@@ -28,7 +28,7 @@ extern "C" {
                                    int &d2_full_sym_dim,
                                    int *symmetry_energy_order,
                                    int &nfrzc,
-                                   int &nmo,
+                                   int &amo_,
                                    int &nfrzv,
                                    int &nirrep_,
                                    double*jacobi_data,
@@ -45,12 +45,12 @@ inline void Jacobi(double*jacobi_transformation_matrix,
                    int &d2_full_sym_dim,
                    int *symmetry_energy_order,
                    int &nfrzc,
-                   int &nmo,
+                   int &amo_,
                    int &nfrzv,
                    int &nirrep_,
                    double*jacobi_data,
                    char*jacobi_file){
-    F77NAME(focas_interface)(jacobi_transformation_matrix,oei_full_sym,oei_full_sym_dim,tei_full_sym,tei_full_sym_dim,d1_full_sym,d1_full_sym_dim,d2_full_sym,d2_full_sym_dim,symmetry_energy_order,nfrzc,nmo,nfrzv,nirrep_,jacobi_data,jacobi_file);
+    F77NAME(focas_interface)(jacobi_transformation_matrix,oei_full_sym,oei_full_sym_dim,tei_full_sym,tei_full_sym_dim,d1_full_sym,d1_full_sym_dim,d2_full_sym,d2_full_sym_dim,symmetry_energy_order,nfrzc,amo_,nfrzv,nirrep_,jacobi_data,jacobi_file);
 };
 
 #endif

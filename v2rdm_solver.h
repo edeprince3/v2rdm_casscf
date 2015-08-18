@@ -104,11 +104,21 @@ class v2RDMSolver: public Wavefunction{
     std::vector < std::vector < std::pair<int,int> > > gems_fullspace;
     std::vector < std::vector < std::pair<int,int> > > gems_plus_corespace;
 
-    int ndocc,nso,nmo,nvirt,ndoccact,nfrzc,nfrzv,nconstraints;
-    int dimx;        // dimension of VARIABLE VECTOR
-    int * amopi_;    // active orbitals per irrep
+    /// total number of active molecular orbitals
+    int amo_;
+    /// active molecular orbitals per irrep
+    int * amopi_;
 
-    int nQ_; // number of auxilliary basis functions
+    int ndocc,nso,nvirt,ndoccact,nfrzc,nfrzv;
+
+    /// total number of constraints (dimension of dual solution vector)
+    long int nconstraints;
+
+    /// total number of variables (dimension of primal solution vector)
+    long int dimx;  
+
+    /// number of auxilliary basis functions
+    int nQ_;
     void ThreeIndexIntegrals(); 
     double * Qmo_;
 

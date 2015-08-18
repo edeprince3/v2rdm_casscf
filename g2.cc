@@ -496,11 +496,11 @@ void v2RDMSolver::G2_constraints_Au_spin_adapted(SharedVector A,SharedVector u){
 
             }
 
-            A_p[offset + k*nmo+l] = dum;
+            A_p[offset + k*amo_+l] = dum;
 
         }
     }
-    offset += nmo*nmo;*/
+    offset += amo_*amo_;*/
     
     // maximal spin constraint:
     /*for (int h = 0; h < nirrep_; h++) {
@@ -522,11 +522,11 @@ void v2RDMSolver::G2_constraints_Au_spin_adapted(SharedVector A,SharedVector u){
             }
 
 printf("%20.12lf\n",maxs);
-            A_p[offset + k*nmo+l] = maxs;
+            A_p[offset + k*amo_+l] = maxs;
 
         }
     }
-    offset += nmo*nmo;
+    offset += amo_*amo_;
     for (int h = 0; h < nirrep_; h++) {
         for (int klg = 0; klg < gems_ab[h]; klg++) {
 
@@ -545,11 +545,11 @@ printf("%20.12lf\n",maxs);
 
             }
 
-            A_p[offset + k*nmo+l] = maxs;
+            A_p[offset + k*amo_+l] = maxs;
 
         }
     }
-    offset += nmo*nmo;*/
+    offset += amo_*amo_;*/
 
 }
 // G2 portion of A^T.y (spin adapted)
@@ -811,14 +811,14 @@ void v2RDMSolver::G2_constraints_ATu_spin_adapted(SharedVector A,SharedVector u)
                 if ( i != j ) continue;
 
 
-                A_p[g2toff[h] + ijg*gems_ab[h] + klg] += (na+nb)*u_p[offset + k*nmo+l];
-                A_p[g2soff[h] + ijg*gems_ab[h] + klg] += -2.0 * ms * u_p[offset + k*nmo+l];
+                A_p[g2toff[h] + ijg*gems_ab[h] + klg] += (na+nb)*u_p[offset + k*amo_+l];
+                A_p[g2soff[h] + ijg*gems_ab[h] + klg] += -2.0 * ms * u_p[offset + k*amo_+l];
 
             }
 
         }
     }
-    offset += nmo*nmo;*/
+    offset += amo_*amo_;*/
     // maximal spin constraint:
     /*for (int h = 0; h < nirrep_; h++) {
         for (int klg = 0; klg < gems_ab[h]; klg++) {
@@ -826,7 +826,7 @@ void v2RDMSolver::G2_constraints_ATu_spin_adapted(SharedVector A,SharedVector u)
             int k = bas_ab_sym[h][klg][0];
             int l = bas_ab_sym[h][klg][1];
 
-            double dum = u_p[offset + k * nmo + l];
+            double dum = u_p[offset + k * amo_ + l];
 
             for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
 
@@ -839,14 +839,14 @@ void v2RDMSolver::G2_constraints_ATu_spin_adapted(SharedVector A,SharedVector u)
 
         }
     }
-    offset += nmo*nmo;
+    offset += amo_*amo_;
     for (int h = 0; h < nirrep_; h++) {
         for (int klg = 0; klg < gems_ab[h]; klg++) {
 
             int k = bas_ab_sym[h][klg][0];
             int l = bas_ab_sym[h][klg][1];
 
-            double dum = u_p[offset + k * nmo + l];
+            double dum = u_p[offset + k * amo_ + l];
 
             for (int ijg = 0; ijg < gems_ab[h]; ijg++) {
 
@@ -859,7 +859,7 @@ void v2RDMSolver::G2_constraints_ATu_spin_adapted(SharedVector A,SharedVector u)
 
         }
     }
-    offset += nmo*nmo;*/
+    offset += amo_*amo_;*/
 }
 
 void v2RDMSolver::G2_constraints_guess(SharedVector u){

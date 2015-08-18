@@ -96,20 +96,20 @@ void v2RDMSolver::BuildBasis() {
     table[6*8+7] = table[7*8+6] = 1;
 
     // orbitals are in pitzer order:
-    symmetry               = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
-    symmetry_full          = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
-    symmetry_plus_core     = (int*)malloc((nmo+nfrzc)*sizeof(int));
-    symmetry_energy_order  = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
-    pitzer_to_energy_order = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
-    energy_to_pitzer_order = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
+    symmetry               = (int*)malloc((amo_+nfrzc+nfrzv)*sizeof(int));
+    symmetry_full          = (int*)malloc((amo_+nfrzc+nfrzv)*sizeof(int));
+    symmetry_plus_core     = (int*)malloc((amo_+nfrzc)*sizeof(int));
+    symmetry_energy_order  = (int*)malloc((amo_+nfrzc+nfrzv)*sizeof(int));
+    pitzer_to_energy_order = (int*)malloc((amo_+nfrzc+nfrzv)*sizeof(int));
+    energy_to_pitzer_order = (int*)malloc((amo_+nfrzc+nfrzv)*sizeof(int));
 
-    memset((void*)symmetry,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
-    memset((void*)symmetry_full,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
-    memset((void*)symmetry_plus_core,'\0',(nmo+nfrzc)*sizeof(int));
-    memset((void*)symmetry_energy_order,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
-    memset((void*)pitzer_to_energy_order,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
-    memset((void*)energy_to_pitzer_order,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
-    full_basis = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
+    memset((void*)symmetry,'\0',(amo_+nfrzc+nfrzv)*sizeof(int));
+    memset((void*)symmetry_full,'\0',(amo_+nfrzc+nfrzv)*sizeof(int));
+    memset((void*)symmetry_plus_core,'\0',(amo_+nfrzc)*sizeof(int));
+    memset((void*)symmetry_energy_order,'\0',(amo_+nfrzc+nfrzv)*sizeof(int));
+    memset((void*)pitzer_to_energy_order,'\0',(amo_+nfrzc+nfrzv)*sizeof(int));
+    memset((void*)energy_to_pitzer_order,'\0',(amo_+nfrzc+nfrzv)*sizeof(int));
+    full_basis = (int*)malloc((amo_+nfrzc+nfrzv)*sizeof(int));
     int count = 0;
     int count_full = 0;
 
@@ -141,8 +141,8 @@ void v2RDMSolver::BuildBasis() {
     double min = 1.0e99;
     int imin = -999;
     int isym = -999;
-    int * skip = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
-    memset((void*)skip,'\0',(nmo+nfrzc+nfrzv)*sizeof(int));
+    int * skip = (int*)malloc((amo_+nfrzc+nfrzv)*sizeof(int));
+    memset((void*)skip,'\0',(amo_+nfrzc+nfrzv)*sizeof(int));
 
     // warning to future eugene:  it is possible that
     // this ordering will differ from that printed at the
@@ -177,7 +177,7 @@ void v2RDMSolver::BuildBasis() {
         energy_to_pitzer_order[i] = imin;
     }
     // active
-    for (int i = nfrzc; i < nmo + nfrzc; i++){
+    for (int i = nfrzc; i < amo_ + nfrzc; i++){
 
         int me = 0;
         min = 1.0e99;
@@ -201,7 +201,7 @@ void v2RDMSolver::BuildBasis() {
         energy_to_pitzer_order[i] = imin;
     }
     // virtual
-    for (int i = nmo + nfrzc; i < nfrzv + nmo + nfrzc; i++){
+    for (int i = amo_ + nfrzc; i < nfrzv + amo_ + nfrzc; i++){
 
         int me = 0;
         min = 1.0e99;
@@ -245,14 +245,14 @@ void v2RDMSolver::BuildBasis() {
     // symmetry pairs:
     int ** sympairs = (int**)malloc(nirrep_*sizeof(int*));
     for (int h = 0; h < nirrep_; h++) {
-        sympairs[h] = (int*)malloc(nmo*sizeof(int));
-        memset((void*)sympairs[h],'\0',nmo*sizeof(int));
+        sympairs[h] = (int*)malloc(amo_*sizeof(int));
+        memset((void*)sympairs[h],'\0',amo_*sizeof(int));
     }
 
     for (int h = 0; h < nirrep_; h++) {
         std::vector < std::pair<int,int> > mygems;
-        for (int i = 0; i < nmo; i++) {
-            for (int j = 0; j < nmo; j++) {
+        for (int i = 0; i < amo_; i++) {
+            for (int j = 0; j < amo_; j++) {
                 int sym = SymmetryPair(symmetry[i],symmetry[j]);
                 if (h==sym) {
                     mygems.push_back(std::make_pair(j,i));
@@ -264,7 +264,7 @@ void v2RDMSolver::BuildBasis() {
     }
     for (int h = 0; h < nirrep_; h++) {
         std::vector < std::pair<int,int> > mygems;
-        for (int i = 0; i < nmo + nfrzc + nfrzv; i++) {
+        for (int i = 0; i < amo_ + nfrzc + nfrzv; i++) {
             for (int j = 0; j <= i; j++) {
                 int sym = SymmetryPair(symmetry_full[i],symmetry_full[j]);
                 if (h==sym) {
@@ -277,7 +277,7 @@ void v2RDMSolver::BuildBasis() {
     }
     for (int h = 0; h < nirrep_; h++) {
         std::vector < std::pair<int,int> > mygems;
-        for (int i = 0; i < nmo + nfrzc; i++) {
+        for (int i = 0; i < amo_ + nfrzc; i++) {
             for (int j = 0; j <= i; j++) {
                 int sym = SymmetryPair(symmetry_plus_core[i],symmetry_plus_core[j]);
                 if (h==sym) {
@@ -307,28 +307,28 @@ void v2RDMSolver::BuildBasis() {
 
     for (int h = 0; h < nirrep_; h++) {
 
-        ibas_ab_sym[h]        = (int**)malloc(nmo*sizeof(int*));
-        ibas_aa_sym[h]        = (int**)malloc(nmo*sizeof(int*));
-        ibas_00_sym[h]        = (int**)malloc(nmo*sizeof(int*));
-        ibas_full_sym[h]      = (int**)malloc((nmo+nfrzc+nfrzv)*sizeof(int*));
+        ibas_ab_sym[h]        = (int**)malloc(amo_*sizeof(int*));
+        ibas_aa_sym[h]        = (int**)malloc(amo_*sizeof(int*));
+        ibas_00_sym[h]        = (int**)malloc(amo_*sizeof(int*));
+        ibas_full_sym[h]      = (int**)malloc((amo_+nfrzc+nfrzv)*sizeof(int*));
 
-        bas_ab_sym[h]         = (int**)malloc(nmo*nmo*sizeof(int*));
-        bas_aa_sym[h]         = (int**)malloc(nmo*nmo*sizeof(int*));
-        bas_00_sym[h]         = (int**)malloc(nmo*nmo*sizeof(int*));
-        bas_full_sym[h]       = (int**)malloc((nmo+nfrzc+nfrzv)*(nmo+nfrzc+nfrzv)*sizeof(int*));
+        bas_ab_sym[h]         = (int**)malloc(amo_*amo_*sizeof(int*));
+        bas_aa_sym[h]         = (int**)malloc(amo_*amo_*sizeof(int*));
+        bas_00_sym[h]         = (int**)malloc(amo_*amo_*sizeof(int*));
+        bas_full_sym[h]       = (int**)malloc((amo_+nfrzc+nfrzv)*(amo_+nfrzc+nfrzv)*sizeof(int*));
 
         // active space geminals
-        for (int i = 0; i < nmo; i++) {
-            ibas_ab_sym[h][i] = (int*)malloc(nmo*sizeof(int));
-            ibas_aa_sym[h][i] = (int*)malloc(nmo*sizeof(int));
-            ibas_00_sym[h][i] = (int*)malloc(nmo*sizeof(int));
-            for (int j = 0; j < nmo; j++) {
+        for (int i = 0; i < amo_; i++) {
+            ibas_ab_sym[h][i] = (int*)malloc(amo_*sizeof(int));
+            ibas_aa_sym[h][i] = (int*)malloc(amo_*sizeof(int));
+            ibas_00_sym[h][i] = (int*)malloc(amo_*sizeof(int));
+            for (int j = 0; j < amo_; j++) {
                 ibas_ab_sym[h][i][j] = -999;
                 ibas_aa_sym[h][i][j] = -999;
                 ibas_00_sym[h][i][j] = -999;
             }
         }
-        for (int i = 0; i < nmo*nmo; i++) {
+        for (int i = 0; i < amo_*amo_; i++) {
             bas_ab_sym[h][i] = (int*)malloc(2*sizeof(int));
             bas_aa_sym[h][i] = (int*)malloc(2*sizeof(int));
             bas_00_sym[h][i] = (int*)malloc(2*sizeof(int));
@@ -339,13 +339,13 @@ void v2RDMSolver::BuildBasis() {
             }
         }
         // full space geminals
-        for (int i = 0; i < nmo+nfrzv+nfrzc; i++) {
-            ibas_full_sym[h][i] = (int*)malloc((nmo+nfrzc+nfrzv)*sizeof(int));
-            for (int j = 0; j < nfrzv+nfrzc+nmo; j++) {
+        for (int i = 0; i < amo_+nfrzv+nfrzc; i++) {
+            ibas_full_sym[h][i] = (int*)malloc((amo_+nfrzc+nfrzv)*sizeof(int));
+            for (int j = 0; j < nfrzv+nfrzc+amo_; j++) {
                 ibas_full_sym[h][i][j] = -999;
             }
         }
-        for (int i = 0; i < (nfrzc+nfrzv+nmo)*(nfrzc+nfrzv+nmo); i++) {
+        for (int i = 0; i < (nfrzc+nfrzv+amo_)*(nfrzc+nfrzv+amo_); i++) {
             bas_full_sym[h][i] = (int*)malloc(2*sizeof(int));
             for (int j = 0; j < 2; j++) {
                 bas_full_sym[h][i][j] = -999;
@@ -391,7 +391,7 @@ void v2RDMSolver::BuildBasis() {
     memset((void*)gems_full,'\0',nirrep_*sizeof(int));
     memset((void*)gems_plus_core,'\0',nirrep_*sizeof(int));
 
-    for (int ieo = 0; ieo < nmo + nfrzc + nfrzv; ieo++) {
+    for (int ieo = 0; ieo < amo_ + nfrzc + nfrzv; ieo++) {
         int ifull = energy_to_pitzer_order[ieo];
         int hi    = symmetry_full[ifull];
         int i     = ifull - pitzer_offset_full[hi];
@@ -406,7 +406,7 @@ void v2RDMSolver::BuildBasis() {
             bas_full_sym[hij][gems_full[hij]][0] = ifull;
             bas_full_sym[hij][gems_full[hij]][1] = jfull;
             gems_full[hij]++;
-            if ( ieo < nmo + nfrzc && jeo < nmo + nfrzc ) {
+            if ( ieo < amo_ + nfrzc && jeo < amo_ + nfrzc ) {
                 gems_plus_core[hij]++;
             }
         }
@@ -415,10 +415,10 @@ void v2RDMSolver::BuildBasis() {
         // make all triplets
         for (int h = 0; h < nirrep_; h++) {
             std::vector < boost::tuple<int,int,int> > mytrip;
-            for (int i = 0; i < nmo; i++) {
-                for (int j = 0; j < nmo; j++) {
+            for (int i = 0; i < amo_; i++) {
+                for (int j = 0; j < amo_; j++) {
                     int s1 = SymmetryPair(symmetry[i],symmetry[j]);
-                    for (int k = 0; k < nmo; k++) {
+                    for (int k = 0; k < amo_; k++) {
                         int s2 = SymmetryPair(s1,symmetry[k]);
                         if (h==s2) {
                             mytrip.push_back(boost::make_tuple(i,j,k));
@@ -439,28 +439,28 @@ void v2RDMSolver::BuildBasis() {
         trip_aab    = (int*)malloc(nirrep_*sizeof(int));
         trip_aba    = (int*)malloc(nirrep_*sizeof(int));
         for (int h = 0; h < nirrep_; h++) {
-            ibas_aaa_sym[h] = (int***)malloc(nmo*sizeof(int**));
-            ibas_aab_sym[h] = (int***)malloc(nmo*sizeof(int**));
-            ibas_aba_sym[h] = (int***)malloc(nmo*sizeof(int**));
-            bas_aaa_sym[h]  = (int**)malloc(nmo*nmo*nmo*sizeof(int*));
-            bas_aab_sym[h]  = (int**)malloc(nmo*nmo*nmo*sizeof(int*));
-            bas_aba_sym[h]  = (int**)malloc(nmo*nmo*nmo*sizeof(int*));
-            for (int i = 0; i < nmo; i++) {
-                ibas_aaa_sym[h][i] = (int**)malloc(nmo*sizeof(int*));
-                ibas_aab_sym[h][i] = (int**)malloc(nmo*sizeof(int*));
-                ibas_aba_sym[h][i] = (int**)malloc(nmo*sizeof(int*));
-                for (int j = 0; j < nmo; j++) {
-                    ibas_aaa_sym[h][i][j] = (int*)malloc(nmo*sizeof(int));
-                    ibas_aab_sym[h][i][j] = (int*)malloc(nmo*sizeof(int));
-                    ibas_aba_sym[h][i][j] = (int*)malloc(nmo*sizeof(int));
-                    for (int k = 0; k < nmo; k++) {
+            ibas_aaa_sym[h] = (int***)malloc(amo_*sizeof(int**));
+            ibas_aab_sym[h] = (int***)malloc(amo_*sizeof(int**));
+            ibas_aba_sym[h] = (int***)malloc(amo_*sizeof(int**));
+            bas_aaa_sym[h]  = (int**)malloc(amo_*amo_*amo_*sizeof(int*));
+            bas_aab_sym[h]  = (int**)malloc(amo_*amo_*amo_*sizeof(int*));
+            bas_aba_sym[h]  = (int**)malloc(amo_*amo_*amo_*sizeof(int*));
+            for (int i = 0; i < amo_; i++) {
+                ibas_aaa_sym[h][i] = (int**)malloc(amo_*sizeof(int*));
+                ibas_aab_sym[h][i] = (int**)malloc(amo_*sizeof(int*));
+                ibas_aba_sym[h][i] = (int**)malloc(amo_*sizeof(int*));
+                for (int j = 0; j < amo_; j++) {
+                    ibas_aaa_sym[h][i][j] = (int*)malloc(amo_*sizeof(int));
+                    ibas_aab_sym[h][i][j] = (int*)malloc(amo_*sizeof(int));
+                    ibas_aba_sym[h][i][j] = (int*)malloc(amo_*sizeof(int));
+                    for (int k = 0; k < amo_; k++) {
                         ibas_aaa_sym[h][i][j][k] = -999;
                         ibas_aab_sym[h][i][j][k] = -999;
                         ibas_aba_sym[h][i][j][k] = -999;
                     }
                 }
             }
-            for (int i = 0; i < nmo*nmo*nmo; i++) {
+            for (int i = 0; i < amo_*amo_*amo_; i++) {
                 bas_aaa_sym[h][i] = (int*)malloc(3*sizeof(int));
                 bas_aab_sym[h][i] = (int*)malloc(3*sizeof(int));
                 bas_aba_sym[h][i] = (int*)malloc(3*sizeof(int));

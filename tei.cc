@@ -115,7 +115,7 @@ void v2RDMSolver::DF_TEI() {
 
 void v2RDMSolver::TEI() {
 
-    long int full = nmo + nfrzc + nfrzv;
+    long int full = amo_ + nfrzc + nfrzv;
     double * temptei = (double*)malloc(full*full*full*full*sizeof(double));
     memset((void*)temptei,'\0',full*full*full*full*sizeof(double));
 

@@ -168,12 +168,12 @@ void  v2RDMSolver::common_init(){
     epsilon_b_= boost::shared_ptr<Vector>(new Vector(nirrep_, nsopi_));
     epsilon_b_->copy(reference_wavefunction_->epsilon_b().get());
     
-    nso = nmo = ndocc = nvirt = nfrzc = nfrzv = 0;
+    nso = amo_ = ndocc = nvirt = nfrzc = nfrzv = 0;
     for (int h = 0; h < nirrep_; h++){
         nfrzc    += frzcpi_[h];
         nfrzv    += frzvpi_[h];
         nso      += nsopi_[h];
-        nmo      += nmopi_[h]-frzcpi_[h]-frzvpi_[h];
+        amo_   += nmopi_[h]-frzcpi_[h]-frzvpi_[h];
         ndocc    += doccpi_[h];
         amopi_[h] = nmopi_[h]-frzcpi_[h]-frzvpi_[h];
     }
@@ -207,14 +207,14 @@ void  v2RDMSolver::common_init(){
 
 
     ndoccact = ndocc - nfrzc;
-    nvirt    = nmo - ndoccact;
+    nvirt    = amo_ - ndoccact;
     //if (nfrzv > 0) {
     //    throw PsiException("bpsdp does not yet work with frozen virtuals",__FILE__,__LINE__);
     //}
     //if (nfrzc > 0) {
     //    throw PsiException("bpsdp does not yet work with frozen core",__FILE__,__LINE__);
     //}
-    if (nmo + nfrzc + nfrzv != nso) {
+    if (amo_ + nfrzc + nfrzv != nso) {
         throw PsiException("bpsdp does not yet work when nmo!=nso",__FILE__,__LINE__);
     }
     // memory is from process::environment        
@@ -910,7 +910,7 @@ void  v2RDMSolver::common_init(){
     }
     jacobi_converged_ = false;
 
-    int full = nmo + nfrzc + nfrzv;
+    int full = amo_ + nfrzc + nfrzv;
     jacobi_transformation_matrix_ = (double*)malloc(full*full*sizeof(double));
     memset((void*)jacobi_transformation_matrix_,'\0',full*full*sizeof(double));
     for (int i = 0; i < full; i++) {
@@ -1085,8 +1085,8 @@ double v2RDMSolver::compute_energy() {
     // evaluate spin squared
     double s2 = 0.0;
     double * x_p = x->pointer();
-    for (int i = 0; i < nmo; i++){
-        for (int j = 0; j < nmo; j++){
+    for (int i = 0; i < amo_; i++){
+        for (int j = 0; j < amo_; j++){
             int h = SymmetryPair(symmetry[i],symmetry[j]);
             int ij = ibas_ab_sym[h][i][j];
             int ji = ibas_ab_sym[h][j][i];
@@ -1779,19 +1779,6 @@ void v2RDMSolver::BuildConstraints(){
                 }
                 offset += gems_ab[h]*gems_ab[h]; 
             }
-            // maximal spin constraint:
-            //for(int i = 0; i < nmo; i++){
-            //    for(int j = 0; j < nmo; j++){
-            //        b_p[offset + i*nmo+j] = 0.0;
-            //    }
-            //}
-            //offset += nmo*nmo;
-            //for(int i = 0; i < nmo; i++){
-            //    for(int j = 0; j < nmo; j++){
-            //        b_p[offset + i*nmo+j] = 0.0;
-            //    }
-            //}
-            //offset += nmo*nmo;
         }
     }
 
@@ -2517,7 +2504,7 @@ void v2RDMSolver::UnpackDensityPlusCore() {
 // repack rotated full-space integrals into active-space integrals
 void v2RDMSolver::RepackIntegralsDF(){
 
-    long int full = nmo + nfrzc + nfrzv;
+    long int full = amo_ + nfrzc + nfrzv;
 
     // if frozen core, adjust oei's and compute frozen core energy:
     efrzc1 = 0.0;
@@ -2634,7 +2621,7 @@ void v2RDMSolver::RepackIntegralsDF(){
 // repack rotated full-space integrals into active-space integrals
 void v2RDMSolver::RepackIntegrals(){
 
-    long int full = nmo + nfrzc + nfrzv;
+    long int full = amo_ + nfrzc + nfrzv;
 
     // if frozen core, adjust oei's and compute frozen core energy:
     efrzc1 = 0.0;
@@ -2815,31 +2802,31 @@ void v2RDMSolver::FinalTransformationMatrix() {
     /*offset = 0;
     double diff = 0.0;
     for (int h = 0; h < nirrep_; h++) {
-        for (int ieo = 0; ieo < nmo+nfrzc+nfrzv; ieo++) {
+        for (int ieo = 0; ieo < amo_+nfrzc+nfrzv; ieo++) {
             int ifull = energy_to_pitzer_order[ieo];
             int hi    = symmetry_full[ifull];
             if ( h != hi ) continue;
             int i     = ifull - pitzer_offset_full[hi];
-            for (int jeo = 0; jeo < nmo+nfrzc+nfrzv; jeo++) {
+            for (int jeo = 0; jeo < amo_+nfrzc+nfrzv; jeo++) {
                 int jfull = energy_to_pitzer_order[jeo];
                 int hj    = symmetry_full[jfull];
                 if ( h != hj ) continue;
                 int j     = jfull - pitzer_offset_full[hj];
                 double dum = 0.0;
-                for (int keo = 0; keo < nmo+nfrzc+nfrzv; keo++) {
+                for (int keo = 0; keo < amo_+nfrzc+nfrzv; keo++) {
                     int kfull = energy_to_pitzer_order[keo];
                     int hk    = symmetry_full[kfull];
                     if ( h != hk ) continue;
                     int k     = kfull - pitzer_offset_full[hk];
-                    for (int leo = 0; leo < nmo+nfrzc+nfrzv; leo++) {
+                    for (int leo = 0; leo < amo_+nfrzc+nfrzv; leo++) {
                         int lfull = energy_to_pitzer_order[leo];
                         int hl    = symmetry_full[lfull];
                         if ( h != hl ) continue;
                         int l     = lfull - pitzer_offset_full[hl];
-                        //dum += saveK1->pointer(h)[k][l] * jacobi_transformation_matrix_[ieo*(nmo+nfrzc+nfrzv)+keo]
-                        //                                * jacobi_transformation_matrix_[jeo*(nmo+nfrzc+nfrzv)+leo];
-                        dum += saveK1->pointer(h)[k][l] * jacobi_transformation_matrix_[keo*(nmo+nfrzc+nfrzv)+ieo]
-                                                        * jacobi_transformation_matrix_[leo*(nmo+nfrzc+nfrzv)+jeo];
+                        //dum += saveK1->pointer(h)[k][l] * jacobi_transformation_matrix_[ieo*(amo_+nfrzc+nfrzv)+keo]
+                        //                                * jacobi_transformation_matrix_[jeo*(amo_+nfrzc+nfrzv)+leo];
+                        dum += saveK1->pointer(h)[k][l] * jacobi_transformation_matrix_[keo*(amo_+nfrzc+nfrzv)+ieo]
+                                                        * jacobi_transformation_matrix_[leo*(amo_+nfrzc+nfrzv)+jeo];
                     }
                 }
                 diff += (dum - oei_full_sym[offset+INDEX(i,j)]) * (dum - oei_full_sym[offset+INDEX(i,j)]);
@@ -2859,7 +2846,7 @@ void v2RDMSolver::FinalTransformationMatrix() {
             double * temp = (double*)malloc(nmopi_[h] * sizeof(double));
 
             // new basis function i in energy order
-            for (int ieo = 0; ieo < nmo+nfrzc+nfrzv; ieo++) {
+            for (int ieo = 0; ieo < amo_+nfrzc+nfrzv; ieo++) {
                 int ifull = energy_to_pitzer_order[ieo];
                 int hi    = symmetry_full[ifull];
                 if ( h != hi ) continue;
@@ -2868,13 +2855,13 @@ void v2RDMSolver::FinalTransformationMatrix() {
                 double dum = 0.0;
 
                 // old basis function j in energy order
-                for (int jeo = 0; jeo < nmo+nfrzc+nfrzv; jeo++) {
+                for (int jeo = 0; jeo < amo_+nfrzc+nfrzv; jeo++) {
                     int jfull = energy_to_pitzer_order[jeo];
                     int hj    = symmetry_full[jfull];
                     if ( h != hj ) continue;
                     int j     = jfull - pitzer_offset_full[hj];
 
-                    dum += ca_p[mu][j] * jacobi_transformation_matrix_[jeo*(nmo+nfrzc+nfrzv)+ieo];
+                    dum += ca_p[mu][j] * jacobi_transformation_matrix_[jeo*(amo_+nfrzc+nfrzv)+ieo];
                 }
                 temp[i] = dum;
             }
@@ -2885,9 +2872,9 @@ void v2RDMSolver::FinalTransformationMatrix() {
             free(temp);
         }
     }
-    //for (int i = 0; i < nfrzc + nmo + nfrzv; i++) {
-    //    for (int j = 0; j < nfrzc + nmo + nfrzv; j++) {
-    //        printf("%5i %5i %20.12lf\n",i,j,jacobi_transformation_matrix_[i*(nfrzc+nmo+nfrzv)+j]);
+    //for (int i = 0; i < nfrzc + amo_ + nfrzv; i++) {
+    //    for (int j = 0; j < nfrzc + amo_ + nfrzv; j++) {
+    //        printf("%5i %5i %20.12lf\n",i,j,jacobi_transformation_matrix_[i*(nfrzc+amo_+nfrzv)+j]);
     //    }
     //}
     //Ca_->print();
@@ -2910,7 +2897,7 @@ void v2RDMSolver::RotateOrbitals(){
     Jacobi(jacobi_transformation_matrix_,
           oei_full_sym,oei_full_dim,tei_full_sym,tei_full_dim,
           d1_plus_core_sym,d1_plus_core_dim,d2_plus_core_sym,d2_plus_core_dim,
-          symmetry_energy_order,nfrzc,nmo,nfrzv,nirrep_,
+          symmetry_energy_order,nfrzc,amo_,nfrzv,nirrep_,
           jacobi_data_,jacobi_outfile_);
 
     outfile->Printf("            Jacobi Optimization %s.\n",(int)jacobi_data_[9] ? "converged" : "did not converge");

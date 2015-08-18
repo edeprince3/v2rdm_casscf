@@ -74,7 +74,7 @@ boost::shared_ptr<Matrix> v2RDMSolver::ReadOEI() {
 
     boost::shared_ptr<Matrix> K1 (new Matrix("one-electron integrals",nirrep_,nmopi_,nmopi_));
 
-    long int full = nmo + nfrzc + nfrzv;
+    long int full = amo_ + nfrzc + nfrzv;
     double * tempoei = (double*)malloc(full*(full+1)/2*sizeof(double));
     memset((void*)tempoei,'\0',full*(full+1)/2*sizeof(double));
     boost::shared_ptr<PSIO> psio(new PSIO());
