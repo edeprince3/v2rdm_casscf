@@ -836,13 +836,13 @@ void  v2RDMSolver::common_init(){
     }
 
     // bpsdp convergence thresholds:
-    r_conv  = options_.get_double("R_CONVERGENCE");
-    e_conv  = options_.get_double("E_CONVERGENCE");
-    maxiter = options_.get_int("MAXITER");
+    r_convergence_  = options_.get_double("R_CONVERGENCE");
+    e_convergence_  = options_.get_double("E_CONVERGENCE");
+    maxiter         = options_.get_int("MAXITER");
 
     // conjugate gradient solver thresholds:
-    cg_conv    = options_.get_double("CG_CONVERGENCE");
-    cg_maxiter = options_.get_double("CG_MAXITER");
+    cg_convergence_ = options_.get_double("CG_CONVERGENCE");
+    cg_maxiter      = options_.get_double("CG_MAXITER");
 
 
     // memory check happens here
@@ -962,7 +962,7 @@ double v2RDMSolver::compute_energy() {
     long int N = nconstraints;
     shared_ptr<CGSolver> cg (new CGSolver(N));
     cg->set_max_iter(cg_maxiter);
-    cg->set_convergence(cg_conv);
+    cg->set_convergence(cg_convergence_);
 
     // evaluate guess energy (c.x):
     double energy_primal = C_DDOT(dimx,c->pointer(),1,x->pointer(),1);
@@ -1005,7 +1005,6 @@ double v2RDMSolver::compute_energy() {
         if (oiter == 0) cg->set_convergence(0.01);
         else            cg->set_convergence( ( ep > ed ) ? 0.01 * ed : 0.01 * ep);
         cg->solve(N,Ax,y,B,evaluate_Ap,(void*)this);
-        //cg->preconditioned_solve(N,Ax,y,B,precon,evaluate_Ap,(void*)this);
         int iiter = cg->total_iterations();
 
         double end = omp_get_wtime();
@@ -1067,12 +1066,12 @@ double v2RDMSolver::compute_energy() {
         denergy_primal = fabs(energy_primal - current_energy);
         energy_primal = current_energy;
 
-        if ( ep < r_conv && ed < r_conv && egap < e_conv ) {
+        if ( ep < r_convergence_ && ed < r_convergence_ && egap < e_convergence_ ) {
             RotateOrbitals();
             energy_primal = C_DDOT(dimx,c->pointer(),1,x->pointer(),1);
         }
 
-    }while( ep > r_conv || ed > r_conv  || egap > e_conv || !jacobi_converged_);
+    }while( ep > r_convergence_ || ed > r_convergence_  || egap > e_convergence_ || !jacobi_converged_);
 
     if ( oiter == maxiter ) {
         throw PsiException("v2RDM did not converge.",__FILE__,__LINE__);
@@ -1410,9 +1409,9 @@ void v2RDMSolver::PrintHeader(){
     outfile->Printf("        Number of active occupied orbitals: %5i\n",ndoccact);
     outfile->Printf("        Number of active virtual orbitals:  %5i\n",nvirt);
     outfile->Printf("        Number of frozen virtual orbitals:  %5i\n",nfrzv);
-    outfile->Printf("        r_convergence:                  %5.3le\n",r_conv);
-    outfile->Printf("        e_convergence:                  %5.3le\n",e_conv);
-    outfile->Printf("        cg_convergence:                 %5.3le\n",cg_conv);
+    outfile->Printf("        r_convergence:                  %5.3le\n",r_convergence_);
+    outfile->Printf("        e_convergence:                  %5.3le\n",e_convergence_);
+    outfile->Printf("        cg_convergence:                 %5.3le\n",cg_convergence_);
     outfile->Printf("        maxiter:                         %8i\n",maxiter);
     outfile->Printf("        cg_maxiter:                      %8i\n",cg_maxiter);
     outfile->Printf("\n");

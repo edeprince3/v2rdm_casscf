@@ -57,9 +57,6 @@ class v2RDMSolver: public Wavefunction{
     /// S(S+1)
     double spin_squared;
 
-    /// is this system a triplet?
-    bool is_triplet;
-
     /// constrain Q2 to be positive semidefinite?
     bool constrain_q2;
 
@@ -69,7 +66,6 @@ class v2RDMSolver: public Wavefunction{
     /// spin adapt constraints?
     bool spin_adapt_g2;
     bool spin_adapt_q2;
-    bool spin_adapt_d2;
 
     /// constraint T1 = D3 + Q3 to be positive semidefinite?
     bool constrain_t1;
@@ -162,17 +158,14 @@ class v2RDMSolver: public Wavefunction{
     int * d3aaboff;
     int * d3bbaoff;
 
-    /// Preconditioner for CG
-    void Preconditioner();
-
     /// convergence in primal energy 
-    double e_conv;
+    double e_convergence_;
 
     /// convergence in primal and dual error
-    double r_conv;
+    double r_convergence_;
 
     /// convergence in conjugate gradient solver
-    double cg_conv;
+    double cg_convergence_;
 
     /// maximum number of outer bpsdp iterations
     int maxiter;
@@ -271,7 +264,6 @@ class v2RDMSolver: public Wavefunction{
     SharedVector b;      // constraint vector
     SharedVector x;      // primal solution
     SharedVector z;      // second dual solution
-    SharedVector precon; // preconditioner for CG
     
     void Update_xz();
     void NaturalOrbitals();
@@ -287,8 +279,8 @@ class v2RDMSolver: public Wavefunction{
     /// full space of integrals for MO gradient / Hessian, blocked by symmetry
     double * tei_full_sym;
     double * oei_full_sym;
-   // gidofalvi -- modified the type of tei_full_dim so that it is correct for large bases 
-   long int tei_full_dim;
+    // gidofalvi -- modified the type of tei_full_dim so that it is correct for large bases 
+    long int tei_full_dim;
     int oei_full_dim;
 
     /// full space D2, blocked by symmetry
