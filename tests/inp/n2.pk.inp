@@ -1,0 +1,44 @@
+
+# PYTHONPATH must include directory above plugin directory.
+#     Define either externally or here, then import plugin.
+sys.path.insert(0, '../..')
+import v2rdm_casscf
+
+molecule mol {
+0 1
+n
+n 1 r
+}
+
+set {
+  guess sad
+  basis cc-pvdz
+  scf_type pk
+  df_basis_scf cc-pvdz-jkfit 
+  d_convergence 1e-10
+  maxiter 500
+  reference rhf
+  frozen_docc  [ 2, 0, 0, 0, 0, 2, 0, 0 ]
+  frozen_uocc  [ 4, 1, 2, 2, 1, 4, 2, 2 ]
+  #frozen_docc  [  4 ]
+  #frozen_uocc  [ 18 ]
+}
+set v2rdm_casscf {
+  positivity dqg
+  constrain_spin true
+  constrain_d3   false
+  spin_adapt_g2  false
+  spin_adapt_q2  false
+  r_convergence  1e-4
+  e_convergence  1e-4
+  cg_convergence 1e-6
+  jacobi_write 1
+  jacobi_nthread 1
+  maxiter 20000
+}
+
+activate(mol)
+mol.r = 0.5
+energy('v2rdm-casscf')
+mol.r = 1.1
+energy('v2rdm-casscf')

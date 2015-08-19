@@ -1,0 +1,108 @@
+#!/bin/csh
+
+set ref_dir = ref
+set inp_dir = inp
+set log_dir = log
+
+echo ''
+echo '*************************************************************************************************' 
+echo running test for accuracy of threaded calculations \(N2, 6-31g,\[6,6\] active space \@ R=0.5 \& 1.1 A\)
+echo '*************************************************************************************************'
+echo''
+
+set input_files = ( n2.df.631g.threaded.inp n2.df.631g.inp )
+
+set num_files = $#input_files
+
+echo ''
+
+echo 'these are tightly-converged calculations'
+echo 'energies should agree to microH \& be independent of initial guess'
+
+echo ''
+
+if ( -d $log_dir ) then
+
+else
+  mkdir log
+endif
+
+set i=1
+while ( $i <= $num_files )
+  set fname = $input_files[$i]
+  set ref_file = $ref_dir/$fname.out.ref
+  cp $inp_dir/$fname .
+
+  if ( $i == 1 ) then
+    echo 'running multi-thread calculations'
+    echo ''
+
+  endif
+  if ( $i == 2 ) then
+    echo 'running single-thread calculations'
+    echo ''  
+
+  endif
+  psi4 $fname 
+  mv $fname.out $log_dir
+  mv $fname.out.mol.jacobi $log_dir
+  rm $fname
+  echo '*** FINAL CALCULATED RDM ENERGIES ***'
+  grep '* v2RDM total' $log_dir/$fname.out
+  echo '*** FINAL REFERENCE  RDM ENERGIES ***'
+  grep '* v2RDM total' $ref_file
+  echo '' 
+
+  @ i = $i + 1
+end
+
+
+set input_files = ( n2.pk.threaded.inp n2.df.threaded.inp n2.df.threaded.inp )
+
+set num_files = $#input_files
+
+echo''
+echo '************************************************************************************************************'
+echo running test for accuracy of integral algorithms \(DF,CD,PK\) \(N2, cc-pVDZ,\[6,6\] active space \@ R=0.5 \& 1.1 A\)
+echo '************************************************************************************************************'
+echo ''
+
+set i=1
+
+while ( $i <= $num_files )
+  set fname = $input_files[$i]
+  set ref_file = $ref_dir/$fname.out.ref
+  cp $inp_dir/$fname .
+
+  if ( $i == 1 ) then
+    echo running regular pk algorithm \(4-index integrals\)
+    echo ''
+
+  endif
+  if ( $i == 2 ) then
+    echo running regular cd algorithm \(3-index integrals\)
+    echo ' '
+
+  endif
+  if ( $i == 3 ) then
+    echo running regular df algorithm \(4-index integrals\)
+    echo ' '
+
+  endif
+  psi4 $fname
+  mv $fname.out $log_dir
+  mv $fname.out.mol.jacobi $log_dir
+  rm $fname
+  echo '*** FINAL CALCULATED RDM ENERGIES ***'
+  grep '* v2RDM total' $log_dir/$fname.out
+  echo '*** FINAL REFERENCE  RDM ENERGIES ***'
+  grep '* v2RDM total' $ref_file
+  echo ''
+
+  @ i = $i + 1
+end
+
+if ( -e timer.dat ) then
+  rm timer.dat
+endif
+rm psi.*.clean

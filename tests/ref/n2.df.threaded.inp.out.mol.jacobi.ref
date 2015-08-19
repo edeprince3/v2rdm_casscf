@@ -1,0 +1,203 @@
+irrep   d_f  d_l  n_d       a_f  a_l  n_a       e_f  e_l  n_e
+    1     1    2    2         5    5    1        11   14    4
+    2     3    2    0         6    5    0        15   15    1
+    3     3    2    0         6    6    1        16   17    2
+    4     3    2    0         7    7    1        18   19    2
+    5     3    2    0         8    7    0        20   20    1
+    6     3    4    2         8    8    1        21   24    4
+    7     5    4    0         9    9    1        25   26    2
+    8     5    4    0        10   10    1        27   28    2
+density information
+ngempi(:)=        6         2         2         2         2         3         2         2
+ nnzpi(:)=       21         3         3         3         3         6         3         3
+offset(:)=        0        21        24        27        30        33        39        42
+integral information
+ngempi(:)=       82        32        48        48        32        68        48        48
+ nnzpi(:)=       11480         4480         6720         6720         4480         9520         6720         6720
+rotation pair information:
+act-doc pairs:      4  ext-doc pairs:     16  act-act pairs:      0  ext-act pairs:     16  total orbital pairs:        36
+ 
+iter:     0 E(k):   -132.59747981   E(k)-E(k-1)  -1.326E+02  ||g||   2.209E-02  t(g+h):   0.01 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     1 E(k):   -132.63285834   E(k)-E(k-1)  -3.538E-02  ||g||   4.363E-03  t(g+h):   0.01 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     2 E(k):   -132.63502494   E(k)-E(k-1)  -2.167E-03  ||g||   5.878E-04  t(g+h):   0.01 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     3 E(k):   -132.63524351   E(k)-E(k-1)  -2.186E-04  ||g||   8.467E-05  t(g+h):   0.01 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     4 E(k):   -132.63529573   E(k)-E(k-1)  -5.223E-05  ||g||   1.298E-05  t(g+h):   0.01 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     5 E(k):   -132.63531672   E(k)-E(k-1)  -2.099E-05  ||g||   2.573E-06  t(g+h):   0.01 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     6 E(k):   -132.63532677   E(k)-E(k-1)  -1.005E-05  ||g||   7.507E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     7 E(k):   -132.63533183   E(k)-E(k-1)  -5.056E-06  ||g||   3.088E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     8 E(k):   -132.63533441   E(k)-E(k-1)  -2.583E-06  ||g||   1.479E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     9 E(k):   -132.63533574   E(k)-E(k-1)  -1.329E-06  ||g||   7.472E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    10 E(k):   -132.63533643   E(k)-E(k-1)  -6.860E-07  ||g||   3.841E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    11 E(k):   -132.63533678   E(k)-E(k-1)  -3.550E-07  ||g||   1.988E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    12 E(k):   -132.63533697   E(k)-E(k-1)  -1.841E-07  ||g||   1.032E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    13 E(k):   -132.63533706   E(k)-E(k-1)  -9.553E-08  ||g||   5.361E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    14 E(k):   -132.63533711   E(k)-E(k-1)  -4.963E-08  ||g||   2.788E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    15 E(k):   -132.63533714   E(k)-E(k-1)  -2.580E-08  ||g||   1.450E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    16 E(k):   -132.63533715   E(k)-E(k-1)  -1.342E-08  ||g||   7.548E-10  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    17 E(k):   -132.63533716   E(k)-E(k-1)  -6.978E-09  ||g||   3.929E-10  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+gradient descent converged
+irrep   d_f  d_l  n_d       a_f  a_l  n_a       e_f  e_l  n_e
+    1     1    2    2         5    5    1        11   14    4
+    2     3    2    0         6    5    0        15   15    1
+    3     3    2    0         6    6    1        16   17    2
+    4     3    2    0         7    7    1        18   19    2
+    5     3    2    0         8    7    0        20   20    1
+    6     3    4    2         8    8    1        21   24    4
+    7     5    4    0         9    9    1        25   26    2
+    8     5    4    0        10   10    1        27   28    2
+density information
+ngempi(:)=        6         2         2         2         2         3         2         2
+ nnzpi(:)=       21         3         3         3         3         6         3         3
+offset(:)=        0        21        24        27        30        33        39        42
+integral information
+ngempi(:)=       82        32        48        48        32        68        48        48
+ nnzpi(:)=       11480         4480         6720         6720         4480         9520         6720         6720
+rotation pair information:
+act-doc pairs:      4  ext-doc pairs:     16  act-act pairs:      0  ext-act pairs:     16  total orbital pairs:        36
+ 
+iter:     0 E(k):   -132.64851692   E(k)-E(k-1)  -1.326E+02  ||g||   5.769E-03  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     1 E(k):   -132.65646963   E(k)-E(k-1)  -7.953E-03  ||g||   6.539E-04  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     2 E(k):   -132.65900053   E(k)-E(k-1)  -2.531E-03  ||g||   3.645E-04  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     3 E(k):   -132.66003641   E(k)-E(k-1)  -1.036E-03  ||g||   2.192E-04  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     4 E(k):   -132.66045715   E(k)-E(k-1)  -4.207E-04  ||g||   1.111E-04  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     5 E(k):   -132.66062218   E(k)-E(k-1)  -1.650E-04  ||g||   5.141E-05  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     6 E(k):   -132.66068517   E(k)-E(k-1)  -6.299E-05  ||g||   2.222E-05  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     7 E(k):   -132.66070882   E(k)-E(k-1)  -2.365E-05  ||g||   9.168E-06  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     8 E(k):   -132.66071761   E(k)-E(k-1)  -8.790E-06  ||g||   3.659E-06  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     9 E(k):   -132.66072085   E(k)-E(k-1)  -3.249E-06  ||g||   1.425E-06  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    10 E(k):   -132.66072205   E(k)-E(k-1)  -1.196E-06  ||g||   5.458E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    11 E(k):   -132.66072249   E(k)-E(k-1)  -4.398E-07  ||g||   2.063E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    12 E(k):   -132.66072265   E(k)-E(k-1)  -1.614E-07  ||g||   7.731E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    13 E(k):   -132.66072271   E(k)-E(k-1)  -5.921E-08  ||g||   2.878E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    14 E(k):   -132.66072273   E(k)-E(k-1)  -2.171E-08  ||g||   1.066E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    15 E(k):   -132.66072274   E(k)-E(k-1)  -7.956E-09  ||g||   3.937E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+gradient descent converged
+irrep   d_f  d_l  n_d       a_f  a_l  n_a       e_f  e_l  n_e
+    1     1    2    2         5    5    1        11   14    4
+    2     3    2    0         6    5    0        15   15    1
+    3     3    2    0         6    6    1        16   17    2
+    4     3    2    0         7    7    1        18   19    2
+    5     3    2    0         8    7    0        20   20    1
+    6     3    4    2         8    8    1        21   24    4
+    7     5    4    0         9    9    1        25   26    2
+    8     5    4    0        10   10    1        27   28    2
+density information
+ngempi(:)=        6         2         2         2         2         3         2         2
+ nnzpi(:)=       21         3         3         3         3         6         3         3
+offset(:)=        0        21        24        27        30        33        39        42
+integral information
+ngempi(:)=       82        32        48        48        32        68        48        48
+ nnzpi(:)=       11480         4480         6720         6720         4480         9520         6720         6720
+rotation pair information:
+act-doc pairs:      4  ext-doc pairs:     16  act-act pairs:      0  ext-act pairs:     16  total orbital pairs:        36
+ 
+iter:     0 E(k):   -132.66618702   E(k)-E(k-1)  -1.327E+02  ||g||   3.215E-04  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     1 E(k):   -132.66667681   E(k)-E(k-1)  -4.898E-04  ||g||   8.250E-05  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     2 E(k):   -132.66677758   E(k)-E(k-1)  -1.008E-04  ||g||   2.944E-05  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     3 E(k):   -132.66680663   E(k)-E(k-1)  -2.905E-05  ||g||   1.317E-05  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     4 E(k):   -132.66681537   E(k)-E(k-1)  -8.744E-06  ||g||   4.942E-06  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     5 E(k):   -132.66681803   E(k)-E(k-1)  -2.658E-06  ||g||   1.746E-06  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     6 E(k):   -132.66681884   E(k)-E(k-1)  -8.108E-07  ||g||   5.877E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     7 E(k):   -132.66681909   E(k)-E(k-1)  -2.478E-07  ||g||   1.926E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     8 E(k):   -132.66681917   E(k)-E(k-1)  -7.585E-08  ||g||   6.188E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     9 E(k):   -132.66681919   E(k)-E(k-1)  -2.323E-08  ||g||   1.963E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:    10 E(k):   -132.66681920   E(k)-E(k-1)  -7.117E-09  ||g||   6.168E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+gradient descent converged
+irrep   d_f  d_l  n_d       a_f  a_l  n_a       e_f  e_l  n_e
+    1     1    2    2         5    5    1        11   14    4
+    2     3    2    0         6    5    0        15   15    1
+    3     3    2    0         6    6    1        16   17    2
+    4     3    2    0         7    7    1        18   19    2
+    5     3    2    0         8    7    0        20   20    1
+    6     3    4    2         8    8    1        21   24    4
+    7     5    4    0         9    9    1        25   26    2
+    8     5    4    0        10   10    1        27   28    2
+density information
+ngempi(:)=        6         2         2         2         2         3         2         2
+ nnzpi(:)=       21         3         3         3         3         6         3         3
+offset(:)=        0        21        24        27        30        33        39        42
+integral information
+ngempi(:)=       82        32        48        48        32        68        48        48
+ nnzpi(:)=       11480         4480         6720         6720         4480         9520         6720         6720
+rotation pair information:
+act-doc pairs:      4  ext-doc pairs:     16  act-act pairs:      0  ext-act pairs:     16  total orbital pairs:        36
+ 
+iter:     0 E(k):   -132.66698931   E(k)-E(k-1)  -1.327E+02  ||g||   6.161E-06  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     1 E(k):   -132.66700746   E(k)-E(k-1)  -1.814E-05  ||g||   4.752E-06  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     2 E(k):   -132.66701145   E(k)-E(k-1)  -3.994E-06  ||g||   1.627E-06  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     3 E(k):   -132.66701257   E(k)-E(k-1)  -1.115E-06  ||g||   6.429E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     4 E(k):   -132.66701289   E(k)-E(k-1)  -3.251E-07  ||g||   2.222E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     5 E(k):   -132.66701299   E(k)-E(k-1)  -9.615E-08  ||g||   7.412E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     6 E(k):   -132.66701302   E(k)-E(k-1)  -2.860E-08  ||g||   2.382E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     7 E(k):   -132.66701302   E(k)-E(k-1)  -8.533E-09  ||g||   7.506E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+gradient descent converged
+irrep   d_f  d_l  n_d       a_f  a_l  n_a       e_f  e_l  n_e
+    1     1    2    2         5    5    1        11   14    4
+    2     3    2    0         6    5    0        15   15    1
+    3     3    2    0         6    6    1        16   17    2
+    4     3    2    0         7    7    1        18   19    2
+    5     3    2    0         8    7    0        20   20    1
+    6     3    4    2         8    8    1        21   24    4
+    7     5    4    0         9    9    1        25   26    2
+    8     5    4    0        10   10    1        27   28    2
+density information
+ngempi(:)=        6         2         2         2         2         3         2         2
+ nnzpi(:)=       21         3         3         3         3         6         3         3
+offset(:)=        0        21        24        27        30        33        39        42
+integral information
+ngempi(:)=       82        32        48        48        32        68        48        48
+ nnzpi(:)=       11480         4480         6720         6720         4480         9520         6720         6720
+rotation pair information:
+act-doc pairs:      4  ext-doc pairs:     16  act-act pairs:      0  ext-act pairs:     16  total orbital pairs:        36
+ 
+iter:     0 E(k):   -132.66701695   E(k)-E(k-1)  -1.327E+02  ||g||   2.270E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     1 E(k):   -132.66701748   E(k)-E(k-1)  -5.235E-07  ||g||   1.621E-07  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     2 E(k):   -132.66701760   E(k)-E(k-1)  -1.186E-07  ||g||   5.435E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     3 E(k):   -132.66701763   E(k)-E(k-1)  -3.323E-08  ||g||   2.056E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     4 E(k):   -132.66701764   E(k)-E(k-1)  -9.690E-09  ||g||   6.957E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+gradient descent converged
+irrep   d_f  d_l  n_d       a_f  a_l  n_a       e_f  e_l  n_e
+    1     1    2    2         5    5    1        11   14    4
+    2     3    2    0         6    5    0        15   15    1
+    3     3    2    0         6    6    1        16   17    2
+    4     3    2    0         7    7    1        18   19    2
+    5     3    2    0         8    7    0        20   20    1
+    6     3    4    2         8    8    1        21   24    4
+    7     5    4    0         9    9    1        25   26    2
+    8     5    4    0        10   10    1        27   28    2
+density information
+ngempi(:)=        6         2         2         2         2         3         2         2
+ nnzpi(:)=       21         3         3         3         3         6         3         3
+offset(:)=        0        21        24        27        30        33        39        42
+integral information
+ngempi(:)=       82        32        48        48        32        68        48        48
+ nnzpi(:)=       11480         4480         6720         6720         4480         9520         6720         6720
+rotation pair information:
+act-doc pairs:      4  ext-doc pairs:     16  act-act pairs:      0  ext-act pairs:     16  total orbital pairs:        36
+ 
+iter:     0 E(k):   -132.66700309   E(k)-E(k-1)  -1.327E+02  ||g||   1.654E-08  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     1 E(k):   -132.66700310   E(k)-E(k-1)  -1.317E-08  ||g||   6.602E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     2 E(k):   -132.66700310   E(k)-E(k-1)  -3.501E-09  ||g||   2.206E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+gradient descent converged
+irrep   d_f  d_l  n_d       a_f  a_l  n_a       e_f  e_l  n_e
+    1     1    2    2         5    5    1        11   14    4
+    2     3    2    0         6    5    0        15   15    1
+    3     3    2    0         6    6    1        16   17    2
+    4     3    2    0         7    7    1        18   19    2
+    5     3    2    0         8    7    0        20   20    1
+    6     3    4    2         8    8    1        21   24    4
+    7     5    4    0         9    9    1        25   26    2
+    8     5    4    0        10   10    1        27   28    2
+density information
+ngempi(:)=        6         2         2         2         2         3         2         2
+ nnzpi(:)=       21         3         3         3         3         6         3         3
+offset(:)=        0        21        24        27        30        33        39        42
+integral information
+ngempi(:)=       82        32        48        48        32        68        48        48
+ nnzpi(:)=       11480         4480         6720         6720         4480         9520         6720         6720
+rotation pair information:
+act-doc pairs:      4  ext-doc pairs:     16  act-act pairs:      0  ext-act pairs:     16  total orbital pairs:        36
+ 
+iter:     0 E(k):   -132.66698874   E(k)-E(k-1)  -1.327E+02  ||g||   4.930E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+iter:     1 E(k):   -132.66698875   E(k)-E(k-1)  -8.046E-09  ||g||   2.760E-09  t(g+h):   0.00 t(E):   0.00 t(e^U):   0.00 t(tran):   0.00
+gradient descent converged
