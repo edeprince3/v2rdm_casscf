@@ -135,7 +135,7 @@ void  v2RDMSolver::common_init(){
 
     if (options_["FROZEN_DOCC"].has_changed()) {
         if (options_["FROZEN_DOCC"].size() != nirrep_) {
-            throw PsiException("The FROZEN_DOCC array has the wrong dimensions",__FILE__,__LINE__);
+            throw PsiException("The FROZEN_DOCC array has the wrong dimensions_",__FILE__,__LINE__);
         }
         for (int h = 0; h < nirrep_; h++) {
             frzcpi_[h] = options_["FROZEN_DOCC"][h].to_double();
@@ -143,7 +143,7 @@ void  v2RDMSolver::common_init(){
     }
     if (options_["FROZEN_UOCC"].has_changed()) {
         if (options_["FROZEN_UOCC"].size() != nirrep_) {
-            throw PsiException("The FROZEN_UOCC array has the wrong dimensions",__FILE__,__LINE__);
+            throw PsiException("The FROZEN_UOCC array has the wrong dimensions_",__FILE__,__LINE__);
         }
         for (int h = 0; h < nirrep_; h++) {
             frzvpi_[h] = options_["FROZEN_UOCC"][h].to_double();
@@ -712,137 +712,137 @@ void  v2RDMSolver::common_init(){
         }
     }
 
-    // list of dimensions
+    // list of dimensions_
     for (int h = 0; h < nirrep_; h++) {
-        dimensions.push_back(gems_ab[h]); // D2ab
+        dimensions_.push_back(gems_ab[h]); // D2ab
     }
     for (int h = 0; h < nirrep_; h++) {
-        dimensions.push_back(gems_aa[h]); // D2aa
+        dimensions_.push_back(gems_aa[h]); // D2aa
     }
     for (int h = 0; h < nirrep_; h++) {
-        dimensions.push_back(gems_aa[h]); // D2bb
+        dimensions_.push_back(gems_aa[h]); // D2bb
     }
     for (int h = 0; h < nirrep_; h++) {
-        dimensions.push_back(amopi_[h]); // D1a
+        dimensions_.push_back(amopi_[h]); // D1a
     }
     for (int h = 0; h < nirrep_; h++) {
-        dimensions.push_back(amopi_[h]); // D1b
+        dimensions_.push_back(amopi_[h]); // D1b
     }
     for (int h = 0; h < nirrep_; h++) {
-        dimensions.push_back(amopi_[h]); // Q1a
+        dimensions_.push_back(amopi_[h]); // Q1a
     }
     for (int h = 0; h < nirrep_; h++) {
-        dimensions.push_back(amopi_[h]); // Q1b
+        dimensions_.push_back(amopi_[h]); // Q1b
     }
     if ( constrain_q2 ) {
         if ( !spin_adapt_q2 ) {
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_ab[h]); // Q2ab
+                dimensions_.push_back(gems_ab[h]); // Q2ab
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_aa[h]); // Q2aa
+                dimensions_.push_back(gems_aa[h]); // Q2aa
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_aa[h]); // Q2bb
+                dimensions_.push_back(gems_aa[h]); // Q2bb
             }
         }else {
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_00[h]); // Q2s
+                dimensions_.push_back(gems_00[h]); // Q2s
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_aa[h]); // Q2t
+                dimensions_.push_back(gems_aa[h]); // Q2t
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_aa[h]); // Q2t_p1
+                dimensions_.push_back(gems_aa[h]); // Q2t_p1
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_aa[h]); // Q2t_m1
+                dimensions_.push_back(gems_aa[h]); // Q2t_m1
             }
         }
     }
     if ( constrain_g2 ) {
         if ( !spin_adapt_g2 ) {
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_ab[h]); // G2ab
+                dimensions_.push_back(gems_ab[h]); // G2ab
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_ab[h]); // G2ba
+                dimensions_.push_back(gems_ab[h]); // G2ba
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(2*gems_ab[h]); // G2aa
+                dimensions_.push_back(2*gems_ab[h]); // G2aa
             }
         }else {
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_ab[h]); // G2s
+                dimensions_.push_back(gems_ab[h]); // G2s
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_ab[h]); // G2t
+                dimensions_.push_back(gems_ab[h]); // G2t
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_ab[h]); // G2t_p1
+                dimensions_.push_back(gems_ab[h]); // G2t_p1
             }
             for (int h = 0; h < nirrep_; h++) {
-                dimensions.push_back(gems_ab[h]); // G2t_m1
+                dimensions_.push_back(gems_ab[h]); // G2t_m1
             }
         }
     }
     if ( constrain_t1 ) {
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aaa[h]); // T1aaa
+            dimensions_.push_back(trip_aaa[h]); // T1aaa
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aaa[h]); // T1bbb
+            dimensions_.push_back(trip_aaa[h]); // T1bbb
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aab[h]); // T1aab
+            dimensions_.push_back(trip_aab[h]); // T1aab
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aab[h]); // T1bba
+            dimensions_.push_back(trip_aab[h]); // T1bba
         }
     }
     if ( constrain_t2 ) {
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aab[h]+trip_aba[h]); // T2aaa
+            dimensions_.push_back(trip_aab[h]+trip_aba[h]); // T2aaa
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aab[h]+trip_aba[h]); // T2bbb
+            dimensions_.push_back(trip_aab[h]+trip_aba[h]); // T2bbb
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aab[h]); // T2aab
+            dimensions_.push_back(trip_aab[h]); // T2aab
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aab[h]); // T2bba
+            dimensions_.push_back(trip_aab[h]); // T2bba
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aba[h]); // T2aba
+            dimensions_.push_back(trip_aba[h]); // T2aba
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aba[h]); // T2bab
+            dimensions_.push_back(trip_aba[h]); // T2bab
         }
     }
     if ( constrain_d3 ) {
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aaa[h]); // D3aaa
+            dimensions_.push_back(trip_aaa[h]); // D3aaa
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aaa[h]); // D3bbb
+            dimensions_.push_back(trip_aaa[h]); // D3bbb
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aab[h]); // D3aab
+            dimensions_.push_back(trip_aab[h]); // D3aab
         }
         for (int h = 0; h < nirrep_; h++) {
-            dimensions.push_back(trip_aab[h]); // D3bba
+            dimensions_.push_back(trip_aab[h]); // D3bba
         }
     }
 
     // bpsdp convergence thresholds:
     r_convergence_  = options_.get_double("R_CONVERGENCE");
     e_convergence_  = options_.get_double("E_CONVERGENCE");
-    maxiter         = options_.get_int("MAXITER");
+    maxiter_        = options_.get_int("MAXITER");
 
     // conjugate gradient solver thresholds:
     cg_convergence_ = options_.get_double("CG_CONVERGENCE");
-    cg_maxiter      = options_.get_double("CG_MAXITER");
+    cg_maxiter_     = options_.get_double("CG_MAXITER");
 
 
     // memory check happens here
@@ -961,7 +961,7 @@ double v2RDMSolver::compute_energy() {
     // congugate gradient solver
     long int N = nconstraints;
     shared_ptr<CGSolver> cg (new CGSolver(N));
-    cg->set_max_iter(cg_maxiter);
+    cg->set_max_iter(cg_maxiter_);
     cg->set_convergence(cg_convergence_);
 
     // evaluate guess energy (c.x):
@@ -1060,7 +1060,7 @@ double v2RDMSolver::compute_energy() {
         d2timeAu=q2timeAu=g2timeAu=d2timeATu=q2timeATu=g2timeATu=0.0;
         oiter++;
     
-        if (oiter == maxiter) break;
+        if (oiter == maxiter_) break;
 
         egap = fabs(current_energy-energy_dual);
         denergy_primal = fabs(energy_primal - current_energy);
@@ -1073,7 +1073,7 @@ double v2RDMSolver::compute_energy() {
 
     }while( ep > r_convergence_ || ed > r_convergence_  || egap > e_convergence_ || !jacobi_converged_);
 
-    if ( oiter == maxiter ) {
+    if ( oiter == maxiter_ ) {
         throw PsiException("v2RDM did not converge.",__FILE__,__LINE__);
     }
 
@@ -1275,10 +1275,14 @@ void v2RDMSolver::Guess(){
     memset((void*)x_p,'\0',dimx*sizeof(double));
     memset((void*)z_p,'\0',dimx*sizeof(double));
 
-    // Hartree-Fock guess for D2, D1, Q1, Q2, and G2
+    // random guess
+    srand(0);
+    for (int i = 0; i < dimx; i++) {
+        x_p[i] = ( (double)rand()/RAND_MAX - 1.0 ) * 2.0;
+    }
+    return;
 
-double * c_p = c->pointer();
-    double en = 0.0;
+    // Hartree-Fock guess for D2, D1, Q1, Q2, and G2
 
     // D2ab
     int poff1 = 0;
@@ -1383,8 +1387,6 @@ double * c_p = c->pointer();
         T2_constraints_guess(x);
     }
 
-    // zero guess for z
-    z->zero();
 }
 
 void v2RDMSolver::PrintHeader(){
@@ -1412,8 +1414,8 @@ void v2RDMSolver::PrintHeader(){
     outfile->Printf("        r_convergence:                  %5.3le\n",r_convergence_);
     outfile->Printf("        e_convergence:                  %5.3le\n",e_convergence_);
     outfile->Printf("        cg_convergence:                 %5.3le\n",cg_convergence_);
-    outfile->Printf("        maxiter:                         %8i\n",maxiter);
-    outfile->Printf("        cg_maxiter:                      %8i\n",cg_maxiter);
+    outfile->Printf("        maxiter:                         %8i\n",maxiter_);
+    outfile->Printf("        cg_maxiter:                      %8i\n",cg_maxiter_);
     outfile->Printf("\n");
     outfile->Printf("  ==> Memory requirements <==\n");
     outfile->Printf("\n");
@@ -2168,26 +2170,26 @@ void v2RDMSolver::Update_xz() {
     ATy->add(x);
 
     // loop over each block of x/z
-    for (int i = 0; i < dimensions.size(); i++) {
-        if ( dimensions[i] == 0 ) continue;
+    for (int i = 0; i < dimensions_.size(); i++) {
+        if ( dimensions_[i] == 0 ) continue;
         int myoffset = 0;
         for (int j = 0; j < i; j++) {
-            myoffset += dimensions[j] * dimensions[j];
+            myoffset += dimensions_[j] * dimensions_[j];
         }
 
-        boost::shared_ptr<Matrix> mat    (new Matrix(dimensions[i],dimensions[i]));
-        boost::shared_ptr<Matrix> eigvec (new Matrix(dimensions[i],dimensions[i]));
-        boost::shared_ptr<Vector> eigval (new Vector(dimensions[i]));
-        boost::shared_ptr<Vector> Up     (new Vector(dimensions[i]));
-        boost::shared_ptr<Vector> Um     (new Vector(dimensions[i]));
+        boost::shared_ptr<Matrix> mat    (new Matrix(dimensions_[i],dimensions_[i]));
+        boost::shared_ptr<Matrix> eigvec (new Matrix(dimensions_[i],dimensions_[i]));
+        boost::shared_ptr<Vector> eigval (new Vector(dimensions_[i]));
+        boost::shared_ptr<Vector> Up     (new Vector(dimensions_[i]));
+        boost::shared_ptr<Vector> Um     (new Vector(dimensions_[i]));
         double ** mat_p = mat->pointer();
         double * A_p   = ATy->pointer();
 
-        //C_DCOPY(dimensions[i]*dimensions[i],&A_p[myoffset],1,&mat_p[0][0],1);
-        for (int p = 0; p < dimensions[i]; p++) {
-            for (int q = p; q < dimensions[i]; q++) {
-                double dum = 0.5 * ( A_p[myoffset + p * dimensions[i] + q] +
-                                     A_p[myoffset + q * dimensions[i] + p] );
+        //C_DCOPY(dimensions_[i]*dimensions_[i],&A_p[myoffset],1,&mat_p[0][0],1);
+        for (int p = 0; p < dimensions_[i]; p++) {
+            for (int q = p; q < dimensions_[i]; q++) {
+                double dum = 0.5 * ( A_p[myoffset + p * dimensions_[i] + q] +
+                                     A_p[myoffset + q * dimensions_[i] + p] );
                 mat_p[p][q] = mat_p[q][p] = dum;
                  
             }
@@ -2198,7 +2200,7 @@ void v2RDMSolver::Update_xz() {
         double * u_p    = Up->pointer();
         double * u_m    = Um->pointer();
         double * eval_p = eigval->pointer();
-        for (int p = 0; p < dimensions[i]; p++) {
+        for (int p = 0; p < dimensions_[i]; p++) {
             if ( eval_p[p] < 0.0 ) {
                 u_m[p] = -eval_p[p];
                 u_p[p] = 0.0;
@@ -2213,23 +2215,23 @@ void v2RDMSolver::Update_xz() {
         double * x_p = x->pointer();
         double * z_p = z->pointer();
         #pragma omp parallel for schedule (dynamic)
-        for (int pq = 0; pq < dimensions[i] * dimensions[i]; pq++) {
+        for (int pq = 0; pq < dimensions_[i] * dimensions_[i]; pq++) {
 
-            int q = pq % dimensions[i];
-            int p = (pq-q) / dimensions[i];
+            int q = pq % dimensions_[i];
+            int p = (pq-q) / dimensions_[i];
             if ( p > q ) continue;
 
             double sumx = 0.0;
             double sumz = 0.0;
-            for (int j = 0; j < dimensions[i]; j++) {
+            for (int j = 0; j < dimensions_[i]; j++) {
                 sumx += u_p[j] * evec_p[p][j] * evec_p[q][j];
                 sumz += u_m[j] * evec_p[p][j] * evec_p[q][j];
             }
-            x_p[myoffset+p*dimensions[i]+q] = sumx;
-            z_p[myoffset+p*dimensions[i]+q] = sumz;
+            x_p[myoffset+p*dimensions_[i]+q] = sumx;
+            z_p[myoffset+p*dimensions_[i]+q] = sumz;
 
-            x_p[myoffset+q*dimensions[i]+p] = sumx;
-            z_p[myoffset+q*dimensions[i]+p] = sumz;
+            x_p[myoffset+q*dimensions_[i]+p] = sumx;
+            z_p[myoffset+q*dimensions_[i]+p] = sumz;
         }
     }
 }

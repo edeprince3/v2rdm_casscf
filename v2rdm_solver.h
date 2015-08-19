@@ -168,13 +168,13 @@ class v2RDMSolver: public Wavefunction{
     double cg_convergence_;
 
     /// maximum number of outer bpsdp iterations
-    int maxiter;
+    int maxiter_;
 
     /// maximum number of outer conjugate gradient iterations
-    int cg_maxiter;
+    int cg_maxiter_;
 
     // standard vector of dimensions of each block of x
-    std::vector<int> dimensions;
+    std::vector<int> dimensions_;
 
     int offset;
 

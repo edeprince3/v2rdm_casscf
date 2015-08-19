@@ -707,7 +707,6 @@ void v2RDMSolver::Q2_constraints_guess(SharedVector u){
                     int ll = l - pitzer_offset[h2];
                     dum        -=  u_p[d1boff[h2] + ll*amopi_[h2]+jj]; // -D1(l,j) dik
                 }
-
                 u_p[q2aboff[h] + ij*gems_ab[h]+kl] = dum;
             }
         }
@@ -758,6 +757,7 @@ void v2RDMSolver::Q2_constraints_guess(SharedVector u){
         }
         offset += gems_aa[h]*gems_aa[h];
     }
+
     // map D2bb to Q2bb
     for (int h = 0; h < nirrep_; h++) {
         #pragma omp parallel for schedule (static)
@@ -796,7 +796,6 @@ void v2RDMSolver::Q2_constraints_guess(SharedVector u){
                     int ll = l - pitzer_offset[h2];
                     dum        -=  u_p[d1boff[h2] + ll*amopi_[h2]+jj];  // -D1(l,j) dkl
                 }
-
                 u_p[q2bboff[h] + ij*gems_aa[h]+kl] = dum;
             }
         }
