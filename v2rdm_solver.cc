@@ -1099,6 +1099,9 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("    * v2RDM total energy:        %20.12lf\n",energy_primal+enuc+efrzc);
     outfile->Printf("\n");
 
+    Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc+efrzc;
+    Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc+efrzc;
+
     // compute and print natural orbital occupation numbers
     FinalTransformationMatrix();
     MullikenPopulations();

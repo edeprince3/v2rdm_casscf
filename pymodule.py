@@ -55,7 +55,7 @@ def run_v2rdm_casscf(name, **kwargs):
     scf_helper(name, **kwargs)
     returnvalue = psi4.plugin('v2rdm_casscf.so')
 
-    psi4.set_variable('CURRENT ENERGY', returnvalue)
+    #psi4.set_variable('CURRENT ENERGY', returnvalue)
 
     return psi4.get_variable('CURRENT ENERGY')
 
