@@ -162,10 +162,12 @@ void  v2RDMSolver::common_init(){
         bool active_space_changed = false;
         for (int h = 0; h < factory_->nirrep(); h++){
             lost[h] = nsopi_[h] - nmopi_[h];
+            if ( lost[h] > 0 ) {
+                active_space_changed = true;
+            }
 
             if ( frzvpi_[h] > 0 && lost[h] > 0 ) {
                 frzvpi_[h] -= ( frzvpi_[h] < lost[h] ? frzvpi_[h] : lost[h] );
-                active_space_changed = true;
             }
         }
         if ( active_space_changed ) {
