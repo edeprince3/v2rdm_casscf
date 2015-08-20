@@ -116,6 +116,7 @@ void  v2RDMSolver::common_init(){
     doccpi_   = reference_wavefunction_->doccpi();
     soccpi_   = reference_wavefunction_->soccpi();
     frzcpi_   = reference_wavefunction_->frzcpi();
+    frzvpi_   = reference_wavefunction_->frzvpi();
     nmopi_    = reference_wavefunction_->nmopi();
     nirrep_   = reference_wavefunction_->nirrep();
     nso_      = reference_wavefunction_->nso();
@@ -151,6 +152,49 @@ void  v2RDMSolver::common_init(){
         }
     }
 
+
+    // were there linear dependencies in the primary basis set?
+    if ( nmo_ != nso_ ) {
+
+        // which irreps lost orbitals?
+        int * lost = (int*)malloc(nirrep_*sizeof(int));
+        memset((void*)lost,'\0',nirrep_*sizeof(int));
+        bool active_space_changed = false;
+        for (int h = 0; h < factory_->nirrep(); h++){
+            lost[h] = nsopi_[h] - nmopi_[h];
+
+            if ( frzvpi_[h] > 0 && lost[h] > 0 ) {
+                frzvpi_[h] -= ( frzvpi_[h] < lost[h] ? frzvpi_[h] : lost[h] );
+                active_space_changed = true;
+            }
+        }
+        if ( active_space_changed ) {
+            outfile->Printf("\n");
+            outfile->Printf("    <<< WARNING!! >>>\n");
+            outfile->Printf("\n");
+            outfile->Printf("    Your basis set may have linear dependencies.\n");
+            outfile->Printf("    The number of frozen virtual orbitals per irrep were adjusted accordingly:\n");
+            outfile->Printf("\n");
+            outfile->Printf("    No. orbitals removed per irrep: [");
+            for (int h = 0; h < nirrep_; h++) 
+                outfile->Printf("%4i",lost[h]);
+            outfile->Printf(" ]\n");
+            outfile->Printf("    No. frozen virtuals per irrep:  [");
+            for (int h = 0; h < nirrep_; h++) 
+                outfile->Printf("%4i",frzvpi_[h]);
+            outfile->Printf(" ]\n");
+            outfile->Printf("\n");
+            outfile->Printf("    Check that your active space is still correct.\n");
+            outfile->Printf("\n");
+        }
+       
+        if ( is_df_ ) { 
+            throw PsiException("v2rdm doesn't work when scf_type = df and linear dependencies in basis",__FILE__,__LINE__);
+        }
+    }
+
+
+
     // active orbitals per irrep:
     amopi_    = (int*)malloc(nirrep_*sizeof(int));
     
@@ -185,9 +229,6 @@ void  v2RDMSolver::common_init(){
 
     int ndoccact = ndocc - nfrzc_;
     nvirt    = amo_ - ndoccact;
-    if (amo_ + nfrzc_ + nfrzv != nso_) {
-        throw PsiException("bpsdp does not yet work when nmo!=nso",__FILE__,__LINE__);
-    }
 
     // sanity check for orbital occupancies:
     for (int h = 0; h < nirrep_; h++) {
