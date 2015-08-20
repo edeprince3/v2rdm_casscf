@@ -108,7 +108,7 @@ void  v2RDMSolver::common_init(){
     }
 
     // This function is a copy of common_init() from SDPSolver
-    escf      = reference_wavefunction_->reference_energy();
+    escf_      = reference_wavefunction_->reference_energy();
     nalpha_   = reference_wavefunction_->nalpha();
     nbeta_    = reference_wavefunction_->nbeta();
     nalphapi_ = reference_wavefunction_->nalphapi();
@@ -968,9 +968,9 @@ double v2RDMSolver::compute_energy() {
     double energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
 
     outfile->Printf("\n");
-    outfile->Printf("    reference energy:     %20.12lf\n",escf);
-    outfile->Printf("    frozen core energy:   %20.12lf\n",efrzc);
-    outfile->Printf("    initial 2-RDM energy: %20.12lf\n",energy_primal + enuc + efrzc);
+    outfile->Printf("    reference energy:     %20.12lf\n",escf_);
+    outfile->Printf("    frozen core energy:   %20.12lf\n",efrzc_);
+    outfile->Printf("    initial 2-RDM energy: %20.12lf\n",energy_primal + enuc_ + efrzc_);
     outfile->Printf("\n");
     outfile->Printf("      oiter");
     outfile->Printf(" iiter");
@@ -1038,11 +1038,11 @@ double v2RDMSolver::compute_energy() {
         if ( oiter % 200 == 0 && oiter > 0) {
 
             // gidofalvi debug
-            //outfile->Printf("current nuclear repulsion energy is %20.13lf \n",enuc);
-            //outfile->Printf("             current core energy is %20.13lf \n",efrzc);
+            //outfile->Printf("current nuclear repulsion energy is %20.13lf \n",enuc_);
+            //outfile->Printf("             current core energy is %20.13lf \n",efrzc_);
             //double current_energy_tmp = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
             //outfile->Printf("           current active energy is %20.13lf \n",current_energy_tmp);
-            //outfile->Printf("            current total energy is %20.13lf \n",current_energy_tmp+efrzc+enuc);
+            //outfile->Printf("            current total energy is %20.13lf \n",current_energy_tmp+efrzc_+enuc_);
             // end debug
 
             RotateOrbitals();
@@ -1056,7 +1056,7 @@ double v2RDMSolver::compute_energy() {
         energy_dual   = C_DDOT(nconstraints_,b->pointer(),1,y->pointer(),1);
 
         outfile->Printf("      %5i %5i %11.6lf %11.6lf %11.6lf %7.3lf %10.5lf %10.5lf\n",
-                    oiter,iiter,current_energy+enuc+efrzc,energy_dual+efrzc+enuc,fabs(current_energy-energy_dual),mu,ep,ed);
+                    oiter,iiter,current_energy+enuc_+efrzc_,energy_dual+efrzc_+enuc_,fabs(current_energy-energy_dual),mu,ep,ed);
         d2timeAu=q2timeAu=g2timeAu=d2timeATu=q2timeATu=g2timeATu=0.0;
         oiter++;
     
@@ -1096,18 +1096,18 @@ double v2RDMSolver::compute_energy() {
     int nb = nbeta_ - nfrzc;
     int ms = (multiplicity_ - 1)/2;
     outfile->Printf("      v2RDM total spin [S(S+1)]: %20.6lf\n", 0.5 * (na + nb) + ms*ms - s2);
-    outfile->Printf("    * v2RDM total energy:        %20.12lf\n",energy_primal+enuc+efrzc);
+    outfile->Printf("    * v2RDM total energy:        %20.12lf\n",energy_primal+enuc_+efrzc_);
     outfile->Printf("\n");
 
-    Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc+efrzc;
-    Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc+efrzc;
+    Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc_+efrzc_;
+    Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc_+efrzc_;
 
     // compute and print natural orbital occupation numbers
     FinalTransformationMatrix();
     MullikenPopulations();
     NaturalOrbitals();
 
-    return energy_primal + enuc + efrzc;
+    return energy_primal + enuc_ + efrzc_;
 }
 
 void v2RDMSolver::NaturalOrbitals() {
@@ -2511,14 +2511,13 @@ void v2RDMSolver::RepackIntegralsDF(){
     long int full = amo_ + nfrzc + nfrzv;
 
     // if frozen core, adjust oei's and compute frozen core energy:
-    efrzc1 = 0.0;
-    efrzc2 = 0.0;
+    efrzc_ = 0.0;
     offset = 0;
     long int offset3 = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (long int i = 0; i < frzcpi_[h]; i++) {
             long int ii = i + offset;
-            efrzc1 += 2.0 * oei_full_sym_[offset3 + INDEX(i,i)];
+            efrzc_ += 2.0 * oei_full_sym_[offset3 + INDEX(i,i)];
 
             long int offset2 = 0;
             for (int h2 = 0; h2 < nirrep_; h2++) {
@@ -2526,7 +2525,7 @@ void v2RDMSolver::RepackIntegralsDF(){
                     long int jj = j + offset2;
                     double dum1 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,ii),1,Qmo_+nQ_*INDEX(jj,jj),1);
                     double dum2 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ii,jj),1,Qmo_+nQ_*INDEX(ii,jj),1);
-                    efrzc2 += 2.0 * dum1 - dum2;
+                    efrzc_ += 2.0 * dum1 - dum2;
                 }
                 offset2 += nmopi_[h2];
             }
@@ -2534,7 +2533,6 @@ void v2RDMSolver::RepackIntegralsDF(){
         offset += nmopi_[h];
         offset3 += nmopi_[h] * (nmopi_[h] + 1 ) / 2;
     }
-    efrzc = efrzc1 + efrzc2;
 
     double* c_p = c->pointer();
 
@@ -2628,8 +2626,7 @@ void v2RDMSolver::RepackIntegrals(){
     long int full = amo_ + nfrzc + nfrzv;
 
     // if frozen core, adjust oei's and compute frozen core energy:
-    efrzc1 = 0.0;
-    efrzc2 = 0.0;
+    efrzc_ = 0.0;
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < frzcpi_[h]; i++) {
@@ -2637,7 +2634,7 @@ void v2RDMSolver::RepackIntegrals(){
             int ifull = i + pitzer_offset_full[h];
             int ii    = ibas_full_sym[0][ifull][ifull];
 
-            efrzc1 += 2.0 * oei_full_sym_[offset + INDEX(i,i)]; 
+            efrzc_ += 2.0 * oei_full_sym_[offset + INDEX(i,i)]; 
 
             for (int h2 = 0; h2 < nirrep_; h2++) {
                 for (int j = 0; j < frzcpi_[h2]; j++) {
@@ -2653,13 +2650,12 @@ void v2RDMSolver::RepackIntegrals(){
                     for (int myh = 0; myh < hij; myh++) {
                         myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
                     }
-                    efrzc2 += (2.0 * tei_full_sym_[INDEX(ii,jj)] - tei_full_sym_[myoff + INDEX(ij,ij)]);
+                    efrzc_ += (2.0 * tei_full_sym_[INDEX(ii,jj)] - tei_full_sym_[myoff + INDEX(ij,ij)]);
                 }
             }
         }
         offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
     }
-    efrzc = efrzc1 + efrzc2;
 
     double* c_p = c->pointer();
 

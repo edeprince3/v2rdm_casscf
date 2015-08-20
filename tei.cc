@@ -109,7 +109,7 @@ void v2RDMSolver::DF_TEI() {
     }
     RepackIntegralsDF();
 
-    enuc = Process::environment.molecule()->nuclear_repulsion_energy();
+    enuc_ = Process::environment.molecule()->nuclear_repulsion_energy();
 
 }
 
@@ -184,17 +184,16 @@ void v2RDMSolver::TEI() {
 
 
     // if frozen core, adjust oei's and compute frozen core energy:
-    efrzc1 = 0.0;
-    efrzc2 = 0.0;
+    efrzc_ = 0.0;
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (long int i = 0; i < frzcpi_[h]; i++) {
-            efrzc1 += 2.0 * K1->pointer(h)[i][i];
+            efrzc_ += 2.0 * K1->pointer(h)[i][i];
 
         long int offset2 = 0;
             for (int h2 = 0; h2 < nirrep_; h2++) {
           for (long int j = 0; j < frzcpi_[h2]; j++) {
-                    efrzc2 += (2.0 * temptei[(i+offset)*full*full*full+(i+offset)*full*full+(j+offset2)*full+(j+offset2)]
+                    efrzc_ += (2.0 * temptei[(i+offset)*full*full*full+(i+offset)*full*full+(j+offset2)*full+(j+offset2)]
                                   - temptei[(i+offset)*full*full*full+(j+offset2)*full*full+(i+offset)*full+(j+offset2)]);
                 }
                 offset2 += nmopi_[h2];
@@ -202,9 +201,6 @@ void v2RDMSolver::TEI() {
         }
         offset += nmopi_[h];
     }
-    efrzc = efrzc1 + efrzc2;
-    //printf("efrzc1       %20.12lf\n",efrzc1);
-    //printf("efrzc2       %20.12lf\n",efrzc2);
 
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -311,7 +307,7 @@ void v2RDMSolver::TEI() {
         }
     }
 
-    enuc = Process::environment.molecule()->nuclear_repulsion_energy();
+    enuc_ = Process::environment.molecule()->nuclear_repulsion_energy();
     free(temptei);
 }
 

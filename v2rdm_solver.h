@@ -253,7 +253,16 @@ class v2RDMSolver: public Wavefunction{
     double t2timeAu,t1timeAu;
     double t2timeATu,t1timeATu;
 
-    double escf, enuc, efrzc, efrzc1, efrzc2, tau, mu, ed, ep;
+    /// SCF energy
+    double escf_; 
+
+    /// nuclear repulsion energy
+    double enuc_; 
+
+    // frozen core energy
+    double efrzc_;
+
+    double tau, mu, ed, ep;
 
     //vectors
     SharedVector Ax;     // vector to hold A . x
