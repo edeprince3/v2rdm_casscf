@@ -68,41 +68,41 @@ void v2RDMSolver::DF_TEI() {
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
     // size of the 3-index integral buffer
-    // tei_full_dim = nQ_*nso_*(nso_+1)/2;
+    // tei_full_dim_ = nQ_*nso_*(nso_+1)/2;
 
     // gidofalvi -- modified this so that number of nnz 2-e integrals is correct for large bases
-    tei_full_dim = (long int) nQ_ * (long int) nso_ * ( (long int) nso_ + 1 ) /2 ;
+    tei_full_dim_ = (long int) nQ_ * (long int) nso_ * ( (long int) nso_ + 1 ) /2 ;
 
-    d2_plus_core_dim = 0;
+    d2_plus_core_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        d2_plus_core_dim += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
+        d2_plus_core_dim_ += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
     }
 
     // just point to 3-index integral buffer
-    tei_full_sym      = Qmo_;
+    tei_full_sym_      = Qmo_;
 
-    d2_plus_core_sym  = (double*)malloc(d2_plus_core_dim*sizeof(double));
-    memset((void*)d2_plus_core_sym,'\0',d2_plus_core_dim*sizeof(double));
+    d2_plus_core_sym_  = (double*)malloc(d2_plus_core_dim_*sizeof(double));
+    memset((void*)d2_plus_core_sym_,'\0',d2_plus_core_dim_*sizeof(double));
 
     // allocate memory for full OEI tensor blocked by symmetry for Greg
-    oei_full_dim = 0;
+    oei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        oei_full_dim += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
+        oei_full_dim_ += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
     }
-    d1_plus_core_dim = 0;
+    d1_plus_core_dim_ = 0;
     for ( int h = 0; h < nirrep_; h++) {
-        d1_plus_core_dim += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
+        d1_plus_core_dim_ += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
     }
-    oei_full_sym = (double*)malloc(oei_full_dim*sizeof(double));
-    d1_plus_core_sym  = (double*)malloc(d1_plus_core_dim*sizeof(double));
-    memset((void*)oei_full_sym,'\0',oei_full_dim*sizeof(double));
-    memset((void*)d1_plus_core_sym,'\0',d1_plus_core_dim*sizeof(double));
+    oei_full_sym_ = (double*)malloc(oei_full_dim_*sizeof(double));
+    d1_plus_core_sym_  = (double*)malloc(d1_plus_core_dim_*sizeof(double));
+    memset((void*)oei_full_sym_,'\0',oei_full_dim_*sizeof(double));
+    memset((void*)d1_plus_core_sym_,'\0',d1_plus_core_dim_*sizeof(double));
 
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (long int i = 0; i < nmopi_[h]; i++) {
             for (long int j = i; j < nmopi_[h]; j++) {
-                oei_full_sym[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
+                oei_full_sym_[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
             }
         }
         offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
@@ -127,23 +127,23 @@ void v2RDMSolver::TEI() {
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
     // allocate memory for full ERI tensor blocked by symmetry for Greg
-    tei_full_dim = 0;
+    tei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        tei_full_dim += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+        tei_full_dim_ += gems_full[h] * ( gems_full[h] + 1 ) / 2;
     }
-    d2_plus_core_dim = 0;
+    d2_plus_core_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        d2_plus_core_dim += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
+        d2_plus_core_dim_ += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
     }
    
-    tei_full_sym      = (double*)malloc(tei_full_dim*sizeof(double));
-    d2_plus_core_sym  = (double*)malloc(d2_plus_core_dim*sizeof(double));
-    memset((void*)tei_full_sym,'\0',tei_full_dim*sizeof(double));
-    memset((void*)d2_plus_core_sym,'\0',d2_plus_core_dim*sizeof(double));
-    //for (int i = 0; i < d2_plus_core_dim; i++) {
-    //    d2_plus_core_sym[i] = -9.0e99;
+    tei_full_sym_      = (double*)malloc(tei_full_dim_*sizeof(double));
+    d2_plus_core_sym_  = (double*)malloc(d2_plus_core_dim_*sizeof(double));
+    memset((void*)tei_full_sym_,'\0',tei_full_dim_*sizeof(double));
+    memset((void*)d2_plus_core_sym_,'\0',d2_plus_core_dim_*sizeof(double));
+    //for (int i = 0; i < d2_plus_core_dim_; i++) {
+    //    d2_plus_core_sym_[i] = -9.0e99;
     //}
-    // load tei_full_sym
+    // load tei_full_sym_
     long int offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (long int ij = 0; ij < gems_full[h]; ij++) {
@@ -152,30 +152,30 @@ void v2RDMSolver::TEI() {
             for (long int kl = ij; kl < gems_full[h]; kl++) {
                 long int k = bas_full_sym[h][kl][0];
                 long int l = bas_full_sym[h][kl][1];
-                tei_full_sym[offset + INDEX(ij,kl)] = temptei[i*full*full*full+j*full*full+k*full+l];
+                tei_full_sym_[offset + INDEX(ij,kl)] = temptei[i*full*full*full+j*full*full+k*full+l];
             }
         }
         offset += gems_full[h] * ( gems_full[h] + 1 ) / 2;
     }
     // allocate memory for full OEI tensor blocked by symmetry for Greg
-    oei_full_dim = 0;
+    oei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        oei_full_dim += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
+        oei_full_dim_ += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
     }
-    d1_plus_core_dim = 0;
+    d1_plus_core_dim_ = 0;
     for ( int h = 0; h < nirrep_; h++) {
-        d1_plus_core_dim += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
+        d1_plus_core_dim_ += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
     }
-    oei_full_sym = (double*)malloc(oei_full_dim*sizeof(double));
-    d1_plus_core_sym  = (double*)malloc(d1_plus_core_dim*sizeof(double));
-    memset((void*)oei_full_sym,'\0',oei_full_dim*sizeof(double));
-    memset((void*)d1_plus_core_sym,'\0',d1_plus_core_dim*sizeof(double));
+    oei_full_sym_ = (double*)malloc(oei_full_dim_*sizeof(double));
+    d1_plus_core_sym_  = (double*)malloc(d1_plus_core_dim_*sizeof(double));
+    memset((void*)oei_full_sym_,'\0',oei_full_dim_*sizeof(double));
+    memset((void*)d1_plus_core_sym_,'\0',d1_plus_core_dim_*sizeof(double));
 
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (long int i = 0; i < nmopi_[h]; i++) {
             for (long int j = i; j < nmopi_[h]; j++) {
-                oei_full_sym[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
+                oei_full_sym_[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
             }
         }
         offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;

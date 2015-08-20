@@ -411,7 +411,7 @@ void v2RDMSolver::BuildBasis() {
             }
         }
     }
-    if ( constrain_t1 || constrain_t2 || constrain_d3 ) {
+    if ( constrain_t1_ || constrain_t2_ || constrain_d3_ ) {
         // make all triplets
         for (int h = 0; h < nirrep_; h++) {
             std::vector < boost::tuple<int,int,int> > mytrip;

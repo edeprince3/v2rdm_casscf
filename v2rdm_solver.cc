@@ -223,53 +223,53 @@ void  v2RDMSolver::common_init(){
     name_ = "BPSDP";
 
     // pick conditions.  default is dqg
-    constrain_q2 = true;
-    constrain_g2 = true;
-    constrain_t1 = false;
-    constrain_t2 = false;
-    constrain_d3 = false;
+    constrain_q2_ = true;
+    constrain_g2_ = true;
+    constrain_t1_ = false;
+    constrain_t2_ = false;
+    constrain_d3_ = false;
     if (options_.get_str("POSITIVITY")=="D") {
-        constrain_q2 = false;
-        constrain_g2 = false;
+        constrain_q2_ = false;
+        constrain_g2_ = false;
     }else if (options_.get_str("POSITIVITY")=="DQ") {
-        constrain_q2 = true;
-        constrain_g2 = false;
+        constrain_q2_ = true;
+        constrain_g2_ = false;
     }else if (options_.get_str("POSITIVITY")=="DG") {
-        constrain_q2 = false;
-        constrain_g2 = true;
+        constrain_q2_ = false;
+        constrain_g2_ = true;
     }else if (options_.get_str("POSITIVITY")=="DQGT1") {
-        constrain_q2 = true;
-        constrain_g2 = true;
-        constrain_t1 = true;
+        constrain_q2_ = true;
+        constrain_g2_ = true;
+        constrain_t1_ = true;
     }else if (options_.get_str("POSITIVITY")=="DQGT2") {
-        constrain_q2 = true;
-        constrain_g2 = true;
-        constrain_t2 = true;
+        constrain_q2_ = true;
+        constrain_g2_ = true;
+        constrain_t2_ = true;
     }else if (options_.get_str("POSITIVITY")=="DQGT1T2") {
-        constrain_q2 = true;
-        constrain_g2 = true;
-        constrain_t1 = true;
-        constrain_t2 = true;
+        constrain_q2_ = true;
+        constrain_g2_ = true;
+        constrain_t1_ = true;
+        constrain_t2_ = true;
     }else if (options_.get_str("POSITIVITY")=="DQGT") {
-        constrain_q2 = true;
-        constrain_g2 = true;
-        constrain_t1 = true;
-        constrain_t2 = true;
+        constrain_q2_ = true;
+        constrain_g2_ = true;
+        constrain_t1_ = true;
+        constrain_t2_ = true;
     }
 
     if ( options_.get_bool("CONSTRAIN_D3") ) {
-        constrain_d3 = true;
+        constrain_d3_ = true;
     }
 
-    spin_adapt_g2  = options_.get_bool("SPIN_ADAPT_G2");
-    spin_adapt_q2  = options_.get_bool("SPIN_ADAPT_Q2");
-    constrain_spin = options_.get_bool("CONSTRAIN_SPIN");
+    spin_adapt_g2_  = options_.get_bool("SPIN_ADAPT_G2");
+    spin_adapt_q2_  = options_.get_bool("SPIN_ADAPT_Q2");
+    constrain_spin_ = options_.get_bool("CONSTRAIN_SPIN");
 
-    if ( constrain_t1 || constrain_t2 ) {
-        if (spin_adapt_g2) {
+    if ( constrain_t1_ || constrain_t2_ ) {
+        if (spin_adapt_g2_) {
             throw PsiException("If constraining T1/T2, G2 cannot currently be spin adapted.",__FILE__,__LINE__);
         }
-        if (spin_adapt_q2) {
+        if (spin_adapt_q2_) {
             throw PsiException("If constraining T1/T2, Q2 cannot currently be spin adapted.",__FILE__,__LINE__);
         }
     }
@@ -279,129 +279,129 @@ void  v2RDMSolver::common_init(){
 
     int ms = (multiplicity_ - 1)/2;
     if ( ms > 0 ) {
-        if (spin_adapt_g2) {
+        if (spin_adapt_g2_) {
             throw PsiException("G2 not spin adapted for S = M != 0",__FILE__,__LINE__);
         }
-        if (spin_adapt_q2) {
+        if (spin_adapt_q2_) {
             throw PsiException("Q2 not spin adapted for S = M != 0",__FILE__,__LINE__);
         }
     }
 
     // dimension of variable buffer (x) 
-    dimx = 0;
+    dimx_ = 0;
     for ( int h = 0; h < nirrep_; h++) {
-        dimx += gems_ab[h]*gems_ab[h]; // D2ab
+        dimx_ += gems_ab[h]*gems_ab[h]; // D2ab
     }
     for ( int h = 0; h < nirrep_; h++) {
-        dimx += gems_aa[h]*gems_aa[h]; // D2aa
+        dimx_ += gems_aa[h]*gems_aa[h]; // D2aa
     }
     for ( int h = 0; h < nirrep_; h++) {
-        dimx += gems_aa[h]*gems_aa[h]; // D2bb
+        dimx_ += gems_aa[h]*gems_aa[h]; // D2bb
     }
     for ( int h = 0; h < nirrep_; h++) {
-        dimx += amopi_[h]*amopi_[h]; // D1a
-        dimx += amopi_[h]*amopi_[h]; // D1b
-        dimx += amopi_[h]*amopi_[h]; // Q1b
-        dimx += amopi_[h]*amopi_[h]; // Q1a
+        dimx_ += amopi_[h]*amopi_[h]; // D1a
+        dimx_ += amopi_[h]*amopi_[h]; // D1b
+        dimx_ += amopi_[h]*amopi_[h]; // Q1b
+        dimx_ += amopi_[h]*amopi_[h]; // Q1a
     }
-    if ( constrain_q2 ) {
-        if ( !spin_adapt_q2 ) {
+    if ( constrain_q2_ ) {
+        if ( !spin_adapt_q2_ ) {
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_ab[h]*gems_ab[h]; // Q2ab
+                dimx_ += gems_ab[h]*gems_ab[h]; // Q2ab
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_aa[h]*gems_aa[h]; // Q2aa
+                dimx_ += gems_aa[h]*gems_aa[h]; // Q2aa
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_aa[h]*gems_aa[h]; // Q2bb
+                dimx_ += gems_aa[h]*gems_aa[h]; // Q2bb
             }
         }else {
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_00[h]*gems_00[h]; // Q2s
+                dimx_ += gems_00[h]*gems_00[h]; // Q2s
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_aa[h]*gems_aa[h]; // Q2t
+                dimx_ += gems_aa[h]*gems_aa[h]; // Q2t
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_aa[h]*gems_aa[h]; // Q2t_p1
+                dimx_ += gems_aa[h]*gems_aa[h]; // Q2t_p1
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_aa[h]*gems_aa[h]; // Q2t_m1
+                dimx_ += gems_aa[h]*gems_aa[h]; // Q2t_m1
             }
         }
     }
-    if ( constrain_g2 ) {
-        if ( !spin_adapt_g2 ) {
+    if ( constrain_g2_ ) {
+        if ( !spin_adapt_g2_ ) {
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_ab[h]*gems_ab[h]; // G2ab
+                dimx_ += gems_ab[h]*gems_ab[h]; // G2ab
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_ab[h]*gems_ab[h]; // G2ba
+                dimx_ += gems_ab[h]*gems_ab[h]; // G2ba
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += 2*gems_ab[h]*2*gems_ab[h]; // G2aa/bb
+                dimx_ += 2*gems_ab[h]*2*gems_ab[h]; // G2aa/bb
             }
         }else {
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_ab[h]*gems_ab[h]; // G2s
+                dimx_ += gems_ab[h]*gems_ab[h]; // G2s
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_ab[h]*gems_ab[h]; // G2t
+                dimx_ += gems_ab[h]*gems_ab[h]; // G2t
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_ab[h]*gems_ab[h]; // G2t_p1
+                dimx_ += gems_ab[h]*gems_ab[h]; // G2t_p1
             }
             for ( int h = 0; h < nirrep_; h++) {
-                dimx += gems_ab[h]*gems_ab[h]; // G2t_m1
+                dimx_ += gems_ab[h]*gems_ab[h]; // G2t_m1
             }
         }
     }
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aaa[h]*trip_aaa[h]; // T1aaa
+            dimx_ += trip_aaa[h]*trip_aaa[h]; // T1aaa
         }
         for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aaa[h]*trip_aaa[h]; // T1bbb
+            dimx_ += trip_aaa[h]*trip_aaa[h]; // T1bbb
         }
         for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aab[h]*trip_aab[h]; // T1aab
+            dimx_ += trip_aab[h]*trip_aab[h]; // T1aab
         }
         for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aab[h]*trip_aab[h]; // T1bba
-        }
-    }
-    if ( constrain_t2 ) {
-        for ( int h = 0; h < nirrep_; h++) {
-            dimx += (trip_aba[h]+trip_aab[h])*(trip_aab[h]+trip_aba[h]); // T2aaa
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            dimx += (trip_aba[h]+trip_aab[h])*(trip_aab[h]+trip_aba[h]); // T2bbb
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aab[h]*trip_aab[h]; // T2aab
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aab[h]*trip_aab[h]; // T2bba
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aba[h]*trip_aba[h]; // T2aba
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aba[h]*trip_aba[h]; // T2bab
+            dimx_ += trip_aab[h]*trip_aab[h]; // T1bba
         }
     }
-    if ( constrain_d3 ) {
+    if ( constrain_t2_ ) {
         for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aaa[h] * trip_aaa[h]; // D3aaa
+            dimx_ += (trip_aba[h]+trip_aab[h])*(trip_aab[h]+trip_aba[h]); // T2aaa
         }
         for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aaa[h] * trip_aaa[h]; // D3bbb
+            dimx_ += (trip_aba[h]+trip_aab[h])*(trip_aab[h]+trip_aba[h]); // T2bbb
         }
         for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aab[h]*trip_aab[h]; // D3aab
+            dimx_ += trip_aab[h]*trip_aab[h]; // T2aab
         }
         for ( int h = 0; h < nirrep_; h++) {
-            dimx += trip_aab[h]*trip_aab[h]; // D3bba
+            dimx_ += trip_aab[h]*trip_aab[h]; // T2bba
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += trip_aba[h]*trip_aba[h]; // T2aba
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += trip_aba[h]*trip_aba[h]; // T2bab
+        }
+    }
+    if ( constrain_d3_ ) {
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += trip_aaa[h] * trip_aaa[h]; // D3aaa
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += trip_aaa[h] * trip_aaa[h]; // D3bbb
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += trip_aab[h]*trip_aab[h]; // D3aab
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += trip_aab[h]*trip_aab[h]; // D3bba
         }
     }
 
@@ -438,8 +438,8 @@ void  v2RDMSolver::common_init(){
         q1boff[h] = offset; offset += amopi_[h]*amopi_[h];
     }
 
-    if ( constrain_q2 ) {
-        if ( !spin_adapt_q2 ) {
+    if ( constrain_q2_ ) {
+        if ( !spin_adapt_q2_ ) {
             q2aboff = (int*)malloc(nirrep_*sizeof(int));
             q2aaoff = (int*)malloc(nirrep_*sizeof(int));
             q2bboff = (int*)malloc(nirrep_*sizeof(int));
@@ -472,8 +472,8 @@ void  v2RDMSolver::common_init(){
         }
     }
 
-    if ( constrain_g2 ) {
-        if ( ! spin_adapt_g2 ) {
+    if ( constrain_g2_ ) {
+        if ( ! spin_adapt_g2_ ) {
             g2aboff = (int*)malloc(nirrep_*sizeof(int));
             g2baoff = (int*)malloc(nirrep_*sizeof(int));
             g2aaoff = (int*)malloc(nirrep_*sizeof(int));
@@ -506,7 +506,7 @@ void  v2RDMSolver::common_init(){
         }
     }
 
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         t1aaboff = (int*)malloc(nirrep_*sizeof(int));
         t1bbaoff = (int*)malloc(nirrep_*sizeof(int));
         t1aaaoff = (int*)malloc(nirrep_*sizeof(int));
@@ -525,7 +525,7 @@ void  v2RDMSolver::common_init(){
         }
     }
 
-    if ( constrain_t2 ) {
+    if ( constrain_t2_ ) {
         t2aaboff = (int*)malloc(nirrep_*sizeof(int));
         t2bbaoff = (int*)malloc(nirrep_*sizeof(int));
         t2aaaoff = (int*)malloc(nirrep_*sizeof(int));
@@ -551,7 +551,7 @@ void  v2RDMSolver::common_init(){
             t2baboff[h] = offset; offset += trip_aba[h]*trip_aba[h]; // T2bab
         }
     }
-    if ( constrain_d3 ) {
+    if ( constrain_d3_ ) {
         d3aaaoff = (int*)malloc(nirrep_*sizeof(int));
         d3bbboff = (int*)malloc(nirrep_*sizeof(int));
         d3aaboff = (int*)malloc(nirrep_*sizeof(int));
@@ -570,145 +570,145 @@ void  v2RDMSolver::common_init(){
         }
     }
     // constraints:
-    nconstraints = 0;
+    nconstraints_ = 0;
 
-    if ( constrain_spin ) {
-        nconstraints += 1;               // spin
+    if ( constrain_spin_ ) {
+        nconstraints_ += 1;               // spin
     }
-    nconstraints += 1;                   // Tr(D2ab)
-    nconstraints += 1;                   // Tr(D2aa)
-    nconstraints += 1;                   // Tr(D2bb)
+    nconstraints_ += 1;                   // Tr(D2ab)
+    nconstraints_ += 1;                   // Tr(D2aa)
+    nconstraints_ += 1;                   // Tr(D2bb)
     for ( int h = 0; h < nirrep_; h++) {
-        nconstraints += amopi_[h]*amopi_[h]; // D1a <-> Q1a
+        nconstraints_ += amopi_[h]*amopi_[h]; // D1a <-> Q1a
     }
     for ( int h = 0; h < nirrep_; h++) {
-        nconstraints += amopi_[h]*amopi_[h]; // D1b <-> Q1b
+        nconstraints_ += amopi_[h]*amopi_[h]; // D1b <-> Q1b
     }
     //for ( int h = 0; h < nirrep_; h++) {
-    //    nconstraints += amopi_[h]*(amopi_[h]+1)/2; // contract D2ab + D2aa -> D1 a
+    //    nconstraints_ += amopi_[h]*(amopi_[h]+1)/2; // contract D2ab + D2aa -> D1 a
     //}
     //for ( int h = 0; h < nirrep_; h++) {
-    //    nconstraints += amopi_[h]*(amopi_[h]+1)/2; // contract D2ab + D2bb -> D1 b
+    //    nconstraints_ += amopi_[h]*(amopi_[h]+1)/2; // contract D2ab + D2bb -> D1 b
     //}
     for ( int h = 0; h < nirrep_; h++) {
-        nconstraints += amopi_[h]*amopi_[h]; // contract D2ab        -> D1 a
+        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2ab        -> D1 a
     }
     for ( int h = 0; h < nirrep_; h++) {
-        nconstraints += amopi_[h]*amopi_[h]; // contract D2ab        -> D1 b
+        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2ab        -> D1 b
     }
     for ( int h = 0; h < nirrep_; h++) {
-        nconstraints += amopi_[h]*amopi_[h]; // contract D2aa        -> D1 a
+        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2aa        -> D1 a
     }
     for ( int h = 0; h < nirrep_; h++) {
-        nconstraints += amopi_[h]*amopi_[h]; // contract D2bb        -> D1 b
+        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2bb        -> D1 b
     }
-    if ( constrain_q2 ) {
-        if ( ! spin_adapt_q2 ) {
+    if ( constrain_q2_ ) {
+        if ( ! spin_adapt_q2_ ) {
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_ab[h]*gems_ab[h]; // Q2ab
+                nconstraints_ += gems_ab[h]*gems_ab[h]; // Q2ab
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_aa[h]*gems_aa[h]; // Q2aa
+                nconstraints_ += gems_aa[h]*gems_aa[h]; // Q2aa
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_aa[h]*gems_aa[h]; // Q2bb
+                nconstraints_ += gems_aa[h]*gems_aa[h]; // Q2bb
             }
         }else {
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_00[h]*gems_00[h]; // Q2s
+                nconstraints_ += gems_00[h]*gems_00[h]; // Q2s
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_aa[h]*gems_aa[h]; // Q2t
+                nconstraints_ += gems_aa[h]*gems_aa[h]; // Q2t
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_aa[h]*gems_aa[h]; // Q2t_p1
+                nconstraints_ += gems_aa[h]*gems_aa[h]; // Q2t_p1
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_aa[h]*gems_aa[h]; // Q2t_m1
+                nconstraints_ += gems_aa[h]*gems_aa[h]; // Q2t_m1
             }
         }
         
     }
-    if ( constrain_g2 ) {
-        if ( ! spin_adapt_g2 ) {
+    if ( constrain_g2_ ) {
+        if ( ! spin_adapt_g2_ ) {
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_ab[h]*gems_ab[h]; // G2ab
+                nconstraints_ += gems_ab[h]*gems_ab[h]; // G2ab
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_ab[h]*gems_ab[h]; // G2ba
+                nconstraints_ += gems_ab[h]*gems_ab[h]; // G2ba
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += 2*gems_ab[h]*2*gems_ab[h]; // G2aa
+                nconstraints_ += 2*gems_ab[h]*2*gems_ab[h]; // G2aa
             }
         }else {
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_ab[h]*gems_ab[h]; // G2s
+                nconstraints_ += gems_ab[h]*gems_ab[h]; // G2s
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_ab[h]*gems_ab[h]; // G2t
+                nconstraints_ += gems_ab[h]*gems_ab[h]; // G2t
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_ab[h]*gems_ab[h]; // G2t_p1
+                nconstraints_ += gems_ab[h]*gems_ab[h]; // G2t_p1
             }
             for ( int h = 0; h < nirrep_; h++) {
-                nconstraints += gems_ab[h]*gems_ab[h]; // G2t_m1
+                nconstraints_ += gems_ab[h]*gems_ab[h]; // G2t_m1
             }
             // maximal spin constraint
-            //nconstraints += 2*nmo*nmo;
+            //nconstraints_ += 2*nmo*nmo;
         }
     }
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += trip_aaa[h]*trip_aaa[h]; // T1aaa
+            nconstraints_ += trip_aaa[h]*trip_aaa[h]; // T1aaa
         }
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += trip_aaa[h]*trip_aaa[h]; // T1bbb
+            nconstraints_ += trip_aaa[h]*trip_aaa[h]; // T1bbb
         }
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += trip_aab[h]*trip_aab[h]; // T1aab
+            nconstraints_ += trip_aab[h]*trip_aab[h]; // T1aab
         }
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += trip_aab[h]*trip_aab[h]; // T1bba
-        }
-    }
-    if ( constrain_t2 ) {
-        for (int h = 0; h < nirrep_; h++) {
-            nconstraints += (trip_aab[h]+trip_aba[h])*(trip_aab[h]+trip_aba[h]); // T2aaa
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            nconstraints += (trip_aab[h]+trip_aba[h])*(trip_aab[h]+trip_aba[h]); // T2bbb
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            nconstraints += trip_aab[h]*trip_aab[h]; // T2aab
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            nconstraints += trip_aab[h]*trip_aab[h]; // T2bba
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            nconstraints += trip_aba[h]*trip_aba[h]; // T2aba
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            nconstraints += trip_aba[h]*trip_aba[h]; // T2bab
+            nconstraints_ += trip_aab[h]*trip_aab[h]; // T1bba
         }
     }
-    if ( constrain_d3 ) {
+    if ( constrain_t2_ ) {
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += gems_aa[h]*gems_aa[h]; // D3aaa -> D2aa
+            nconstraints_ += (trip_aab[h]+trip_aba[h])*(trip_aab[h]+trip_aba[h]); // T2aaa
         }
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += gems_aa[h]*gems_aa[h]; // D3bbb -> D2bb
+            nconstraints_ += (trip_aab[h]+trip_aba[h])*(trip_aab[h]+trip_aba[h]); // T2bbb
         }
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += gems_aa[h]*gems_aa[h]; // D3aab -> D2aa
+            nconstraints_ += trip_aab[h]*trip_aab[h]; // T2aab
         }
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += gems_aa[h]*gems_aa[h]; // D3bba -> D2bb
+            nconstraints_ += trip_aab[h]*trip_aab[h]; // T2bba
         }
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += gems_ab[h]*gems_ab[h]; // D3aab -> D2ab
+            nconstraints_ += trip_aba[h]*trip_aba[h]; // T2aba
         }
         for (int h = 0; h < nirrep_; h++) {
-            nconstraints += gems_ab[h]*gems_ab[h]; // D3bba -> D2ab
+            nconstraints_ += trip_aba[h]*trip_aba[h]; // T2bab
+        }
+    }
+    if ( constrain_d3_ ) {
+        for (int h = 0; h < nirrep_; h++) {
+            nconstraints_ += gems_aa[h]*gems_aa[h]; // D3aaa -> D2aa
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            nconstraints_ += gems_aa[h]*gems_aa[h]; // D3bbb -> D2bb
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            nconstraints_ += gems_aa[h]*gems_aa[h]; // D3aab -> D2aa
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            nconstraints_ += gems_aa[h]*gems_aa[h]; // D3bba -> D2bb
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            nconstraints_ += gems_ab[h]*gems_ab[h]; // D3aab -> D2ab
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            nconstraints_ += gems_ab[h]*gems_ab[h]; // D3bba -> D2ab
         }
     }
 
@@ -734,8 +734,8 @@ void  v2RDMSolver::common_init(){
     for (int h = 0; h < nirrep_; h++) {
         dimensions_.push_back(amopi_[h]); // Q1b
     }
-    if ( constrain_q2 ) {
-        if ( !spin_adapt_q2 ) {
+    if ( constrain_q2_ ) {
+        if ( !spin_adapt_q2_ ) {
             for (int h = 0; h < nirrep_; h++) {
                 dimensions_.push_back(gems_ab[h]); // Q2ab
             }
@@ -760,8 +760,8 @@ void  v2RDMSolver::common_init(){
             }
         }
     }
-    if ( constrain_g2 ) {
-        if ( !spin_adapt_g2 ) {
+    if ( constrain_g2_ ) {
+        if ( !spin_adapt_g2_ ) {
             for (int h = 0; h < nirrep_; h++) {
                 dimensions_.push_back(gems_ab[h]); // G2ab
             }
@@ -786,7 +786,7 @@ void  v2RDMSolver::common_init(){
             }
         }
     }
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         for (int h = 0; h < nirrep_; h++) {
             dimensions_.push_back(trip_aaa[h]); // T1aaa
         }
@@ -800,7 +800,7 @@ void  v2RDMSolver::common_init(){
             dimensions_.push_back(trip_aab[h]); // T1bba
         }
     }
-    if ( constrain_t2 ) {
+    if ( constrain_t2_ ) {
         for (int h = 0; h < nirrep_; h++) {
             dimensions_.push_back(trip_aab[h]+trip_aba[h]); // T2aaa
         }
@@ -820,7 +820,7 @@ void  v2RDMSolver::common_init(){
             dimensions_.push_back(trip_aba[h]); // T2bab
         }
     }
-    if ( constrain_d3 ) {
+    if ( constrain_d3_ ) {
         for (int h = 0; h < nirrep_; h++) {
             dimensions_.push_back(trip_aaa[h]); // D3aaa
         }
@@ -884,13 +884,13 @@ void  v2RDMSolver::common_init(){
     }
 
     // allocate vectors
-    Ax     = SharedVector(new Vector("A . x",nconstraints));
-    ATy    = SharedVector(new Vector("A^T . y",dimx));
-    x      = SharedVector(new Vector("primal solution",dimx));
-    c      = SharedVector(new Vector("OEI and TEI",dimx));
-    y      = SharedVector(new Vector("dual solution",nconstraints));
-    z      = SharedVector(new Vector("dual solution 2",dimx));
-    b      = SharedVector(new Vector("constraints",nconstraints));
+    Ax     = SharedVector(new Vector("A . x",nconstraints_));
+    ATy    = SharedVector(new Vector("A^T . y",dimx_));
+    x      = SharedVector(new Vector("primal solution",dimx_));
+    c      = SharedVector(new Vector("OEI and TEI",dimx_));
+    y      = SharedVector(new Vector("dual solution",nconstraints_));
+    z      = SharedVector(new Vector("dual solution 2",dimx_));
+    b      = SharedVector(new Vector("constraints",nconstraints_));
 
     // input/output array for jacobi sweeps
     jacobi_data_    = (double*)malloc(11*sizeof(double));
@@ -953,19 +953,19 @@ double v2RDMSolver::compute_energy() {
 
     // AATy = A(c-z)+tu(b-Ax) rearange w.r.t cg solver
     // Ax   = AATy and b=A(c-z)+tu(b-Ax)
-    SharedVector B   = SharedVector(new Vector("compound B",nconstraints));
+    SharedVector B   = SharedVector(new Vector("compound B",nconstraints_));
 
     tau = 1.6;
     mu  = 1.0;
 
     // congugate gradient solver
-    long int N = nconstraints;
+    long int N = nconstraints_;
     shared_ptr<CGSolver> cg (new CGSolver(N));
     cg->set_max_iter(cg_maxiter_);
     cg->set_convergence(cg_convergence_);
 
     // evaluate guess energy (c.x):
-    double energy_primal = C_DDOT(dimx,c->pointer(),1,x->pointer(),1);
+    double energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
 
     outfile->Printf("\n");
     outfile->Printf("    reference energy:     %20.12lf\n",escf);
@@ -1040,7 +1040,7 @@ double v2RDMSolver::compute_energy() {
             // gidofalvi debug
             //outfile->Printf("current nuclear repulsion energy is %20.13lf \n",enuc);
             //outfile->Printf("             current core energy is %20.13lf \n",efrzc);
-            //double current_energy_tmp = C_DDOT(dimx,c->pointer(),1,x->pointer(),1);
+            //double current_energy_tmp = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
             //outfile->Printf("           current active energy is %20.13lf \n",current_energy_tmp);
             //outfile->Printf("            current total energy is %20.13lf \n",current_energy_tmp+efrzc+enuc);
             // end debug
@@ -1050,10 +1050,10 @@ double v2RDMSolver::compute_energy() {
 
         // compute current primal and dual energies
 
-        //energy_primal = C_DDOT(dimx,c->pointer(),1,x->pointer(),1);
-        double current_energy = C_DDOT(dimx,c->pointer(),1,x->pointer(),1);
+        //energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
+        double current_energy = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
 
-        energy_dual   = C_DDOT(nconstraints,b->pointer(),1,y->pointer(),1);
+        energy_dual   = C_DDOT(nconstraints_,b->pointer(),1,y->pointer(),1);
 
         outfile->Printf("      %5i %5i %11.6lf %11.6lf %11.6lf %7.3lf %10.5lf %10.5lf\n",
                     oiter,iiter,current_energy+enuc+efrzc,energy_dual+efrzc+enuc,fabs(current_energy-energy_dual),mu,ep,ed);
@@ -1068,7 +1068,7 @@ double v2RDMSolver::compute_energy() {
 
         if ( ep < r_convergence_ && ed < r_convergence_ && egap < e_convergence_ ) {
             RotateOrbitals();
-            energy_primal = C_DDOT(dimx,c->pointer(),1,x->pointer(),1);
+            energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
         }
 
     }while( ep > r_convergence_ || ed > r_convergence_  || egap > e_convergence_ || !jacobi_converged_);
@@ -1275,12 +1275,12 @@ void v2RDMSolver::Guess(){
     double* x_p = x->pointer();
     double* z_p = z->pointer();
 
-    memset((void*)x_p,'\0',dimx*sizeof(double));
-    memset((void*)z_p,'\0',dimx*sizeof(double));
+    memset((void*)x_p,'\0',dimx_*sizeof(double));
+    memset((void*)z_p,'\0',dimx_*sizeof(double));
 
     // random guess
     srand(0);
-    for (int i = 0; i < dimx; i++) {
+    for (int i = 0; i < dimx_; i++) {
         x_p[i] = ( (double)rand()/RAND_MAX - 1.0 ) * 2.0;
     }
     return;
@@ -1367,26 +1367,26 @@ void v2RDMSolver::Guess(){
         }
     }
 
-    if ( constrain_q2 ) {
-        if ( !spin_adapt_q2) {
+    if ( constrain_q2_ ) {
+        if ( !spin_adapt_q2_) {
             Q2_constraints_guess(x);
         }else {
             Q2_constraints_guess_spin_adapted(x);
         }
     }
 
-    if ( constrain_g2 ) {
-        if ( ! spin_adapt_g2 ) {
+    if ( constrain_g2_ ) {
+        if ( ! spin_adapt_g2_ ) {
             G2_constraints_guess(x);
         }else {
             G2_constraints_guess_spin_adapted(x);
         }
     }
 
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         T1_constraints_guess(x);
     }
-    if ( constrain_t2 ) {
+    if ( constrain_t2_ ) {
         T2_constraints_guess(x);
     }
 
@@ -1438,13 +1438,13 @@ void v2RDMSolver::PrintHeader(){
         if ( gems_ab[h] > maxgem ) {
             maxgem = gems_ab[h];
         }
-        if ( constrain_g2 ) {
+        if ( constrain_g2_ ) {
             if ( 2*gems_ab[h] > maxgem ) {
                 maxgem = 2*gems_ab[h];
             }
         }
 
-        if ( constrain_t1 ) {
+        if ( constrain_t1_ ) {
             nt1 += trip_aaa[h] * trip_aaa[h]; // T1aaa
             nt1 += trip_aaa[h] * trip_aaa[h]; // T1bbb
             nt1 += trip_aab[h] * trip_aab[h]; // T1aab
@@ -1454,7 +1454,7 @@ void v2RDMSolver::PrintHeader(){
             }
         }
 
-        if ( constrain_t2 ) {
+        if ( constrain_t2_ ) {
             nt2 += (trip_aab[h]+trip_aba[h]) * (trip_aab[h]+trip_aba[h]); // T2aaa
             nt2 += (trip_aab[h]+trip_aba[h]) * (trip_aab[h]+trip_aba[h]); // T2bbb
             nt2 += trip_aab[h] * trip_aab[h]; // T2aab
@@ -1470,19 +1470,19 @@ void v2RDMSolver::PrintHeader(){
     }
 
     outfile->Printf("        D2:                       %7.2lf mb\n",nd2 * 8.0 / 1024.0 / 1024.0);
-    if ( constrain_q2 ) {
+    if ( constrain_q2_ ) {
         outfile->Printf("        Q2:                       %7.2lf mb\n",nd2 * 8.0 / 1024.0 / 1024.0);
     }
-    if ( constrain_g2 ) {
+    if ( constrain_g2_ ) {
         outfile->Printf("        G2:                       %7.2lf mb\n",ng2 * 8.0 / 1024.0 / 1024.0);
     }
-    if ( constrain_d3 ) {
+    if ( constrain_d3_ ) {
         outfile->Printf("        D3:                       %7.2lf mb\n",nt1 * 8.0 / 1024.0 / 1024.0);
     }
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         outfile->Printf("        T1:                       %7.2lf mb\n",nt1 * 8.0 / 1024.0 / 1024.0);
     }
-    if ( constrain_t2 ) {
+    if ( constrain_t2_ ) {
         outfile->Printf("        T2:                       %7.2lf mb\n",nt2 * 8.0 / 1024.0 / 1024.0);
     }
     outfile->Printf("\n");
@@ -1496,21 +1496,21 @@ void v2RDMSolver::PrintHeader(){
     //     4-index integrals (no permutational symmetry)
     //     3-index integrals 
 
-    double tot = 4.0*dimx + 4.0*nconstraints + 2.0*maxgem*maxgem;
+    double tot = 4.0*dimx_ + 4.0*nconstraints_ + 2.0*maxgem*maxgem;
     tot += nd2; // for K2a, K2b
 
     // for casscf, need d2 and 3- or 4-index integrals
 
     // allocate memory for full ERI tensor blocked by symmetry for Greg
-    tei_full_dim = 0;
+    tei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        tei_full_dim += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+        tei_full_dim_ += gems_full[h] * ( gems_full[h] + 1 ) / 2;
     }
-    d2_plus_core_dim = 0;
+    d2_plus_core_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        d2_plus_core_dim += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
+        d2_plus_core_dim_ += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
     }
-    tot += d2_plus_core_dim;
+    tot += d2_plus_core_dim_;
     if ( is_df_ ) {
         nQ_ = Process::environment.globals["NAUX (SCF)"];
         if ( options_.get_str("SCF_TYPE") == "DF" ) {
@@ -1526,16 +1526,16 @@ void v2RDMSolver::PrintHeader(){
         }
         tot += (long int)nQ_*(long int)nso_*((long int)nso_+1)/2;
     }else {
-        tei_full_dim = 0;
+        tei_full_dim_ = 0;
         for (int h = 0; h < nirrep_; h++) {
-            tei_full_dim += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+            tei_full_dim_ += gems_full[h] * ( gems_full[h] + 1 ) / 2;
         }
-        tot += tei_full_dim;
+        tot += tei_full_dim_;
         tot += nso_*nso_*nso_*nso_; // for four-index integrals stored stupidly 
     }
     
-    outfile->Printf("        Total number of variables:     %10i\n",dimx);
-    outfile->Printf("        Total number of constraints:   %10i\n",nconstraints);
+    outfile->Printf("        Total number of variables:     %10i\n",dimx_);
+    outfile->Printf("        Total number of constraints:   %10i\n",nconstraints_);
     outfile->Printf("        Total memory requirements:     %7.2lf mb\n",tot * 8.0 / 1024.0 / 1024.0);
     outfile->Printf("\n");
 
@@ -1574,7 +1574,7 @@ void v2RDMSolver::BuildConstraints(){
     offset = 0;
 
     // funny ab trace with spin: N/2 + Ms^2 - S(S+1)
-    if ( constrain_spin ) {
+    if ( constrain_spin_ ) {
         double ms = (multiplicity_-1.0)/2.0;
         b_p[offset++] = (0.5 * (na + nb) + ms*ms - ms*(ms+1.0));
     }
@@ -1644,8 +1644,8 @@ void v2RDMSolver::BuildConstraints(){
         offset += amopi_[h]*amopi_[h];
     }
 
-    if ( constrain_q2 ) {
-        if ( !spin_adapt_q2 ) {
+    if ( constrain_q2_ ) {
+        if ( !spin_adapt_q2_ ) {
             // map d2ab to q2ab
             for (int h = 0; h < nirrep_; h++) {
                 for(int i = 0; i < gems_ab[h]; i++){
@@ -1715,8 +1715,8 @@ void v2RDMSolver::BuildConstraints(){
         }
     }
 
-    if ( constrain_g2 ) {
-        if ( ! spin_adapt_g2 ) {
+    if ( constrain_g2_ ) {
+        if ( ! spin_adapt_g2_ ) {
             // map d2 and d1 to g2ab
             for (int h = 0; h < nirrep_; h++) {
                 for(int i = 0; i < gems_ab[h]; i++){
@@ -1786,7 +1786,7 @@ void v2RDMSolver::BuildConstraints(){
         }
     }
 
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         // T1aaa
         for (int h = 0; h < nirrep_; h++) {
             for(int i = 0; i < trip_aaa[h]; i++){
@@ -1825,7 +1825,7 @@ void v2RDMSolver::BuildConstraints(){
         }
     }
 
-    if ( constrain_t2 ) {
+    if ( constrain_t2_ ) {
         // T2aaa
         for (int h = 0; h < nirrep_; h++) {
             for(int i = 0; i < trip_aba[h]+trip_aab[h]; i++){
@@ -1893,7 +1893,7 @@ void v2RDMSolver::BuildConstraints(){
             offset += trip_aba[h]*trip_aba[h];
         }
     }
-    if ( constrain_d3 ) {
+    if ( constrain_d3_ ) {
         // D3aaa -> D2aa
         for (int h = 0; h < nirrep_; h++) {
             for(int i = 0; i < gems_aa[h]; i++){
@@ -1956,7 +1956,7 @@ void v2RDMSolver::BuildConstraints(){
 void v2RDMSolver::bpsdp_Au(SharedVector A, SharedVector u){
 
     //A->zero();  
-    memset((void*)A->pointer(),'\0',nconstraints*sizeof(double));
+    memset((void*)A->pointer(),'\0',nconstraints_*sizeof(double));
 
     offset = 0;
     double start = omp_get_wtime();
@@ -1964,9 +1964,9 @@ void v2RDMSolver::bpsdp_Au(SharedVector A, SharedVector u){
     double end = omp_get_wtime();
     d2timeAu += (end - start);
 
-    if ( constrain_q2 ) {
+    if ( constrain_q2_ ) {
         start = omp_get_wtime();
-        if ( !spin_adapt_q2 ) {
+        if ( !spin_adapt_q2_ ) {
             Q2_constraints_Au(A,u);
         }else {
             Q2_constraints_Au_spin_adapted(A,u);
@@ -1975,9 +1975,9 @@ void v2RDMSolver::bpsdp_Au(SharedVector A, SharedVector u){
         q2timeAu += (end - start);
     }
 
-    if ( constrain_g2 ) {
+    if ( constrain_g2_ ) {
         start = omp_get_wtime();
-        if ( ! spin_adapt_g2 ) {
+        if ( ! spin_adapt_g2_ ) {
             G2_constraints_Au(A,u);
         }else {
             G2_constraints_Au_spin_adapted(A,u);
@@ -1986,11 +1986,11 @@ void v2RDMSolver::bpsdp_Au(SharedVector A, SharedVector u){
         g2timeAu += (end - start);
     }
 
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         T1_constraints_Au(A,u);
     }
 
-    if ( constrain_t2 ) {
+    if ( constrain_t2_ ) {
         double start = omp_get_wtime();
         //T2_constraints_Au(A,u);
         T2_constraints_Au_slow(A,u);
@@ -1998,7 +1998,7 @@ void v2RDMSolver::bpsdp_Au(SharedVector A, SharedVector u){
         t2timeAu += end - start;
     }
 
-    if ( constrain_d3 ) {
+    if ( constrain_d3_ ) {
         D3_constraints_Au(A,u);
     }
 
@@ -2007,7 +2007,7 @@ void v2RDMSolver::bpsdp_Au(SharedVector A, SharedVector u){
 void v2RDMSolver::bpsdp_Au_slow(SharedVector A, SharedVector u){
 
     //A->zero();  
-    memset((void*)A->pointer(),'\0',nconstraints*sizeof(double));
+    memset((void*)A->pointer(),'\0',nconstraints_*sizeof(double));
 
     offset = 0;
     double start = omp_get_wtime();
@@ -2015,9 +2015,9 @@ void v2RDMSolver::bpsdp_Au_slow(SharedVector A, SharedVector u){
     double end = omp_get_wtime();
     d2timeAu += (end - start);
 
-    if ( constrain_q2 ) {
+    if ( constrain_q2_ ) {
         start = omp_get_wtime();
-        if ( !spin_adapt_q2 ) {
+        if ( !spin_adapt_q2_ ) {
             Q2_constraints_Au(A,u);
         }else {
             Q2_constraints_Au_spin_adapted(A,u);
@@ -2026,9 +2026,9 @@ void v2RDMSolver::bpsdp_Au_slow(SharedVector A, SharedVector u){
         q2timeAu += (end - start);
     }
 
-    if ( constrain_g2 ) {
+    if ( constrain_g2_ ) {
         start = omp_get_wtime();
-        if ( ! spin_adapt_g2 ) {
+        if ( ! spin_adapt_g2_ ) {
             G2_constraints_Au(A,u);
         }else {
             G2_constraints_Au_spin_adapted(A,u);
@@ -2037,18 +2037,18 @@ void v2RDMSolver::bpsdp_Au_slow(SharedVector A, SharedVector u){
         g2timeAu += (end - start);
     }
 
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         T1_constraints_Au(A,u);
     }
 
-    if ( constrain_t2 ) {
+    if ( constrain_t2_ ) {
         double start = omp_get_wtime();
         //T2_constraints_Au(A,u);
         T2_constraints_Au_slow(A,u);
         double end = omp_get_wtime();
         t2timeAu += end - start;
     }
-    if ( constrain_d3 ) {
+    if ( constrain_d3_ ) {
         D3_constraints_Au(A,u);
     }
 
@@ -2058,7 +2058,7 @@ void v2RDMSolver::bpsdp_Au_slow(SharedVector A, SharedVector u){
 void v2RDMSolver::bpsdp_ATu(SharedVector A, SharedVector u){
 
     //A->zero();
-    memset((void*)A->pointer(),'\0',dimx*sizeof(double));
+    memset((void*)A->pointer(),'\0',dimx_*sizeof(double));
 
     offset = 0;
     double start = omp_get_wtime();
@@ -2066,9 +2066,9 @@ void v2RDMSolver::bpsdp_ATu(SharedVector A, SharedVector u){
     double end = omp_get_wtime();
     d2timeATu += (end - start);
 
-    if ( constrain_q2 ) {
+    if ( constrain_q2_ ) {
         start = omp_get_wtime();
-        if ( !spin_adapt_q2 ) {
+        if ( !spin_adapt_q2_ ) {
             Q2_constraints_ATu(A,u);
         }else {
             Q2_constraints_ATu_spin_adapted(A,u);
@@ -2077,9 +2077,9 @@ void v2RDMSolver::bpsdp_ATu(SharedVector A, SharedVector u){
         q2timeATu += (end - start);
     }
 
-    if ( constrain_g2 ) {
+    if ( constrain_g2_ ) {
         start = omp_get_wtime();
-        if ( ! spin_adapt_g2 ) {
+        if ( ! spin_adapt_g2_ ) {
             G2_constraints_ATu(A,u);
         }else {
             G2_constraints_ATu_spin_adapted(A,u);
@@ -2088,18 +2088,18 @@ void v2RDMSolver::bpsdp_ATu(SharedVector A, SharedVector u){
         g2timeATu += (end - start);
     }
 
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         T1_constraints_ATu(A,u);
     }
 
-    if ( constrain_t2 ) {
+    if ( constrain_t2_ ) {
         double start = omp_get_wtime();
         //T2_constraints_ATu(A,u);
         T2_constraints_ATu_slow(A,u);
         double end = omp_get_wtime();
         t2timeATu += end - start;
     }
-    if ( constrain_d3 ) {
+    if ( constrain_d3_ ) {
         D3_constraints_ATu(A,u);
     }
 
@@ -2108,7 +2108,7 @@ void v2RDMSolver::bpsdp_ATu(SharedVector A, SharedVector u){
 void v2RDMSolver::bpsdp_ATu_slow(SharedVector A, SharedVector u){
 
     //A->zero();
-    memset((void*)A->pointer(),'\0',dimx*sizeof(double));
+    memset((void*)A->pointer(),'\0',dimx_*sizeof(double));
 
     offset = 0;
     double start = omp_get_wtime();
@@ -2116,9 +2116,9 @@ void v2RDMSolver::bpsdp_ATu_slow(SharedVector A, SharedVector u){
     double end = omp_get_wtime();
     d2timeATu += (end - start);
 
-    if ( constrain_q2 ) {
+    if ( constrain_q2_ ) {
         start = omp_get_wtime();
-        if ( !spin_adapt_q2 ) {
+        if ( !spin_adapt_q2_ ) {
             Q2_constraints_ATu(A,u);
         }else {
             Q2_constraints_ATu_spin_adapted(A,u);
@@ -2127,9 +2127,9 @@ void v2RDMSolver::bpsdp_ATu_slow(SharedVector A, SharedVector u){
         q2timeATu += (end - start);
     }
 
-    if ( constrain_g2 ) {
+    if ( constrain_g2_ ) {
         start = omp_get_wtime();
-        if ( ! spin_adapt_g2 ) {
+        if ( ! spin_adapt_g2_ ) {
             G2_constraints_ATu(A,u);
         }else {
             G2_constraints_ATu_spin_adapted(A,u);
@@ -2138,11 +2138,11 @@ void v2RDMSolver::bpsdp_ATu_slow(SharedVector A, SharedVector u){
         g2timeATu += (end - start);
     }
 
-    if ( constrain_t1 ) {
+    if ( constrain_t1_ ) {
         T1_constraints_ATu(A,u);
     }
 
-    if ( constrain_t2 ) {
+    if ( constrain_t2_ ) {
         double start = omp_get_wtime();
         //T2_constraints_ATu(A,u);
         T2_constraints_ATu_slow(A,u);
@@ -2150,7 +2150,7 @@ void v2RDMSolver::bpsdp_ATu_slow(SharedVector A, SharedVector u){
         t2timeATu += end - start;
     }
 
-    if ( constrain_d3 ) {
+    if ( constrain_d3_ ) {
         D3_constraints_ATu(A,u);
     }
 
@@ -2241,7 +2241,7 @@ void v2RDMSolver::Update_xz() {
 
 void v2RDMSolver::UnpackDensityPlusCore() {
 
-    memset((void*)d2_plus_core_sym,'\0',d2_plus_core_dim*sizeof(double));
+    memset((void*)d2_plus_core_sym_,'\0',d2_plus_core_dim_*sizeof(double));
 
     // D2 first
     double * x_p = x->pointer();
@@ -2331,7 +2331,7 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                 if ( ik_full != jl_full ) {
                     val *= 2.0;
                 }
-                d2_plus_core_sym[id] = val;
+                d2_plus_core_sym_[id] = val;
             }
         }
     }
@@ -2354,22 +2354,22 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                         int iifull = ibas_full_sym[0][ifull][ifull];
                         int jjfull = ibas_full_sym[0][jfull][jfull];
 
-                        //if ( fabs(d2_plus_core_sym[INDEX(iifull,jjfull)]) < 1e-10 ) {
-                        //    en += tei_full_sym[INDEX(iifull,jjfull)];
+                        //if ( fabs(d2_plus_core_sym_[INDEX(iifull,jjfull)]) < 1e-10 ) {
+                        //    en += tei_full_sym_[INDEX(iifull,jjfull)];
                         //}
 
-                        d2_plus_core_sym[INDEX(iifull,jjfull)] =  1.0;
+                        d2_plus_core_sym_[INDEX(iifull,jjfull)] =  1.0;
 
                     }else {
 
                         int iifull = ibas_full_sym[0][ifull][ifull];
                         int jjfull = ibas_full_sym[0][jfull][jfull];
 
-                        //if ( fabs(d2_plus_core_sym[INDEX(iifull,jjfull)]) < 1e-10 ) {
-                        //    en += 4.0 * tei_full_sym[INDEX(iifull,jjfull)];
+                        //if ( fabs(d2_plus_core_sym_[INDEX(iifull,jjfull)]) < 1e-10 ) {
+                        //    en += 4.0 * tei_full_sym_[INDEX(iifull,jjfull)];
                         //}
 
-                        d2_plus_core_sym[INDEX(iifull,jjfull)] =  4.0;
+                        d2_plus_core_sym_[INDEX(iifull,jjfull)] =  4.0;
 
                         int offset2 = 0;
                         for (int myh = 0; myh < hij; myh++) {
@@ -2381,11 +2381,11 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                         }
 
                         int ijfull = ibas_full_sym[hij][ifull][jfull];
-                        //if ( fabs(d2_plus_core_sym[offset + INDEX(ijfull,ijfull)]) < 1e-10 ) {
-                        //    en -= 2.0 * tei_full_sym[offset2 + INDEX(ijfull,ijfull)];
+                        //if ( fabs(d2_plus_core_sym_[offset + INDEX(ijfull,ijfull)]) < 1e-10 ) {
+                        //    en -= 2.0 * tei_full_sym_[offset2 + INDEX(ijfull,ijfull)];
                         //}
 
-                        d2_plus_core_sym[offset + INDEX(ijfull,ijfull)] = -2.0;
+                        d2_plus_core_sym_[offset + INDEX(ijfull,ijfull)] = -2.0;
                     }
                 }
             }
@@ -2433,7 +2433,7 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                             val += 2.0 * x_p[d1boff[hj]+j*amopi_[hj]+l];
                         }
 
-                        d2_plus_core_sym[id] = val;
+                        d2_plus_core_sym_[id] = val;
 
                         // also (il|ji) with a minus sign
                         int hil = SymmetryPair(symmetry_full[ifull],symmetry_full[lfull]);
@@ -2460,7 +2460,7 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                             offset += gems_plus_core[myh] * ( gems_plus_core[myh] + 1 ) / 2;
                         }
 
-                        d2_plus_core_sym[offset + INDEX(ilfull,jifull)] = val;
+                        d2_plus_core_sym_[offset + INDEX(ilfull,jifull)] = val;
 
                     }
                 }
@@ -2482,12 +2482,12 @@ void v2RDMSolver::UnpackDensityPlusCore() {
 
                 int id = offset + INDEX(iplus_core,jplus_core);
                 
-                d1_plus_core_sym[id]  = x_p[d1aoff[h] + i * amopi_[h] + j];
-                d1_plus_core_sym[id] += x_p[d1boff[h] + i * amopi_[h] + j];
+                d1_plus_core_sym_[id]  = x_p[d1aoff[h] + i * amopi_[h] + j];
+                d1_plus_core_sym_[id] += x_p[d1boff[h] + i * amopi_[h] + j];
 
                 // scale off-diagonal elements
                 if ( i != j ) {
-                    d1_plus_core_sym[id] *= 2.0;
+                    d1_plus_core_sym_[id] *= 2.0;
                 }
 
             }
@@ -2499,7 +2499,7 @@ void v2RDMSolver::UnpackDensityPlusCore() {
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < frzcpi_[h]; i++) {
-            d1_plus_core_sym[offset + INDEX(i,i)] = 2.0;
+            d1_plus_core_sym_[offset + INDEX(i,i)] = 2.0;
         }
         offset += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
     }
@@ -2518,7 +2518,7 @@ void v2RDMSolver::RepackIntegralsDF(){
     for (int h = 0; h < nirrep_; h++) {
         for (long int i = 0; i < frzcpi_[h]; i++) {
             long int ii = i + offset;
-            efrzc1 += 2.0 * oei_full_sym[offset3 + INDEX(i,i)];
+            efrzc1 += 2.0 * oei_full_sym_[offset3 + INDEX(i,i)];
 
             long int offset2 = 0;
             for (int h2 = 0; h2 < nirrep_; h2++) {
@@ -2560,8 +2560,8 @@ void v2RDMSolver::RepackIntegralsDF(){
                     }
                     offset2 += nmopi_[h2];
                 }
-                c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym[offset3+INDEX(i,j)];
-                c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym[offset3+INDEX(i,j)];
+                c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym_[offset3+INDEX(i,j)];
+                c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym_[offset3+INDEX(i,j)];
 
                 c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] += 2.0 * dum1 - dum2;
                 c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] += 2.0 * dum1 - dum2;
@@ -2637,7 +2637,7 @@ void v2RDMSolver::RepackIntegrals(){
             int ifull = i + pitzer_offset_full[h];
             int ii    = ibas_full_sym[0][ifull][ifull];
 
-            efrzc1 += 2.0 * oei_full_sym[offset + INDEX(i,i)]; 
+            efrzc1 += 2.0 * oei_full_sym_[offset + INDEX(i,i)]; 
 
             for (int h2 = 0; h2 < nirrep_; h2++) {
                 for (int j = 0; j < frzcpi_[h2]; j++) {
@@ -2653,7 +2653,7 @@ void v2RDMSolver::RepackIntegrals(){
                     for (int myh = 0; myh < hij; myh++) {
                         myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
                     }
-                    efrzc2 += (2.0 * tei_full_sym[INDEX(ii,jj)] - tei_full_sym[myoff + INDEX(ij,ij)]);
+                    efrzc2 += (2.0 * tei_full_sym_[INDEX(ii,jj)] - tei_full_sym_[myoff + INDEX(ij,ij)]);
                 }
             }
         }
@@ -2695,12 +2695,12 @@ void v2RDMSolver::RepackIntegrals(){
                             myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
                         }
 
-                        dum += (2.0 * tei_full_sym[INDEX(ij,kk)] - tei_full_sym[myoff+INDEX(ik,jk)]);
+                        dum += (2.0 * tei_full_sym_[INDEX(ij,kk)] - tei_full_sym_[myoff+INDEX(ik,jk)]);
 
                     }
                 }
-                c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym[offset+INDEX(i,j)];
-                c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym[offset+INDEX(i,j)];
+                c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym_[offset+INDEX(i,j)];
+                c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = oei_full_sym_[offset+INDEX(i,j)];
                 c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] += dum;
                 c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] += dum;
             }
@@ -2740,7 +2740,7 @@ void v2RDMSolver::RepackIntegrals(){
                     myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
                 }
 
-                c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = tei_full_sym[myoff + INDEX(ik,jl)];
+                c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = tei_full_sym_[myoff + INDEX(ik,jl)];
 
             }
         }
@@ -2776,10 +2776,10 @@ void v2RDMSolver::RepackIntegrals(){
                     myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
                 }
 
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * tei_full_sym[myoff + INDEX(ik,jl)];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   += 0.5 * tei_full_sym[myoff + INDEX(jl,ik)];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = 0.5 * tei_full_sym[myoff + INDEX(ik,jl)];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   += 0.5 * tei_full_sym[myoff + INDEX(jl,ik)];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * tei_full_sym_[myoff + INDEX(ik,jl)];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   += 0.5 * tei_full_sym_[myoff + INDEX(jl,ik)];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = 0.5 * tei_full_sym_[myoff + INDEX(ik,jl)];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   += 0.5 * tei_full_sym_[myoff + INDEX(jl,ik)];
 
                 int hil = SymmetryPair(symmetry_full[ifull],symmetry_full[lfull]);
                 int il  = ibas_full_sym[hil][ifull][lfull];
@@ -2790,10 +2790,10 @@ void v2RDMSolver::RepackIntegrals(){
                     myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
                 }
 
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym[myoff + INDEX(il,jk)];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym[myoff + INDEX(jk,il)];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym[myoff + INDEX(il,jk)];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym[myoff + INDEX(jk,il)];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym_[myoff + INDEX(il,jk)];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym_[myoff + INDEX(jk,il)];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym_[myoff + INDEX(il,jk)];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym_[myoff + INDEX(jk,il)];
 
             }
         }
@@ -2827,14 +2827,14 @@ void v2RDMSolver::FinalTransformationMatrix() {
                         int hl    = symmetry_full[lfull];
                         if ( h != hl ) continue;
                         int l     = lfull - pitzer_offset_full[hl];
-                        //dum += saveK1->pointer(h)[k][l] * jacobi_transformation_matrix_[ieo*(amo_+nfrzc+nfrzv)+keo]
+                        //dum += saveOEI_->pointer(h)[k][l] * jacobi_transformation_matrix_[ieo*(amo_+nfrzc+nfrzv)+keo]
                         //                                * jacobi_transformation_matrix_[jeo*(amo_+nfrzc+nfrzv)+leo];
-                        dum += saveK1->pointer(h)[k][l] * jacobi_transformation_matrix_[keo*(amo_+nfrzc+nfrzv)+ieo]
+                        dum += saveOEI_->pointer(h)[k][l] * jacobi_transformation_matrix_[keo*(amo_+nfrzc+nfrzv)+ieo]
                                                         * jacobi_transformation_matrix_[leo*(amo_+nfrzc+nfrzv)+jeo];
                     }
                 }
-                diff += (dum - oei_full_sym[offset+INDEX(i,j)]) * (dum - oei_full_sym[offset+INDEX(i,j)]);
-                printf("%5i %5i %20.12lf %20.12lf\n",i,j,dum,oei_full_sym[offset+INDEX(i,j)]);
+                diff += (dum - oei_full_sym_[offset+INDEX(i,j)]) * (dum - oei_full_sym_[offset+INDEX(i,j)]);
+                printf("%5i %5i %20.12lf %20.12lf\n",i,j,dum,oei_full_sym_[offset+INDEX(i,j)]);
             }
         }
         offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
@@ -2899,8 +2899,8 @@ void v2RDMSolver::RotateOrbitals(){
     outfile->Printf("\n");
 
     Jacobi(jacobi_transformation_matrix_,
-          oei_full_sym,oei_full_dim,tei_full_sym,tei_full_dim,
-          d1_plus_core_sym,d1_plus_core_dim,d2_plus_core_sym,d2_plus_core_dim,
+          oei_full_sym_,oei_full_dim_,tei_full_sym_,tei_full_dim_,
+          d1_plus_core_sym_,d1_plus_core_dim_,d2_plus_core_sym_,d2_plus_core_dim_,
           symmetry_energy_order,nfrzc,amo_,nfrzv,nirrep_,
           jacobi_data_,jacobi_outfile_);
 

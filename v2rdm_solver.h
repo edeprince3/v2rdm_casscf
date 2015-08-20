@@ -52,32 +52,31 @@ class v2RDMSolver: public Wavefunction{
 
   protected:
 
-    boost::shared_ptr<Matrix> saveK1;
-
-    /// S(S+1)
-    double spin_squared;
+    boost::shared_ptr<Matrix> saveOEI_;
 
     /// constrain Q2 to be positive semidefinite?
-    bool constrain_q2;
+    bool constrain_q2_;
 
     /// constrain G2 to be positive semidefinite?
-    bool constrain_g2;
+    bool constrain_g2_;
 
-    /// spin adapt constraints?
-    bool spin_adapt_g2;
-    bool spin_adapt_q2;
+    /// spin adapt g2 constraint?
+    bool spin_adapt_g2_;
+
+    /// spin adapt q2 constraint?
+    bool spin_adapt_q2_;
 
     /// constraint T1 = D3 + Q3 to be positive semidefinite?
-    bool constrain_t1;
+    bool constrain_t1_;
 
     /// constraint T2 = E3 + F3 to be positive semidefinite?
-    bool constrain_t2;
+    bool constrain_t2_;
 
     /// keep d3 positive semidefinite and constrain D3->D2 mapping?
-    bool constrain_d3;
+    bool constrain_d3_;
 
     /// constrain spin?
-    bool constrain_spin;
+    bool constrain_spin_;
 
     /// symmetry product table:
     int * table;
@@ -108,10 +107,10 @@ class v2RDMSolver: public Wavefunction{
     int ndocc,nso,nvirt,ndoccact,nfrzc,nfrzv;
 
     /// total number of constraints (dimension of dual solution vector)
-    long int nconstraints;
+    long int nconstraints_;
 
     /// total number of variables (dimension of primal solution vector)
-    long int dimx;  
+    long int dimx_;  
 
     /// number of auxilliary basis functions
     int nQ_;
@@ -277,22 +276,21 @@ class v2RDMSolver: public Wavefunction{
     int multiplicity_;
 
     /// full space of integrals for MO gradient / Hessian, blocked by symmetry
-    double * tei_full_sym;
-    double * oei_full_sym;
-    // gidofalvi -- modified the type of tei_full_dim so that it is correct for large bases 
-    long int tei_full_dim;
-    int oei_full_dim;
+    double * tei_full_sym_;
+    double * oei_full_sym_;
+    // gidofalvi -- modified the type of tei_full_dim_ so that it is correct for large bases 
+    long int tei_full_dim_;
+    int oei_full_dim_;
 
     /// full space D2, blocked by symmetry
-    double * d2_plus_core_sym;
-    int d2_plus_core_dim;
+    double * d2_plus_core_sym_;
+    int d2_plus_core_dim_;
 
     /// full space D1, blocked by symmetry
-    double * d1_plus_core_sym;
-    int d1_plus_core_dim;
+    double * d1_plus_core_sym_;
+    int d1_plus_core_dim_;
 
     /// unpack active-space density into full-space density
-    void UnpackFullDensity();
     void UnpackDensityPlusCore();
 
     /// repack rotated full-space integrals into active-space integrals 
