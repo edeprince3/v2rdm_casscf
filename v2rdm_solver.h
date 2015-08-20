@@ -83,7 +83,10 @@ class v2RDMSolver: public Wavefunction{
 
     /// returns symmetry product for two orbitals
     int SymmetryPair(int i, int j);
+
+    /// returns symmetry product for four orbitals
     int TotalSym(int i, int j,int k, int l);
+
     int * symmetry;
     int * symmetry_full;
     int * symmetry_plus_core;
@@ -94,17 +97,19 @@ class v2RDMSolver: public Wavefunction{
     int * pitzer_offset_full;      // for orbital indexing within an irrep
     int * pitzer_offset_plus_core; // for orbital indexing within an irrep
 
-    // geminals for each symmetry:
+    /// geminals for each symmetry:
     std::vector < std::vector < std::pair<int,int> > > gems;
     std::vector < std::vector < std::pair<int,int> > > gems_fullspace;
     std::vector < std::vector < std::pair<int,int> > > gems_plus_corespace;
 
     /// total number of active molecular orbitals
     int amo_;
+
+    /// total number of frozen core orbitals
+    int nfrzc_;
+
     /// active molecular orbitals per irrep
     int * amopi_;
-
-    int ndocc,nso,nvirt,ndoccact,nfrzc,nfrzv;
 
     /// total number of constraints (dimension of dual solution vector)
     long int nconstraints_;
@@ -114,13 +119,17 @@ class v2RDMSolver: public Wavefunction{
 
     /// number of auxilliary basis functions
     int nQ_;
+
+    /// read three-index integrals and transform them to MO basis
     void ThreeIndexIntegrals(); 
+
+    /// three-index integral buffer
     double * Qmo_;
 
-    boost::shared_ptr<Matrix> ReadOEI();
+    /// grab one-electron integrals (T+V) in MO basis
     boost::shared_ptr<Matrix> GetOEI();
 
-    // offsets
+    /// offsets
     int * d1aoff;  
     int * d1boff;  
     int * q1aoff;  
@@ -166,13 +175,13 @@ class v2RDMSolver: public Wavefunction{
     /// convergence in conjugate gradient solver
     double cg_convergence_;
 
-    /// maximum number of outer bpsdp iterations
+    /// maximum number of boundary-point SDP (outer) iterations
     int maxiter_;
 
-    /// maximum number of outer conjugate gradient iterations
+    /// maximum number of conjugate gradient (inner) iterations
     int cg_maxiter_;
 
-    // standard vector of dimensions of each block of x
+    /// standard vector of dimensions of each block of primal solution vector
     std::vector<int> dimensions_;
 
     int offset;
@@ -181,7 +190,7 @@ class v2RDMSolver: public Wavefunction{
     void BuildBasis();
     int * full_basis;
 
-    // mapping arrays with symmetry:
+    /// mapping arrays with symmetry:
     int * gems_ab;
     int * gems_aa;
     int * gems_00;
@@ -196,7 +205,7 @@ class v2RDMSolver: public Wavefunction{
     int *** ibas_00_sym;
     int *** ibas_full_sym;
 
-    // triplets for each symmetry:
+    /// triplets for each irrep:
     std::vector < std::vector < boost::tuple<int,int,int> > > triplets;
     int * trip_aaa;
     int * trip_aab;
@@ -209,8 +218,13 @@ class v2RDMSolver: public Wavefunction{
     int **** ibas_aba_sym;
 
     void PrintHeader();
+
+    /// read two-electron integrals, sort the ones we need
     void TEI();
+
+    /// build subset of two-electron integrals from 3-index integrals
     void DF_TEI();
+
     void BuildConstraints();
 
     void Guess();
@@ -247,20 +261,11 @@ class v2RDMSolver: public Wavefunction{
     void T2_tilde_constraints_ATu(SharedVector A,SharedVector u);
     void D3_constraints_ATu(SharedVector A,SharedVector u);
 
-
-    double g2timeAu,q2timeAu,d2timeAu;
-    double g2timeATu,q2timeATu,d2timeATu;
-    double t2timeAu,t1timeAu;
-    double t2timeATu,t1timeATu;
-
     /// SCF energy
     double escf_; 
 
     /// nuclear repulsion energy
     double enuc_; 
-
-    // frozen core energy
-    double efrzc_;
 
     double tau, mu, ed, ep;
 

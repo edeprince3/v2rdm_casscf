@@ -114,7 +114,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
 
     long int nrows = 1;
     long int rowsize = nQ_;
-    while ( rowsize*nso*nso*2 > ndoubles ) {
+    while ( rowsize*nso_*nso_*2 > ndoubles ) {
         nrows++;
         rowsize = nQ_ / nrows;
         if (nrows * rowsize < nQ_) rowsize++;
@@ -225,7 +225,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                         offn += nsopi_[h];
                     }
                     int nn = reorder[n] + offn;
-                    tmp1[Q*nn1+INDEX(mm,nn)] = tmp2[Q*nso_*nso_+m*nso+n];
+                    tmp1[Q*nn1+INDEX(mm,nn)] = tmp2[Q*nso_*nso_+m*nso_+n];
                 }
             }
         }

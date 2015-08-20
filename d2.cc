@@ -139,8 +139,8 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
         offset += amopi_[h]*amopi_[h];
     }
 
-    int na = nalpha_ - nfrzc;
-    int nb = nbeta_ - nfrzc;
+    int na = nalpha_ - nfrzc_;
+    int nb = nbeta_ - nfrzc_;
 
     int poff = 0;
 
@@ -317,8 +317,8 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
         offset += amopi_[h]*amopi_[h];
     }
 
-    int na = nalpha_ - nfrzc;
-    int nb = nbeta_ - nfrzc;
+    int na = nalpha_ - nfrzc_;
+    int nb = nbeta_ - nfrzc_;
     double n = na + nb;
 
     // contraction: D2aa + D2ab -> D1 a

@@ -66,8 +66,8 @@ void v2RDMSolver::D3_constraints_Au(SharedVector A,SharedVector u){
     double * A_p = A->pointer();
     double * u_p = u->pointer();
 
-    int na = nalpha_ - nfrzc;
-    int nb = nbeta_ - nfrzc;
+    int na = nalpha_ - nfrzc_;
+    int nb = nbeta_ - nfrzc_;
 
     // D3aaa -> D2aa
     for ( int h = 0; h < nirrep_; h++) {
@@ -228,8 +228,8 @@ void v2RDMSolver::D3_constraints_ATu(SharedVector A,SharedVector u){
     double * A_p = A->pointer();
     double * u_p = u->pointer();
 
-    int na = nalpha_ - nfrzc;
-    int nb = nbeta_ - nfrzc;
+    int na = nalpha_ - nfrzc_;
+    int nb = nbeta_ - nfrzc_;
 
     // D3aaa -> D2aa
     for ( int h = 0; h < nirrep_; h++) {
