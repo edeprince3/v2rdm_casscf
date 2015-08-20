@@ -19,9 +19,9 @@
 extern "C" {
     void F77NAME(focas_interface)(double*jacobi_transformation_matrix,
                                    double*oei_full_sym_,
-                                   int &oei_full_sym__dim,
+                                   int &oei_full_sym_dim,
                                    double*tei_full_sym_,
-                                   long int &tei_full_sym__dim,
+                                   long int &tei_full_sym_dim,
                                    double*d1_full_sym,
                                    int &d1_full_sym_dim,
                                    double*d2_full_sym,
@@ -36,9 +36,9 @@ extern "C" {
 };
 inline void Jacobi(double*jacobi_transformation_matrix,
                    double*oei_full_sym_,
-                   int &oei_full_sym__dim,
+                   int &oei_full_sym_dim,
                    double*tei_full_sym_,
-                   long int &tei_full_sym__dim,
+                   long int &tei_full_sym_dim,
                    double*d1_full_sym,
                    int &d1_full_sym_dim,
                    double*d2_full_sym,
@@ -50,7 +50,7 @@ inline void Jacobi(double*jacobi_transformation_matrix,
                    int &nirrep_,
                    double*jacobi_data,
                    char*jacobi_file){
-    F77NAME(focas_interface)(jacobi_transformation_matrix,oei_full_sym_,oei_full_sym__dim,tei_full_sym_,tei_full_sym__dim,d1_full_sym,d1_full_sym_dim,d2_full_sym,d2_full_sym_dim,symmetry_energy_order,nfrzc,amo_,nfrzv,nirrep_,jacobi_data,jacobi_file);
+    F77NAME(focas_interface)(jacobi_transformation_matrix,oei_full_sym_,oei_full_sym_dim,tei_full_sym_,tei_full_sym_dim,d1_full_sym,d1_full_sym_dim,d2_full_sym,d2_full_sym_dim,symmetry_energy_order,nfrzc,amo_,nfrzv,nirrep_,jacobi_data,jacobi_file);
 };
 
 #endif
