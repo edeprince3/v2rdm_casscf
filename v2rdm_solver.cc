@@ -897,6 +897,20 @@ void  v2RDMSolver::common_init(){
     outfile->Printf("        maxiter:                         %8i\n",maxiter_);
     outfile->Printf("        cg_maxiter:                      %8i\n",cg_maxiter_);
     outfile->Printf("\n");
+    outfile->Printf("  ==> Orbital optimization parameters <==\n");
+    outfile->Printf("\n");
+// gg
+    outfile->Printf("        1-step algorithm:                   %5i\n",options_.get_int("ORBOPT_ONE_STEP"));    
+    outfile->Printf("        g_convergence:                  %5.3le\n",options_.get_double("ORBOPT_GRADIENT_CONVERGENCE"));
+    outfile->Printf("        e_convergence:                  %5.3le\n",options_.get_double("ORBOPT_ENERGY_CONVERGENCE"));
+    outfile->Printf("        frequency:                          %5i\n",options_.get_int("ORBOPT_FREQUENCY"));
+    outfile->Printf("        active-active rotations:            %5i\n",options_.get_int("ORBOPT_ACTIVE_ACTIVE_ROTATIONS"));
+    outfile->Printf("        exact diagonal Hessian:             %5i\n",options_.get_int("ORBOPT_EXACT_DIAGONAL_HESSIAN"));
+    outfile->Printf("        number of DIIS vectors:             %5i\n",options_.get_int("ORBOPT_NUM_DIIS_VECTORS"));
+    outfile->Printf("        print iteration info:               %5i\n",options_.get_int("ORBOPT_WRITE"));
+// gg
+    
+    outfile->Printf("\n");
     outfile->Printf("  ==> Memory requirements <==\n");
     outfile->Printf("\n");
     int nd2   = 0;
@@ -1086,7 +1100,7 @@ void  v2RDMSolver::common_init(){
     orbopt_data_[0] = (double)nthread;
     orbopt_data_[1] = (double)options_.get_bool("ORBOPT_ACTIVE_ACTIVE_ROTATIONS");
     orbopt_data_[2] = (double)options_.get_int("ORBOPT_FROZEN_CORE");
-    orbopt_data_[3] = (double)options_.get_double("ORBOPT_GRADIENT_TOLERANCE");
+    orbopt_data_[3] = (double)options_.get_double("ORBOPT_GRADIENT_CONVERGENCE");
     orbopt_data_[4] = (double)options_.get_double("ORBOPT_ENERGY_CONVERGENCE");
     orbopt_data_[5] = (double)options_.get_bool("ORBOPT_WRITE");
     orbopt_data_[6] = (double)options_.get_int("ORBOPT_EXACT_DIAGONAL_HESSIAN");
@@ -1174,6 +1188,11 @@ double v2RDMSolver::compute_energy() {
     double energy_dual,egap;
     double denergy_primal = fabs(energy_primal);
 
+// gg
+    int orbopt_frequency = options_.get_int("ORBOPT_FREQUENCY");
+    int orbopt_one_step  = options_.get_int("ORBOPT_ONE_STEP");
+// gg
+
     int oiter=0;
     do {
 
@@ -1225,15 +1244,7 @@ double v2RDMSolver::compute_energy() {
         if ( oiter % 200 == 0 && oiter > 0) {
             mu = mu*ep/ed;
         }
-        if ( oiter % 200 == 0 && oiter > 0) {
-
-            // gidofalvi debug
-            //outfile->Printf("current nuclear repulsion energy is %20.13lf \n",enuc_);
-            //outfile->Printf("             current core energy is %20.13lf \n",efzc_);
-            //double current_energy_tmp = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
-            //outfile->Printf("           current active energy is %20.13lf \n",current_energy_tmp);
-            //outfile->Printf("            current total energy is %20.13lf \n",current_energy_tmp+efzc_+enuc_);
-            // end debug
+        if ( orbopt_one_step == 1 && oiter % orbopt_frequency == 0 && oiter > 0) {
 
             RotateOrbitals();
         }
