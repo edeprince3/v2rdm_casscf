@@ -34,7 +34,7 @@ extern "C" {
                                    double*jacobi_data,
                                    char*jacobi_file);
 };
-inline void Jacobi(double*jacobi_transformation_matrix,
+inline void OrbOpt(double*jacobi_transformation_matrix,
                    double*oei_full_sym_,
                    int &oei_full_sym_dim,
                    double*tei_full_sym_,

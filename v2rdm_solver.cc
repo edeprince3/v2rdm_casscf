@@ -1075,42 +1075,42 @@ void  v2RDMSolver::common_init(){
     z      = SharedVector(new Vector("dual solution 2",dimx_));
     b      = SharedVector(new Vector("constraints",nconstraints_));
 
-    // input/output array for jacobi sweeps
+    // input/output array for orbopt sweeps
 
     int nthread = 1;
     #ifdef _OPENMP
         nthread = omp_get_max_threads();
     #endif
 
-    jacobi_data_    = (double*)malloc(11*sizeof(double));
-    jacobi_data_[0] = (double)nthread;
-    jacobi_data_[1] = (double)options_.get_bool("JACOBI_ACTIVE_ACTIVE_ROTATIONS");
-    jacobi_data_[2] = (double)options_.get_int("JACOBI_FROZEN_CORE");
-    jacobi_data_[3] = (double)options_.get_double("JACOBI_ANGLE_TOLERANCE");
-    jacobi_data_[4] = (double)options_.get_double("JACOBI_E_CONVERGENCE");
-    jacobi_data_[5] = (double)options_.get_bool("JACOBI_WRITE");
-    jacobi_data_[6] = 0.0;  // ntsweep: total sweeps (output)
-    jacobi_data_[7] = 0.0;  // ntrot: total pairs rotated (output)
-    jacobi_data_[8] = 0.0;  // delrot: change in energy
-    jacobi_data_[9] = 0.0;  // converged?
-    jacobi_data_[10] = 0.0;
+    orbopt_data_    = (double*)malloc(11*sizeof(double));
+    orbopt_data_[0] = (double)nthread;
+    orbopt_data_[1] = (double)options_.get_bool("ORBOPT_ACTIVE_ACTIVE_ROTATIONS");
+    orbopt_data_[2] = (double)options_.get_int("ORBOPT_FROZEN_CORE");
+    orbopt_data_[3] = (double)options_.get_double("ORBOPT_ANGLE_TOLERANCE");
+    orbopt_data_[4] = (double)options_.get_double("ORBOPT_E_CONVERGENCE");
+    orbopt_data_[5] = (double)options_.get_bool("ORBOPT_WRITE");
+    orbopt_data_[6] = 0.0;  // ntsweep: total sweeps (output)
+    orbopt_data_[7] = 0.0;  // ntrot: total pairs rotated (output)
+    orbopt_data_[8] = 0.0;  // delrot: change in energy
+    orbopt_data_[9] = 0.0;  // converged?
+    orbopt_data_[10] = 0.0;
     if ( is_df_ ) {
-      jacobi_data_[10] = 1.0;
+      orbopt_data_[10] = 1.0;
     }
-    jacobi_converged_ = false;
+    orbopt_converged_ = false;
 
-    jacobi_transformation_matrix_ = (double*)malloc(nmo_*nmo_*sizeof(double));
-    memset((void*)jacobi_transformation_matrix_,'\0',nmo_*nmo_*sizeof(double));
+    orbopt_transformation_matrix_ = (double*)malloc(nmo_*nmo_*sizeof(double));
+    memset((void*)orbopt_transformation_matrix_,'\0',nmo_*nmo_*sizeof(double));
     for (int i = 0; i < nmo_; i++) {
-        jacobi_transformation_matrix_[i*nmo_+i] = 1.0;
+        orbopt_transformation_matrix_[i*nmo_+i] = 1.0;
     }
 
     // don't change the length of this filename
-    jacobi_outfile_ = (char*)malloc(120*sizeof(char));
-    std::string filename = get_writer_file_prefix() + ".jacobi";
-    strcpy(jacobi_outfile_,filename.c_str());
-    if ( options_.get_bool("JACOBI_WRITE") ) { 
-        FILE * fp = fopen(jacobi_outfile_,"w");
+    orbopt_outfile_ = (char*)malloc(120*sizeof(char));
+    std::string filename = get_writer_file_prefix() + ".orbopt";
+    strcpy(orbopt_outfile_,filename.c_str());
+    if ( options_.get_bool("ORBOPT_WRITE") ) { 
+        FILE * fp = fopen(orbopt_outfile_,"w");
         fclose(fp);
     }
 
@@ -1258,7 +1258,7 @@ double v2RDMSolver::compute_energy() {
             energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
         }
 
-    }while( ep > r_convergence_ || ed > r_convergence_  || egap > e_convergence_ || !jacobi_converged_);
+    }while( ep > r_convergence_ || ed > r_convergence_  || egap > e_convergence_ || !orbopt_converged_);
 
     if ( oiter == maxiter_ ) {
         throw PsiException("v2RDM did not converge.",__FILE__,__LINE__);
@@ -2794,10 +2794,10 @@ void v2RDMSolver::FinalTransformationMatrix() {
                         int hl    = symmetry_full[lfull];
                         if ( h != hl ) continue;
                         int l     = lfull - pitzer_offset_full[hl];
-                        //dum += saveOEI_->pointer(h)[k][l] * jacobi_transformation_matrix_[ieo*nmo_+keo]
-                        //                                * jacobi_transformation_matrix_[jeo*nmo_+leo];
-                        dum += saveOEI_->pointer(h)[k][l] * jacobi_transformation_matrix_[keo*nmo_+ieo]
-                                                        * jacobi_transformation_matrix_[leo*nmo_+jeo];
+                        //dum += saveOEI_->pointer(h)[k][l] * orbopt_transformation_matrix_[ieo*nmo_+keo]
+                        //                                * orbopt_transformation_matrix_[jeo*nmo_+leo];
+                        dum += saveOEI_->pointer(h)[k][l] * orbopt_transformation_matrix_[keo*nmo_+ieo]
+                                                        * orbopt_transformation_matrix_[leo*nmo_+jeo];
                     }
                 }
                 diff += (dum - oei_full_sym_[offset+INDEX(i,j)]) * (dum - oei_full_sym_[offset+INDEX(i,j)]);
@@ -2832,7 +2832,7 @@ void v2RDMSolver::FinalTransformationMatrix() {
                     if ( h != hj ) continue;
                     int j     = jfull - pitzer_offset_full[hj];
 
-                    dum += ca_p[mu][j] * jacobi_transformation_matrix_[jeo*nmo_+ieo];
+                    dum += ca_p[mu][j] * orbopt_transformation_matrix_[jeo*nmo_+ieo];
                 }
                 temp[i] = dum;
             }
@@ -2845,7 +2845,7 @@ void v2RDMSolver::FinalTransformationMatrix() {
     }
     //for (int i = 0; i < nmo_; i++) {
     //    for (int j = 0; j < nmo_; j++) {
-    //        printf("%5i %5i %20.12lf\n",i,j,jacobi_transformation_matrix_[i*nmo_+j]);
+    //        printf("%5i %5i %20.12lf\n",i,j,orbopt_transformation_matrix_[i*nmo_+j]);
     //    }
     //}
     //Ca_->print();
@@ -2866,18 +2866,18 @@ void v2RDMSolver::RotateOrbitals(){
     outfile->Printf("\n");
 
     int nfrzv = nmo_-amo_-nfrzc_;
-    Jacobi(jacobi_transformation_matrix_,
+    OrbOpt(orbopt_transformation_matrix_,
           oei_full_sym_,oei_full_dim_,tei_full_sym_,tei_full_dim_,
           d1_plus_core_sym_,d1_plus_core_dim_,d2_plus_core_sym_,d2_plus_core_dim_,
           symmetry_energy_order,nfrzc_,amo_,nfrzv,nirrep_,
-          jacobi_data_,jacobi_outfile_);
+          orbopt_data_,orbopt_outfile_);
 
-    outfile->Printf("            Jacobi Optimization %s.\n",(int)jacobi_data_[9] ? "converged" : "did not converge");
-    outfile->Printf("            Total energy change: %11.6le\n",jacobi_data_[8]);
+    outfile->Printf("            Orbital Optimization %s.\n",(int)orbopt_data_[9] ? "converged" : "did not converge");
+    outfile->Printf("            Total energy change: %11.6le\n",orbopt_data_[8]);
     outfile->Printf("\n");
 
-    if ( fabs(jacobi_data_[8]) < jacobi_data_[4] ) {
-        jacobi_converged_ = true;
+    if ( fabs(orbopt_data_[8]) < orbopt_data_[4] ) {
+        orbopt_converged_ = true;
     }
 
     if ( is_df_ ) {

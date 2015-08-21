@@ -314,10 +314,10 @@ class v2RDMSolver: public Wavefunction{
     /// function to rotate orbitals
     void RotateOrbitals();
 
-    double * jacobi_transformation_matrix_;
-    double * jacobi_data_;
-    char * jacobi_outfile_;
-    bool jacobi_converged_;
+    double * orbopt_transformation_matrix_;
+    double * orbopt_data_;
+    char * orbopt_outfile_;
+    bool orbopt_converged_;
 
     /// are we using 3-index integrals?
     bool is_df_;
