@@ -11,9 +11,9 @@ n 1 r
 
 set {
   basis cc-pvdz
-  scf_type cd
-  cholesky_tolerance 1e-12
+  scf_type df
   d_convergence      1e-10
+  guess sad
   maxiter 500
   frozen_docc  [ 2, 0, 0, 0, 0, 2, 0, 0 ]
   frozen_uocc  [ 4, 1, 2, 2, 1, 4, 2, 2 ]
@@ -27,9 +27,9 @@ set v2rdm_casscf {
 
 activate(n2)
 
-n2.r     = 0.5
-refscf   = -103.04337420425341 # TEST
-refv2rdm = -103.086370861461   # TEST
+n2.r     = 3.0
+refscf   = -107.99404148727913 # TEST
+refv2rdm = -108.778127535786   # TEST
 
 energy('v2rdm-casscf')
 
