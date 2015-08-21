@@ -190,9 +190,9 @@ void  v2RDMSolver::common_init(){
             outfile->Printf("\n");
         }
        
-        if ( is_df_ ) { 
-            throw PsiException("v2rdm doesn't work when scf_type = df and linear dependencies in basis",__FILE__,__LINE__);
-        }
+        //if ( is_df_ ) { 
+        //    throw PsiException("v2rdm doesn't work when scf_type = df and linear dependencies in basis",__FILE__,__LINE__);
+        //}
     }
 
 
@@ -210,9 +210,9 @@ void  v2RDMSolver::common_init(){
     
     //Ca_->print();
 
-    epsilon_a_= boost::shared_ptr<Vector>(new Vector(nirrep_, nsopi_));
+    epsilon_a_= boost::shared_ptr<Vector>(new Vector(nirrep_, nmopi_));
     epsilon_a_->copy(reference_wavefunction_->epsilon_a().get());
-    epsilon_b_= boost::shared_ptr<Vector>(new Vector(nirrep_, nsopi_));
+    epsilon_b_= boost::shared_ptr<Vector>(new Vector(nirrep_, nmopi_));
     epsilon_b_->copy(reference_wavefunction_->epsilon_b().get());
     
     amo_      = 0;
@@ -235,7 +235,7 @@ void  v2RDMSolver::common_init(){
     // sanity check for orbital occupancies:
     for (int h = 0; h < nirrep_; h++) {
         int tot = doccpi_[h] + soccpi_[h] + frzvpi_[h];
-        if (doccpi_[h] + soccpi_[h] + frzvpi_[h] > nsopi_[h] ) {
+        if (doccpi_[h] + soccpi_[h] + frzvpi_[h] > nmopi_[h] ) {
             outfile->Printf("\n");
             outfile->Printf("    <<< WARNING >>> irrep %5i has too many orbitals:\n",h);
             outfile->Printf("\n");
@@ -244,7 +244,7 @@ void  v2RDMSolver::common_init(){
             outfile->Printf("                    frzv = %5i\n",frzvpi_[h]);
             outfile->Printf("                    tot  = %5i\n",doccpi_[h] + soccpi_[h] + frzvpi_[h]);
             outfile->Printf("\n");
-            outfile->Printf("                    total no. orbitals should be %5i\n",nsopi_[h]);
+            outfile->Printf("                    total no. orbitals should be %5i\n",nmopi_[h]);
             outfile->Printf("\n");
             throw PsiException("at least one irrep has too many orbitals",__FILE__,__LINE__);
         }
@@ -1018,14 +1018,14 @@ void  v2RDMSolver::common_init(){
             nQ_ = auxiliary->nbf();
             Process::environment.globals["NAUX (SCF)"] = nQ_;
         }
-        tot += (long int)nQ_*(long int)nso_*((long int)nso_+1)/2;
+        tot += (long int)nQ_*(long int)nmo_*((long int)nmo_+1)/2;
     }else {
         tei_full_dim_ = 0;
         for (int h = 0; h < nirrep_; h++) {
             tei_full_dim_ += gems_full[h] * ( gems_full[h] + 1 ) / 2;
         }
         tot += tei_full_dim_;
-        tot += nso_*nso_*nso_*nso_; // for four-index integrals stored stupidly 
+        tot += nmo_*nmo_*nmo_*nmo_; // for four-index integrals stored stupidly 
     }
     
     outfile->Printf("        Total number of variables:     %10i\n",dimx_);

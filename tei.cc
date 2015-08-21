@@ -68,10 +68,7 @@ void v2RDMSolver::DF_TEI() {
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
     // size of the 3-index integral buffer
-    // tei_full_dim_ = nQ_*nso_*(nso_+1)/2;
-
-    // gidofalvi -- modified this so that number of nnz 2-e integrals is correct for large bases
-    tei_full_dim_ = (long int) nQ_ * (long int) nso_ * ( (long int) nso_ + 1 ) /2 ;
+    tei_full_dim_ = (long int) nQ_ * (long int) nmo_ * ( (long int) nmo_ + 1 ) /2 ;
 
     d2_plus_core_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -122,17 +119,16 @@ void v2RDMSolver::TEI() {
     ReadIntegrals(temptei,nmo_);
    
     // read oei's from disk (this will simplify things when we add symmetry):
-    //boost::shared_ptr<Matrix> K1 = ReadOEI();
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
     // allocate memory for full ERI tensor blocked by symmetry for Greg
     tei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        tei_full_dim_ += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+        tei_full_dim_ += (long int)gems_full[h] * ( (long int)gems_full[h] + 1L ) / 2L;
     }
     d2_plus_core_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        d2_plus_core_dim_ += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
+        d2_plus_core_dim_ += (long int)gems_plus_core[h] * ( (long int)gems_plus_core[h] + 1L ) / 2L;
     }
    
     tei_full_sym_      = (double*)malloc(tei_full_dim_*sizeof(double));
@@ -144,6 +140,8 @@ void v2RDMSolver::TEI() {
     //}
     // load tei_full_sym_
     long int offset = 0;
+    long int n2 = (long int)nmo_*(long int)nmo_;
+    long int n3 = n2 * (long int)nmo_;
     for (int h = 0; h < nirrep_; h++) {
         for (long int ij = 0; ij < gems_full[h]; ij++) {
             long int i = bas_full_sym[h][ij][0];
@@ -151,10 +149,10 @@ void v2RDMSolver::TEI() {
             for (long int kl = ij; kl < gems_full[h]; kl++) {
                 long int k = bas_full_sym[h][kl][0];
                 long int l = bas_full_sym[h][kl][1];
-                tei_full_sym_[offset + INDEX(ij,kl)] = temptei[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
+                tei_full_sym_[offset + INDEX(ij,kl)] = temptei[i*n3+j*n2+k*(long int)nmo_+l];
             }
         }
-        offset += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+        offset += (long int)gems_full[h] * ( (long int)gems_full[h] + 1 ) / 2;
     }
     // allocate memory for full OEI tensor blocked by symmetry for Greg
     oei_full_dim_ = 0;
@@ -180,8 +178,6 @@ void v2RDMSolver::TEI() {
         offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
     }
    
-
-
     // if frozen core, adjust oei's and compute frozen core energy:
     efzc_ = 0.0;
     offset = 0;
@@ -192,8 +188,8 @@ void v2RDMSolver::TEI() {
         long int offset2 = 0;
             for (int h2 = 0; h2 < nirrep_; h2++) {
           for (long int j = 0; j < frzcpi_[h2]; j++) {
-                    efzc_ += (2.0 * temptei[(i+offset)*nmo_*nmo_*nmo_+(i+offset)*nmo_*nmo_+(j+offset2)*nmo_+(j+offset2)]
-                                  - temptei[(i+offset)*nmo_*nmo_*nmo_+(j+offset2)*nmo_*nmo_+(i+offset)*nmo_+(j+offset2)]);
+                    efzc_ += (2.0 * temptei[(i+offset)*n3+(i+offset) *n2+(j+offset2)*(long int)nmo_+(j+offset2)]
+                                  - temptei[(i+offset)*n3+(j+offset2)*n2+(i+offset) *(long int)nmo_+(j+offset2)]);
                 }
                 offset2 += nmopi_[h2];
             }
@@ -212,8 +208,8 @@ void v2RDMSolver::TEI() {
                 for (int h2 = 0; h2 < nirrep_; h2++) {
 
                     for (long int k = 0; k < frzcpi_[h2]; k++) {
-                    dum += (2.0 * temptei[(i+offset)*nmo_*nmo_*nmo_+(j+offset)*nmo_*nmo_+(k+offset2)*nmo_+(k+offset2)]
-                        - temptei[(i+offset)*nmo_*nmo_*nmo_+(k+offset2)*nmo_*nmo_+(k+offset2)*nmo_+(j+offset)]);
+                    dum += (2.0 * temptei[(i+offset)*n3+(j+offset) *n2+(k+offset2)*(long int)nmo_+(k+offset2)]
+                                - temptei[(i+offset)*n3+(k+offset2)*n2+(k+offset2)*(long int)nmo_+(j+offset)]);
                     }
 
                     offset2 += nmopi_[h2];
@@ -255,7 +251,7 @@ void v2RDMSolver::TEI() {
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = temptei[ii*nmo_*nmo_*nmo_+kk*nmo_*nmo_+jj*nmo_+ll];
+                c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = temptei[ii*n3+kk*n2+jj*(long int)nmo_+ll];
 
                 long int hi = symmetry[i];
                 long int hj = symmetry[j];
@@ -278,30 +274,19 @@ void v2RDMSolver::TEI() {
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*nmo_*nmo_*nmo_+kk*nmo_*nmo_+jj*nmo_+ll];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*nmo_*nmo_*nmo_+ll*nmo_*nmo_+jj*nmo_+kk];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*nmo_*nmo_*nmo_+kk*nmo_*nmo_+ii*nmo_+ll];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*nmo_*nmo_*nmo_+ll*nmo_*nmo_+ii*nmo_+kk];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*n3+kk*n2+jj*(long int)nmo_+ll];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*n3+ll*n2+jj*(long int)nmo_+kk];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*n3+kk*n2+ii*(long int)nmo_+ll];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*n3+ll*n2+ii*(long int)nmo_+kk];
 
                 long int hi = symmetry[i];
                 long int hj = symmetry[j];
 
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*nmo_*nmo_*nmo_+kk*nmo_*nmo_+jj*nmo_+ll];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*nmo_*nmo_*nmo_+ll*nmo_*nmo_+jj*nmo_+kk];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*nmo_*nmo_*nmo_+kk*nmo_*nmo_+ii*nmo_+ll];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*nmo_*nmo_*nmo_+ll*nmo_*nmo_+ii*nmo_+kk];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*n3+kk*n2+jj*(long int)nmo_+ll];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*n3+ll*n2+jj*(long int)nmo_+kk];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*n3+kk*n2+ii*(long int)nmo_+ll];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*n3+ll*n2+ii*(long int)nmo_+kk];
 
-            }
-        }
-    }
-
-    for (int h = 0; h < nirrep_; h++) {
-        for (long int i = frzcpi_[h]; i < nmopi_[h] - frzvpi_[h]; i++) {
-            for (long int j = frzcpi_[h]; j < nmopi_[h] - frzvpi_[h]; j++) {
-                //c_p[d1aoff[h] + INDEX(i-frzcpi_[h],j-frzcpi_[h])] = K1->pointer(h)[i][j];
-                //c_p[d1boff[h] + INDEX(i-frzcpi_[h],j-frzcpi_[h])] = K1->pointer(h)[i][j];
-                //c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h]+(j-frzcpi_[h])] = 0.0;//K1->pointer(h)[i][j];
-                //c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h]+(j-frzcpi_[h])] = 0.0;//K1->pointer(h)[i][j];
             }
         }
     }
