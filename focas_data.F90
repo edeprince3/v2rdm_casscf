@@ -110,8 +110,9 @@ module focas_data
   integer :: nthread_use_                                          ! number of threads to use in parallel parts of the code (this is the actuaal number of threads used)
   integer :: nthread_want_                                         ! number of threads to use in parallel parts of the code ( as specified by user )
   integer :: log_print_                                            ! 1/0 = flag for printing iteration/info for orbtial optimization
-  integer :: num_negative_diagonal_hessian_                        ! numbe of negative diagonal Hessian matrix elements
-
+  integer :: num_negative_diagonal_hessian_                        ! number of negative diagonal Hessian matrix elements
+  integer :: use_exact_hessian_diagonal_                           ! flag to use exact expressions for the diagonal elements of the Hessian
+ 
   ! *** doubles
   real(wp) :: e1_c_                                                ! core contribution to 1-e energy
   real(wp) :: e2_cc_                                               ! core contribution to 2-e energy all indeces in g(pq|rs) in \D
@@ -125,6 +126,7 @@ module focas_data
   real(wp) :: e2_total_                                            ! total 2-e energy
   real(wp) :: e_active_                                            ! active space energy
   real(wp) :: grad_norm_                                           ! norm of the gradient ddot(g,g)
+  real(wp) :: min_diag_hessian_                                    ! smallest diagonal Hessian element
  
   contains
 
