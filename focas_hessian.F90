@@ -378,9 +378,9 @@ module focas_hessian
             uu_den = dens_%gemind(u,u)
             ut_den = dens_%gemind(u,t)
 
-            h_val    = 2.0_wp * ( den1(tt_den) * f_i(uu_int) + den1(uu_den) * f_i(tt_int) &    
+            h_val    = 2.0_wp * ( den1(tt_den) * f_i(uu_int) + den1(uu_den) * f_i(tt_int) &
                                & - (  2.0_wp * den1(ut_den) * f_i(ut_int)                 &
-                               &    + q(t-ndoc_tot_,t) + q(u-ndoc_tot_,u) +               &
+                               &    + q(t-ndoc_tot_,t) + q(u-ndoc_tot_,u)                 &
                                &    + z(t-ndoc_tot_,t) + z(u-ndoc_tot_,u) ) )
 
             if ( use_exact_hessian_diagonal_ == 1 ) then
