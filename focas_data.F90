@@ -76,11 +76,24 @@ module focas_data
     integer, allocatable :: class_to_df_map(:)                     ! mapping array to map orbital indeces from class order to df order
   end type df_info
 
+  type diis_info
+    integer :: do_diis                                             ! flag for performing DIIS updates (set internally based on max_num_diis)
+    integer :: error                                               ! return code from dgesv()
+    integer :: update                                              ! internal flag for performing update
+    integer :: max_num_diis                                        ! maximum number of diis vectors stored
+    integer :: current_index                                       ! current diis index
+    real(wp), allocatable :: B(:,:)                                ! DIIS B matrix (max_num_diis+1,max_num_diis+1)
+    real(wp), allocatable :: c(:)                                  ! coefficent vector for DIIS interpolation
+    integer, allocatable  :: ip(:)                                 ! temporary matrix used during solution of A * x = c
+    real(wp), allocatable :: dP(:,:)                               ! dP vectors (npair,max_num_diis)
+  end type diis_info
+
   ! *** allocatable derived types
 
   type(sym_info)   :: dens_                                        ! density symmetry data
   type(sym_info)   :: ints_                                        ! integral symmetry data
   type(trans_info) :: trans_
+  type(diis_info)  :: diis_
 
   ! indexing derived types
   

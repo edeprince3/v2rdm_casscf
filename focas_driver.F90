@@ -5,6 +5,7 @@ module focas_driver
   use focas_hessian
   use focas_transform_driver
   use focas_exponential
+  use focas_diis
 
   implicit none
 
@@ -50,20 +51,8 @@ module focas_driver
     delta_energy_tolerance      = orbopt_data(5)  
     log_print_                  = int(orbopt_data(6))
     use_exact_hessian_diagonal_ = int(orbopt_data(7))
-    num_diis_vectors_           = int(orbopt_data(8)) 
+    diis_%max_num_diis          = int(orbopt_data(8)) 
     df_vars_%use_df_teints      = int(orbopt_data(9))
-    
-
-!    write(*,*)'threads:',nthread_use_
-!    write(*,*)'aarot',include_aa_rot_
-!    write(*,*)'gnorm_tol',gradient_norm_tolerance
-!    write(*,*)'dele_tol',delta_energy_tolerance
-!    write(*,*)'print',log_print_
-!    write(*,*)'exact diagonal',use_exact_hessian_diagonal_
-!    write(*,*)'ndiis',num_diis_vectors_
-!    write(*,*)'df',df_vars_%use_df_teints
-!
-!    stop
 
     ! orbitals should be sorted accoring to 
     ! 1) class (doubly occupied, active, virtual)
@@ -99,6 +88,9 @@ module focas_driver
 
     ! allocate temporary Fock matrices
     call allocate_temporary_fock_matrices()
+
+    ! allocate matrices for DIIS extrapolation
+    call allocate_diis_data()
 
     ! allocate remaining arrays/matrices
     call allocate_initial()
@@ -157,8 +149,11 @@ module focas_driver
       call diagonal_inverse_hessian_preconditioner(orbital_gradient_,fock_i_,fock_a_,q_,z_,int2,den1,den2)
 
       ! update kappa_
-      step_size=1.0_wp
-      kappa_ = - step_size * orbital_gradient_
+      step_size = 1.0_wp
+      kappa_    = - step_size * orbital_gradient_
+
+      ! possible DIIS extrapolation
+      if ( diis_%do_diis == 1 ) call diis_extrapolate(-kappa_)
 
       t1 = timer()
       t_gh = t1 - t0
@@ -209,6 +204,9 @@ module focas_driver
 
     ! deallocate indexing arrays
     call deallocate_indexing_arrays()
+
+    ! allocate matrices for DIIS extrapolation
+    call deallocate_diis_data()
 
     ! final deallocation
     call deallocate_final()
