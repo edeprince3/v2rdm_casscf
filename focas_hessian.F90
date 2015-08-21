@@ -13,7 +13,6 @@ module focas_hessian
       real(wp), intent(in) :: q(:,:),z(:,:)
       integer :: error
 
-      use_exact_hessian_diagonal_ = 1
       min_diag_hessian_           = 1.0e-2
 
       num_negative_diagonal_hessian_ = 0 

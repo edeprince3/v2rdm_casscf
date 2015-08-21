@@ -33,11 +33,7 @@ module focas_gradient
     ! calculate auxiliary z matrix
     call compute_z(den1)
  
-    ! build generalized Fock matrix
-    !call compute_f_gen()
-
     ! compute gradient
-    !call compute_orbital_gradient_old()
     call compute_orbital_gradient()
 
 !    ! print the gradient 
@@ -287,7 +283,7 @@ module focas_gradient
 
     end if
 
-    grad_norm_ = ddot(rot_pair_%n_tot,orbital_gradient_,1,orbital_gradient_,1)
+    grad_norm_ = sqrt(ddot(rot_pair_%n_tot,orbital_gradient_,1,orbital_gradient_,1))
 
     return 
 

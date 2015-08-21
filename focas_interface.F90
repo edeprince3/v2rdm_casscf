@@ -1,6 +1,6 @@
 subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,density_1,nnz_d1,&
-           &density_2,nnz_d2,syms,ncore_in,nact_in,nvirt_in,nirrep_in,jacobi_data_io, &
-           &jacobi_log_file)
+           &density_2,nnz_d2,syms,ncore_in,nact_in,nvirt_in,nirrep_in,orbopt_data_io, &
+           &orbopt_log_file)
 
   
   use focas_driver, only : focas_optimize
@@ -22,18 +22,15 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer :: nirrep_in,ncore_in,nact_in,nvirt_in
   integer :: nnz_d1,nnz_d2,nnz_i1
   integer(ip) :: nnz_i2
-  integer :: nproc,aarot,nfrozen,print_flag
   real(wp) :: integrals_1(nnz_i1),integrals_2(nnz_i2),density_1(nnz_d1),density_2(nnz_d2)
   real(wp) :: mo_coeff_out(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
-  real(wp) :: jacobi_data_io(11) 
-  character(120) :: jacobi_log_file
+  real(wp) :: orbopt_data_io(13) 
+  character(120) :: orbopt_log_file
   integer  :: syms(ncore_in+nact_in+nvirt_in)
-
-  real(wp) :: delrot
 
   real(wp) :: mo_coeff(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: nactpi(nirrep_in),ndocpi(nirrep_in),nextpi(nirrep_in)
-  integer :: ndoc,nact,next,nmo,nirrep,converged
+  integer :: ndoc,nact,next,nmo,nirrep
   integer :: nnz_int1,nnz_den1,nnz_den2,df_ints
   integer(ip) :: nnz_int2
   integer :: gemind_int(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
@@ -54,73 +51,42 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer(ip) :: offset_int(nirrep_in)
   integer :: offset_irrep_int1(nirrep_in)
   integer :: offset_irrep_den1(nirrep_in)
-  real(wp) :: dele_tol,gnorm_tol,gnorm
-
  
-!  jacobi_data_io:
-!  1) nproc
-!  2) aarot
-!  3) nfrozen
-!  4) angtol
-!  5) mcetol
-!  6) jacobi_print
-!  7) ntsweep
-!  8) ntrot
-!  9) delrot
-! 10) converged (1=yes/0=no)
-! 11) df integral flag 
-  ! copy some variables
-
   ndoc=ncore_in 
   nact=nact_in
   next=nvirt_in
   nmo=ncore_in+nact_in+nvirt_in
   nirrep=nirrep_in
-  ! aarot=0/1 exclue/include active-active rotations
-  nproc=int(jacobi_data_io(1))
-  ! aarot=0/1 exclue/include active-active rotations
-  aarot=int(jacobi_data_io(2))
-  ! nfrozen is the number of core orbitals not optimized
-  nfrozen=int(jacobi_data_io(3))
-  ! set convergence variables
-  gnorm_tol=jacobi_data_io(4)
-  ! energy tolerance
-  dele_tol=jacobi_data_io(5)
   ! set density-fitted integral flag
-  df_ints = int(jacobi_data_io(11))
-  ! print flag for jacobi routine
-  print_flag=int(jacobi_data_io(6))
+  df_ints = int(orbopt_data_io(9))
 
   call setup_symmetry_arrays(syms)
 
   call initial_sort()
 
   nnz_int1 = gemind_int_new(last_index(nirrep,3),last_index(nirrep,3))
+
   nnz_den1 = gemind_den_new(last_index(nirrep,2),last_index(nirrep,2))
+
   if (df_ints == 0 ) then
+
     nnz_int2 = sum(nnz_int)  
+
   else
-    nnz_int2 = nnz_i2 !size(integrals_2,dim=1)
+
+    nnz_int2 = nnz_i2 
+
   endif
+
   nnz_den2 = sum(nnz_den_new)
 
   call focas_optimize(mo_coeff,integrals_1,nnz_int1,integrals_2,nnz_int2,               &
                     & density_1(1:nnz_den1),nnz_den1,density_2(1:nnz_den2),nnz_den2,&
-                    & ndocpi,nactpi,nextpi,nirrep,gnorm_tol,dele_tol,gnorm,delrot,converged,&
-                    & df_ints,nproc,jacobi_log_file,print_flag,aarot)
+                    & ndocpi,nactpi,nextpi,nirrep,orbopt_data_io,orbopt_log_file)
+
 
   call final_sort()
 
-  jacobi_data_io(7)=real(1.0_wp,kind=wp)
-  jacobi_data_io(8)=real(1.0_wp,kind=wp)
-  jacobi_data_io(9)=delrot
-  jacobi_data_io(10)=converged
-
-  ! copy local copy into the array to be returned
-!  mo_coeff_out=mo_coeff
-!  mo_coeff_out=matmul(mo_coeff,mo_coeff_out)
-
-  close(fid)
   contains
 
     subroutine final_sort()

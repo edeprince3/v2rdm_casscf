@@ -96,10 +96,14 @@ int read_options(std::string name, Options& options)
         options.add_int("ORBOPT_FROZEN_CORE",0);
         /*- do rotate active/active orbital pairs? -*/
         options.add_bool("ORBOPT_ACTIVE_ACTIVE_ROTATIONS",false);
-        /*- tolerance for energy change for a given pair of orbitals -*/
-        options.add_double("ORBOPT_ANGLE_TOLERANCE",1.0e-6);
+        /*- convergence in gradient norm -*/
+        options.add_double("ORBOPT_GRADIENT_TOLERANCE",1.0e-4);
         /*- convergence in energy for rotations -*/
-        options.add_double("ORBOPT_E_CONVERGENCE",1.0e-8);
+        options.add_double("ORBOPT_ENERGY_CONVERGENCE",1.0e-8);
+        /* flag for using exact expresions for diagonal Hessian element */
+        options.add_int("ORBOPT_EXACT_DIAGONAL_HESSIAN",0);
+        /* number of DIIS vectors to keep in orbital optimization */ 
+        options.add_int("ORBOPT_NUM_DIIS_VECTORS",0);
         /*- Do write a MOLDEN output file?  If so, the filename will end in
         .molden, and the prefix is determined by |globals__writer_file_label|
         (if set), or else by the name of the output file plus the name of

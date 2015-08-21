@@ -108,10 +108,10 @@ module focas_data
   integer :: nmo_tot_                                              ! total number of orbitals
   integer :: include_aa_rot_                                       ! 1/0 = include/do not include rotations between active-active orbtials
   integer :: nthread_use_                                          ! number of threads to use in parallel parts of the code (this is the actuaal number of threads used)
-  integer :: nthread_want_                                         ! number of threads to use in parallel parts of the code ( as specified by user )
   integer :: log_print_                                            ! 1/0 = flag for printing iteration/info for orbtial optimization
   integer :: num_negative_diagonal_hessian_                        ! number of negative diagonal Hessian matrix elements
   integer :: use_exact_hessian_diagonal_                           ! flag to use exact expressions for the diagonal elements of the Hessian
+  integer :: num_diis_vectors_
  
   ! *** doubles
   real(wp) :: e1_c_                                                ! core contribution to 1-e energy
@@ -177,20 +177,5 @@ module focas_data
       call cpu_time(timer)
 #endif
     end function timer
-
-    integer function get_nthread()
-      ! simple function to set the number of threads to use in the parallel sections of the code
-      integer :: max_thread
-      
-# ifdef OMP
-      max_thread = nthread_want_
-# else
-      max_thread = 1
-# endif
-      get_nthread = min( max_thread , nthread_want_ )
-
-      return 
-
-    end function get_nthread
 
 end module focas_data
