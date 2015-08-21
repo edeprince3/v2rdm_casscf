@@ -3,11 +3,13 @@
 SHELL := /bin/bash
 
 # add new tests here
-all-tests := $(addsuffix .test, v2rdm1 v2rdm2 v2rdm3)
+subdirs := v2rdm1 v2rdm2 v2rdm3
+
+all-tests := $(addsuffix .test, $(subdirs))
 
 quick-tests := $(addsuffix .test, v2rdm1)
 
-.PHONY : test all %.test
+.PHONY : test all %.test 
 
 test: $(all-tests)
 
