@@ -1,22 +1,18 @@
 # v2rdm-casscf test suite
 
-default: test
+SHELL := /bin/bash
 
-test:
-	@echo "\033[0;36m"
+# add new tests here
+all-tests := $(addsuffix .test, v2rdm1 v2rdm2 v2rdm3)
+
+.PHONY : test all %.test
+
+test: $(all-tests)
+
+%.test : 
 	@echo ""
-	@echo "    $(tput setaf 6)Running tests..."
+	@echo "    $(basename $@):"
 	@echo ""
-	@echo "\033[0;0m"
-	@echo "    v2rdm1:"
+	@cd $(basename $@); psi4 -d
 	@echo ""
-	@cd v2rdm1; psi4 -d
-	@echo ""
-	@echo "    v2rdm2:"
-	@echo ""
-	@cd v2rdm2; psi4 -d
-	@echo ""
-	@echo "    v2rdm3:"
-	@echo ""
-	@cd v2rdm3; psi4 -d
-	@echo ""
+
