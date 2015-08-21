@@ -12,7 +12,7 @@ module focas_driver
 
   subroutine focas_optimize(mo_coeff,int1,nnz_int1,int2,nnz_int2,den1,nnz_den1,den2,nnz_den2,    &
                            & ndocpi,nactpi,nextpi,nirrep,gnorm_tol,dele_tol,gnorm_last,dele_last,&
-                           & converged,df_ints_in,nthread,fname,print_fl)
+                           & converged,df_ints_in,nthread,fname,print_fl,aarot_fl)
  
     ! integer input
     integer, intent(in)     :: nthread         ! number of threads to use
@@ -20,13 +20,14 @@ module focas_driver
     integer, intent(in)     :: df_ints_in      ! flag for using density-fitted 2-e integrals (0--> 4-index integrals, 1--> 3-index DF integrals)
     integer, intent(in)     :: nirrep          ! number of irreps in point group
     integer, intent(in)     :: nnz_int1        ! total number of nonzero 1-e integrals
-    integer(ip), intent(in)     :: nnz_int2        ! total number of nonzero 2-e integrals
+    integer(ip), intent(in) :: nnz_int2        ! total number of nonzero 2-e integrals
     integer, intent(in)     :: nnz_den1        ! total number of nonzero 1-e density elements
     integer, intent(in)     :: nnz_den2        ! total number of nonzero 2-e density elements
     integer, intent(in)     :: ndocpi(nirrep)  ! number of doubly occupied orbitals per irrep (includes frozen doubly occupied orbitals)
     integer, intent(in)     :: nactpi(nirrep)  ! number of active orbitals per irrep
     integer, intent(in)     :: nextpi(nirrep)  ! number of virtual orbitals per irrep (excluding forzen virtual orbitals) 
     integer, intent(in)     :: print_fl        ! flag for printing output information
+    integer, intent(in)     :: aarot_fl        ! flag to include active-aactive rotations
     ! real input
     real(wp), intent(inout) :: mo_coeff(:,:)   ! mo coefficient matrix
     real(wp), intent(inout) :: dele_last       ! final energy change
@@ -76,7 +77,7 @@ module focas_driver
     next_tot_ = sum(nextpi)
     nmo_tot_  = ndoc_tot_+nact_tot_+next_tot_
 
-    include_aa_rot_ = 0
+    include_aa_rot_ = aarot_fl
 
     ! figure out maxmimum number of threads to use
     nthread_want_ = nthread
@@ -153,7 +154,7 @@ module focas_driver
       call orbital_gradient(int1,int2,den1,den2)
 
       ! precondition gradient with the diagonal Hessian
-      call diagonal_inverse_hessian_preconditioner(orbital_gradient_,fock_i_,fock_a_,q_,z_,den1)
+      call diagonal_inverse_hessian_preconditioner(orbital_gradient_,fock_i_,fock_a_,q_,z_,int2,den1,den2)
 
       ! update kappa_
       step_size=1.0_wp
