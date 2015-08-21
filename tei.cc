@@ -68,82 +68,81 @@ void v2RDMSolver::DF_TEI() {
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
     // size of the 3-index integral buffer
-    // tei_full_dim = nQ_*nso_*(nso_+1)/2;
+    // tei_full_dim_ = nQ_*nso_*(nso_+1)/2;
 
     // gidofalvi -- modified this so that number of nnz 2-e integrals is correct for large bases
-    tei_full_dim = (long int) nQ_ * (long int) nso_ * ( (long int) nso_ + 1 ) /2 ;
+    tei_full_dim_ = (long int) nQ_ * (long int) nso_ * ( (long int) nso_ + 1 ) /2 ;
 
-    d2_plus_core_dim = 0;
+    d2_plus_core_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        d2_plus_core_dim += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
+        d2_plus_core_dim_ += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
     }
 
     // just point to 3-index integral buffer
-    tei_full_sym      = Qmo_;
+    tei_full_sym_      = Qmo_;
 
-    d2_plus_core_sym  = (double*)malloc(d2_plus_core_dim*sizeof(double));
-    memset((void*)d2_plus_core_sym,'\0',d2_plus_core_dim*sizeof(double));
+    d2_plus_core_sym_  = (double*)malloc(d2_plus_core_dim_*sizeof(double));
+    memset((void*)d2_plus_core_sym_,'\0',d2_plus_core_dim_*sizeof(double));
 
     // allocate memory for full OEI tensor blocked by symmetry for Greg
-    oei_full_dim = 0;
+    oei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        oei_full_dim += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
+        oei_full_dim_ += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
     }
-    d1_plus_core_dim = 0;
+    d1_plus_core_dim_ = 0;
     for ( int h = 0; h < nirrep_; h++) {
-        d1_plus_core_dim += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
+        d1_plus_core_dim_ += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
     }
-    oei_full_sym = (double*)malloc(oei_full_dim*sizeof(double));
-    d1_plus_core_sym  = (double*)malloc(d1_plus_core_dim*sizeof(double));
-    memset((void*)oei_full_sym,'\0',oei_full_dim*sizeof(double));
-    memset((void*)d1_plus_core_sym,'\0',d1_plus_core_dim*sizeof(double));
+    oei_full_sym_ = (double*)malloc(oei_full_dim_*sizeof(double));
+    d1_plus_core_sym_  = (double*)malloc(d1_plus_core_dim_*sizeof(double));
+    memset((void*)oei_full_sym_,'\0',oei_full_dim_*sizeof(double));
+    memset((void*)d1_plus_core_sym_,'\0',d1_plus_core_dim_*sizeof(double));
 
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (long int i = 0; i < nmopi_[h]; i++) {
             for (long int j = i; j < nmopi_[h]; j++) {
-                oei_full_sym[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
+                oei_full_sym_[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
             }
         }
         offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
     }
     RepackIntegralsDF();
 
-    enuc = Process::environment.molecule()->nuclear_repulsion_energy();
+    enuc_ = Process::environment.molecule()->nuclear_repulsion_energy();
 
 }
 
 void v2RDMSolver::TEI() {
 
-    long int full = amo_ + nfrzc + nfrzv;
-    double * temptei = (double*)malloc(full*full*full*full*sizeof(double));
-    memset((void*)temptei,'\0',full*full*full*full*sizeof(double));
+    double * temptei = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
+    memset((void*)temptei,'\0',nmo_*nmo_*nmo_*nmo_*sizeof(double));
 
     // read two-electron integrals from disk
-    ReadIntegrals(temptei,full);
+    ReadIntegrals(temptei,nmo_);
    
     // read oei's from disk (this will simplify things when we add symmetry):
     //boost::shared_ptr<Matrix> K1 = ReadOEI();
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
     // allocate memory for full ERI tensor blocked by symmetry for Greg
-    tei_full_dim = 0;
+    tei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        tei_full_dim += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+        tei_full_dim_ += gems_full[h] * ( gems_full[h] + 1 ) / 2;
     }
-    d2_plus_core_dim = 0;
+    d2_plus_core_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        d2_plus_core_dim += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
+        d2_plus_core_dim_ += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
     }
    
-    tei_full_sym      = (double*)malloc(tei_full_dim*sizeof(double));
-    d2_plus_core_sym  = (double*)malloc(d2_plus_core_dim*sizeof(double));
-    memset((void*)tei_full_sym,'\0',tei_full_dim*sizeof(double));
-    memset((void*)d2_plus_core_sym,'\0',d2_plus_core_dim*sizeof(double));
-    //for (int i = 0; i < d2_plus_core_dim; i++) {
-    //    d2_plus_core_sym[i] = -9.0e99;
+    tei_full_sym_      = (double*)malloc(tei_full_dim_*sizeof(double));
+    d2_plus_core_sym_  = (double*)malloc(d2_plus_core_dim_*sizeof(double));
+    memset((void*)tei_full_sym_,'\0',tei_full_dim_*sizeof(double));
+    memset((void*)d2_plus_core_sym_,'\0',d2_plus_core_dim_*sizeof(double));
+    //for (int i = 0; i < d2_plus_core_dim_; i++) {
+    //    d2_plus_core_sym_[i] = -9.0e99;
     //}
-    // load tei_full_sym
+    // load tei_full_sym_
     long int offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (long int ij = 0; ij < gems_full[h]; ij++) {
@@ -152,30 +151,30 @@ void v2RDMSolver::TEI() {
             for (long int kl = ij; kl < gems_full[h]; kl++) {
                 long int k = bas_full_sym[h][kl][0];
                 long int l = bas_full_sym[h][kl][1];
-                tei_full_sym[offset + INDEX(ij,kl)] = temptei[i*full*full*full+j*full*full+k*full+l];
+                tei_full_sym_[offset + INDEX(ij,kl)] = temptei[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
             }
         }
         offset += gems_full[h] * ( gems_full[h] + 1 ) / 2;
     }
     // allocate memory for full OEI tensor blocked by symmetry for Greg
-    oei_full_dim = 0;
+    oei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
-        oei_full_dim += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
+        oei_full_dim_ += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
     }
-    d1_plus_core_dim = 0;
+    d1_plus_core_dim_ = 0;
     for ( int h = 0; h < nirrep_; h++) {
-        d1_plus_core_dim += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
+        d1_plus_core_dim_ += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
     }
-    oei_full_sym = (double*)malloc(oei_full_dim*sizeof(double));
-    d1_plus_core_sym  = (double*)malloc(d1_plus_core_dim*sizeof(double));
-    memset((void*)oei_full_sym,'\0',oei_full_dim*sizeof(double));
-    memset((void*)d1_plus_core_sym,'\0',d1_plus_core_dim*sizeof(double));
+    oei_full_sym_ = (double*)malloc(oei_full_dim_*sizeof(double));
+    d1_plus_core_sym_  = (double*)malloc(d1_plus_core_dim_*sizeof(double));
+    memset((void*)oei_full_sym_,'\0',oei_full_dim_*sizeof(double));
+    memset((void*)d1_plus_core_sym_,'\0',d1_plus_core_dim_*sizeof(double));
 
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (long int i = 0; i < nmopi_[h]; i++) {
             for (long int j = i; j < nmopi_[h]; j++) {
-                oei_full_sym[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
+                oei_full_sym_[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
             }
         }
         offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
@@ -184,27 +183,23 @@ void v2RDMSolver::TEI() {
 
 
     // if frozen core, adjust oei's and compute frozen core energy:
-    efrzc1 = 0.0;
-    efrzc2 = 0.0;
+    efzc_ = 0.0;
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
         for (long int i = 0; i < frzcpi_[h]; i++) {
-            efrzc1 += 2.0 * K1->pointer(h)[i][i];
+            efzc_ += 2.0 * K1->pointer(h)[i][i];
 
         long int offset2 = 0;
             for (int h2 = 0; h2 < nirrep_; h2++) {
           for (long int j = 0; j < frzcpi_[h2]; j++) {
-                    efrzc2 += (2.0 * temptei[(i+offset)*full*full*full+(i+offset)*full*full+(j+offset2)*full+(j+offset2)]
-                                  - temptei[(i+offset)*full*full*full+(j+offset2)*full*full+(i+offset)*full+(j+offset2)]);
+                    efzc_ += (2.0 * temptei[(i+offset)*nmo_*nmo_*nmo_+(i+offset)*nmo_*nmo_+(j+offset2)*nmo_+(j+offset2)]
+                                  - temptei[(i+offset)*nmo_*nmo_*nmo_+(j+offset2)*nmo_*nmo_+(i+offset)*nmo_+(j+offset2)]);
                 }
                 offset2 += nmopi_[h2];
             }
         }
         offset += nmopi_[h];
     }
-    efrzc = efrzc1 + efrzc2;
-    //printf("efrzc1       %20.12lf\n",efrzc1);
-    //printf("efrzc2       %20.12lf\n",efrzc2);
 
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -217,8 +212,8 @@ void v2RDMSolver::TEI() {
                 for (int h2 = 0; h2 < nirrep_; h2++) {
 
                     for (long int k = 0; k < frzcpi_[h2]; k++) {
-                    dum += (2.0 * temptei[(i+offset)*full*full*full+(j+offset)*full*full+(k+offset2)*full+(k+offset2)]
-                        - temptei[(i+offset)*full*full*full+(k+offset2)*full*full+(k+offset2)*full+(j+offset)]);
+                    dum += (2.0 * temptei[(i+offset)*nmo_*nmo_*nmo_+(j+offset)*nmo_*nmo_+(k+offset2)*nmo_+(k+offset2)]
+                        - temptei[(i+offset)*nmo_*nmo_*nmo_+(k+offset2)*nmo_*nmo_+(k+offset2)*nmo_+(j+offset)]);
                     }
 
                     offset2 += nmopi_[h2];
@@ -244,8 +239,8 @@ void v2RDMSolver::TEI() {
         }
     }
 
-    long int na = nalpha_ - nfrzc;
-    long int nb = nbeta_ - nfrzc;
+    long int na = nalpha_ - nfrzc_;
+    long int nb = nbeta_ - nfrzc_;
     for (int h = 0; h < nirrep_; h++) {
         for (long int ij = 0; ij < gems_ab[h]; ij++) {
             long int i = bas_ab_sym[h][ij][0];
@@ -260,7 +255,7 @@ void v2RDMSolver::TEI() {
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = temptei[ii*full*full*full+kk*full*full+jj*full+ll];
+                c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = temptei[ii*nmo_*nmo_*nmo_+kk*nmo_*nmo_+jj*nmo_+ll];
 
                 long int hi = symmetry[i];
                 long int hj = symmetry[j];
@@ -283,18 +278,18 @@ void v2RDMSolver::TEI() {
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*full*full*full+kk*full*full+jj*full+ll];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*full*full*full+ll*full*full+jj*full+kk];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*full*full*full+kk*full*full+ii*full+ll];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*full*full*full+ll*full*full+ii*full+kk];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*nmo_*nmo_*nmo_+kk*nmo_*nmo_+jj*nmo_+ll];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*nmo_*nmo_*nmo_+ll*nmo_*nmo_+jj*nmo_+kk];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*nmo_*nmo_*nmo_+kk*nmo_*nmo_+ii*nmo_+ll];
+                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*nmo_*nmo_*nmo_+ll*nmo_*nmo_+ii*nmo_+kk];
 
                 long int hi = symmetry[i];
                 long int hj = symmetry[j];
 
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*full*full*full+kk*full*full+jj*full+ll];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*full*full*full+ll*full*full+jj*full+kk];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*full*full*full+kk*full*full+ii*full+ll];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*full*full*full+ll*full*full+ii*full+kk];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = 0.5 * temptei[ii*nmo_*nmo_*nmo_+kk*nmo_*nmo_+jj*nmo_+ll];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[ii*nmo_*nmo_*nmo_+ll*nmo_*nmo_+jj*nmo_+kk];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * temptei[jj*nmo_*nmo_*nmo_+kk*nmo_*nmo_+ii*nmo_+ll];
+                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   += 0.5 * temptei[jj*nmo_*nmo_*nmo_+ll*nmo_*nmo_+ii*nmo_+kk];
 
             }
         }
@@ -311,7 +306,7 @@ void v2RDMSolver::TEI() {
         }
     }
 
-    enuc = Process::environment.molecule()->nuclear_repulsion_energy();
+    enuc_ = Process::environment.molecule()->nuclear_repulsion_energy();
     free(temptei);
 }
 

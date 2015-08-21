@@ -70,29 +70,4 @@ boost::shared_ptr<Matrix> v2RDMSolver::GetOEI() {
     return K1;
 }
 
-boost::shared_ptr<Matrix> v2RDMSolver::ReadOEI() {
-
-    boost::shared_ptr<Matrix> K1 (new Matrix("one-electron integrals",nirrep_,nmopi_,nmopi_));
-
-    long int full = amo_ + nfrzc + nfrzv;
-    double * tempoei = (double*)malloc(full*(full+1)/2*sizeof(double));
-    memset((void*)tempoei,'\0',full*(full+1)/2*sizeof(double));
-    boost::shared_ptr<PSIO> psio(new PSIO());
-    psio->open(PSIF_OEI,PSIO_OPEN_OLD);
-    psio->read_entry(PSIF_OEI,"MO-basis One-electron Ints",(char*)&tempoei[0],full*(full+1)/2*sizeof(double));
-    psio->close(PSIF_OEI,1);
-    offset = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (long int i = 0; i < nmopi_[h]; i++) {
-            for (long int j = 0; j < nmopi_[h]; j++) {
-                K1->pointer(h)[i][j] = tempoei[INDEX(i+offset,j+offset)];
-            }
-        }
-        offset += nmopi_[h];
-    }
-    free(tempoei);
-
-    return K1;
-}
-
 }}

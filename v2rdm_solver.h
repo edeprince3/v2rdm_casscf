@@ -52,39 +52,41 @@ class v2RDMSolver: public Wavefunction{
 
   protected:
 
-    boost::shared_ptr<Matrix> saveK1;
-
-    /// S(S+1)
-    double spin_squared;
+    boost::shared_ptr<Matrix> saveOEI_;
 
     /// constrain Q2 to be positive semidefinite?
-    bool constrain_q2;
+    bool constrain_q2_;
 
     /// constrain G2 to be positive semidefinite?
-    bool constrain_g2;
+    bool constrain_g2_;
 
-    /// spin adapt constraints?
-    bool spin_adapt_g2;
-    bool spin_adapt_q2;
+    /// spin adapt g2 constraint?
+    bool spin_adapt_g2_;
+
+    /// spin adapt q2 constraint?
+    bool spin_adapt_q2_;
 
     /// constraint T1 = D3 + Q3 to be positive semidefinite?
-    bool constrain_t1;
+    bool constrain_t1_;
 
     /// constraint T2 = E3 + F3 to be positive semidefinite?
-    bool constrain_t2;
+    bool constrain_t2_;
 
     /// keep d3 positive semidefinite and constrain D3->D2 mapping?
-    bool constrain_d3;
+    bool constrain_d3_;
 
     /// constrain spin?
-    bool constrain_spin;
+    bool constrain_spin_;
 
     /// symmetry product table:
     int * table;
 
     /// returns symmetry product for two orbitals
     int SymmetryPair(int i, int j);
+
+    /// returns symmetry product for four orbitals
     int TotalSym(int i, int j,int k, int l);
+
     int * symmetry;
     int * symmetry_full;
     int * symmetry_plus_core;
@@ -95,33 +97,39 @@ class v2RDMSolver: public Wavefunction{
     int * pitzer_offset_full;      // for orbital indexing within an irrep
     int * pitzer_offset_plus_core; // for orbital indexing within an irrep
 
-    // geminals for each symmetry:
+    /// geminals for each symmetry:
     std::vector < std::vector < std::pair<int,int> > > gems;
     std::vector < std::vector < std::pair<int,int> > > gems_fullspace;
     std::vector < std::vector < std::pair<int,int> > > gems_plus_corespace;
 
     /// total number of active molecular orbitals
     int amo_;
+
+    /// total number of frozen core orbitals
+    int nfrzc_;
+
     /// active molecular orbitals per irrep
     int * amopi_;
 
-    int ndocc,nso,nvirt,ndoccact,nfrzc,nfrzv;
-
     /// total number of constraints (dimension of dual solution vector)
-    long int nconstraints;
+    long int nconstraints_;
 
     /// total number of variables (dimension of primal solution vector)
-    long int dimx;  
+    long int dimx_;  
 
     /// number of auxilliary basis functions
     int nQ_;
+
+    /// read three-index integrals and transform them to MO basis
     void ThreeIndexIntegrals(); 
+
+    /// three-index integral buffer
     double * Qmo_;
 
-    boost::shared_ptr<Matrix> ReadOEI();
+    /// grab one-electron integrals (T+V) in MO basis
     boost::shared_ptr<Matrix> GetOEI();
 
-    // offsets
+    /// offsets
     int * d1aoff;  
     int * d1boff;  
     int * q1aoff;  
@@ -167,13 +175,13 @@ class v2RDMSolver: public Wavefunction{
     /// convergence in conjugate gradient solver
     double cg_convergence_;
 
-    /// maximum number of outer bpsdp iterations
+    /// maximum number of boundary-point SDP (outer) iterations
     int maxiter_;
 
-    /// maximum number of outer conjugate gradient iterations
+    /// maximum number of conjugate gradient (inner) iterations
     int cg_maxiter_;
 
-    // standard vector of dimensions of each block of x
+    /// standard vector of dimensions of each block of primal solution vector
     std::vector<int> dimensions_;
 
     int offset;
@@ -182,7 +190,7 @@ class v2RDMSolver: public Wavefunction{
     void BuildBasis();
     int * full_basis;
 
-    // mapping arrays with symmetry:
+    /// mapping arrays with symmetry:
     int * gems_ab;
     int * gems_aa;
     int * gems_00;
@@ -197,7 +205,7 @@ class v2RDMSolver: public Wavefunction{
     int *** ibas_00_sym;
     int *** ibas_full_sym;
 
-    // triplets for each symmetry:
+    /// triplets for each irrep:
     std::vector < std::vector < boost::tuple<int,int,int> > > triplets;
     int * trip_aaa;
     int * trip_aab;
@@ -210,8 +218,13 @@ class v2RDMSolver: public Wavefunction{
     int **** ibas_aba_sym;
 
     void PrintHeader();
+
+    /// read two-electron integrals, sort the ones we need
     void TEI();
+
+    /// build subset of two-electron integrals from 3-index integrals
     void DF_TEI();
+
     void BuildConstraints();
 
     void Guess();
@@ -248,13 +261,13 @@ class v2RDMSolver: public Wavefunction{
     void T2_tilde_constraints_ATu(SharedVector A,SharedVector u);
     void D3_constraints_ATu(SharedVector A,SharedVector u);
 
+    /// SCF energy
+    double escf_; 
 
-    double g2timeAu,q2timeAu,d2timeAu;
-    double g2timeATu,q2timeATu,d2timeATu;
-    double t2timeAu,t1timeAu;
-    double t2timeATu,t1timeATu;
+    /// nuclear repulsion energy
+    double enuc_; 
 
-    double escf, enuc, efrzc, efrzc1, efrzc2, tau, mu, ed, ep;
+    double tau, mu, ed, ep;
 
     //vectors
     SharedVector Ax;     // vector to hold A . x
@@ -277,22 +290,21 @@ class v2RDMSolver: public Wavefunction{
     int multiplicity_;
 
     /// full space of integrals for MO gradient / Hessian, blocked by symmetry
-    double * tei_full_sym;
-    double * oei_full_sym;
-    // gidofalvi -- modified the type of tei_full_dim so that it is correct for large bases 
-    long int tei_full_dim;
-    int oei_full_dim;
+    double * tei_full_sym_;
+    double * oei_full_sym_;
+    // gidofalvi -- modified the type of tei_full_dim_ so that it is correct for large bases 
+    long int tei_full_dim_;
+    int oei_full_dim_;
 
     /// full space D2, blocked by symmetry
-    double * d2_plus_core_sym;
-    int d2_plus_core_dim;
+    double * d2_plus_core_sym_;
+    int d2_plus_core_dim_;
 
     /// full space D1, blocked by symmetry
-    double * d1_plus_core_sym;
-    int d1_plus_core_dim;
+    double * d1_plus_core_sym_;
+    int d1_plus_core_dim_;
 
     /// unpack active-space density into full-space density
-    void UnpackFullDensity();
     void UnpackDensityPlusCore();
 
     /// repack rotated full-space integrals into active-space integrals 

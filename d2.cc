@@ -66,7 +66,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
     double* A_p = A->pointer();
     double* u_p = u->pointer();
 
-    if ( constrain_spin ) {
+    if ( constrain_spin_ ) {
         // spin
         for (int i = 0; i < amo_; i++){
             for (int j = 0; j < amo_; j++){
@@ -139,8 +139,8 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
         offset += amopi_[h]*amopi_[h];
     }
 
-    int na = nalpha_ - nfrzc;
-    int nb = nbeta_ - nfrzc;
+    int na = nalpha_ - nfrzc_;
+    int nb = nbeta_ - nfrzc_;
 
     int poff = 0;
 
@@ -237,7 +237,7 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
     double* A_p = A->pointer();
     double* u_p = u->pointer();
 
-    if ( constrain_spin ) {
+    if ( constrain_spin_ ) {
         // spin
         double s2 = 0.0;
         for (int i = 0; i < amo_; i++){
@@ -317,8 +317,8 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
         offset += amopi_[h]*amopi_[h];
     }
 
-    int na = nalpha_ - nfrzc;
-    int nb = nbeta_ - nfrzc;
+    int na = nalpha_ - nfrzc_;
+    int nb = nbeta_ - nfrzc_;
     double n = na + nb;
 
     // contraction: D2aa + D2ab -> D1 a
