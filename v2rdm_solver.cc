@@ -125,15 +125,6 @@ void  v2RDMSolver::common_init(){
 
     // multiplicity:
     multiplicity_ = Process::environment.molecule()->multiplicity();
-    if ( options_["MULTIPLICITY"].has_changed() ) {
-        multiplicity_ = options_.get_int("MULTIPLICITY");
-        int ms = (multiplicity_ - 1)/2;
-        if ( nalpha_ != nbeta_ ) {
-            throw PsiException("error: multiplicity keyword only works with na=nb",__FILE__,__LINE__);
-        }
-        nalpha_ += ms;
-        nbeta_  -= ms;
-    }
 
     if (options_["FROZEN_DOCC"].has_changed()) {
         if (options_["FROZEN_DOCC"].size() != nirrep_) {
@@ -261,7 +252,7 @@ void  v2RDMSolver::common_init(){
     // memory is from process::environment        
     memory_ = Process::environment.get_memory();
     // set the wavefunction name
-    name_ = "BPSDP";
+    name_ = "V2RDM CASSCF";
 
     // pick conditions.  default is dqg
     constrain_q2_ = true;
@@ -625,12 +616,6 @@ void  v2RDMSolver::common_init(){
     for ( int h = 0; h < nirrep_; h++) {
         nconstraints_ += amopi_[h]*amopi_[h]; // D1b <-> Q1b
     }
-    //for ( int h = 0; h < nirrep_; h++) {
-    //    nconstraints_ += amopi_[h]*(amopi_[h]+1)/2; // contract D2ab + D2aa -> D1 a
-    //}
-    //for ( int h = 0; h < nirrep_; h++) {
-    //    nconstraints_ += amopi_[h]*(amopi_[h]+1)/2; // contract D2ab + D2bb -> D1 b
-    //}
     for ( int h = 0; h < nirrep_; h++) {
         nconstraints_ += amopi_[h]*amopi_[h]; // contract D2ab        -> D1 a
     }
@@ -694,8 +679,6 @@ void  v2RDMSolver::common_init(){
             for ( int h = 0; h < nirrep_; h++) {
                 nconstraints_ += gems_ab[h]*gems_ab[h]; // G2t_m1
             }
-            // maximal spin constraint
-            //nconstraints_ += 2*nmo*nmo;
         }
     }
     if ( constrain_t1_ ) {
@@ -876,7 +859,7 @@ void  v2RDMSolver::common_init(){
         }
     }
 
-    // bpsdp convergence thresholds:
+    // v2rdm sdp convergence thresholds:
     r_convergence_  = options_.get_double("R_CONVERGENCE");
     e_convergence_  = options_.get_double("E_CONVERGENCE");
     maxiter_        = options_.get_int("MAXITER");

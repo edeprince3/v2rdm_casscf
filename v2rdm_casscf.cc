@@ -57,9 +57,6 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
-        /*- The multiplicity.  This option will override the multiplicity 
-            from the molecule group -*/
-        options.add_int("MULTIPLICITY", 1);
         /*- The type of 2-positivity computation -*/
         options.add_str("POSITIVITY", "DQG", "DQG D DQ DG DQGT1 DQGT2 DQGT1T2");
         /*- Do constrain D3 to D2 mapping? -*/
@@ -74,7 +71,7 @@ int read_options(std::string name, Options& options)
         options.add_double("E_CONVERGENCE", 1e-4);
         /*- convergence in the primal error -*/
         options.add_double("R_CONVERGENCE", 1e-3);
-        /*- convergence for conjugate gradient solver -*/
+        /*- convergence for conjugate gradient solver. currently not used. -*/
         options.add_double("CG_CONVERGENCE", 1e-5);
         /*- maximum number of bpsdp outer iterations -*/
         options.add_int("MAXITER", 10000);
