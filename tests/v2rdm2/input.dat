@@ -1,7 +1,7 @@
 #! cc-pvdz N2 (6,6) active space Test DQG
 
 # job description:
-print '        N2 / cc-pVDZ / DQG(6,6), scf_type = CD / 1e-12, rNN = 0.5 A'
+print '        N2 / cc-pVDZ / DQG(6,6), scf_type = PK, rNN = 1.1 A'
 
 sys.path.insert(0, '../../..')
 import v2rdm_casscf
@@ -14,8 +14,7 @@ n 1 r
 
 set {
   basis cc-pvdz
-  scf_type cd
-  cholesky_tolerance 1e-12
+  scf_type pk
   d_convergence      1e-10
   maxiter 500
   frozen_docc  [ 2, 0, 0, 0, 0, 2, 0, 0 ]
@@ -30,9 +29,9 @@ set v2rdm_casscf {
 
 activate(n2)
 
-n2.r     = 0.5
-refscf   = -103.04337420425341 # TEST
-refv2rdm = -103.086370861461   # TEST
+n2.r     = 1.1
+refscf   = -108.95379624015767 # TEST
+refv2rdm = -109.094829037354   # TEST
 
 energy('v2rdm-casscf')
 
