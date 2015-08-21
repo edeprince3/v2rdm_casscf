@@ -92,8 +92,6 @@ int read_options(std::string name, Options& options)
 
         /*- SUBSECTION JACOBI -*/
 
-        /*- number of threads to use for jacobi rotations -*/
-        options.add_int("JACOBI_NTHREAD",1);
         /*- number of truly frozen orbitals (not optimized by jacobi) -*/
         options.add_int("JACOBI_FROZEN_CORE",0);
         /*- do rotate active/active orbital pairs? -*/

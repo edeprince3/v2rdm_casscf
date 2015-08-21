@@ -1076,8 +1076,14 @@ void  v2RDMSolver::common_init(){
     b      = SharedVector(new Vector("constraints",nconstraints_));
 
     // input/output array for jacobi sweeps
+
+    int nthread = 1;
+    #ifdef _OPENMP
+        nthread = omp_get_max_threads();
+    #endif
+
     jacobi_data_    = (double*)malloc(11*sizeof(double));
-    jacobi_data_[0] = (double)options_.get_int("JACOBI_NTHREAD");
+    jacobi_data_[0] = (double)nthread;
     jacobi_data_[1] = (double)options_.get_bool("JACOBI_ACTIVE_ACTIVE_ROTATIONS");
     jacobi_data_[2] = (double)options_.get_int("JACOBI_FROZEN_CORE");
     jacobi_data_[3] = (double)options_.get_double("JACOBI_ANGLE_TOLERANCE");
