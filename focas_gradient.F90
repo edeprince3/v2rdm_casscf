@@ -8,31 +8,46 @@ module focas_gradient
   subroutine orbital_gradient(int1,int2,den1,den2)
     implicit none
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
+    real(wp) :: t0,t1
 
     ! calculate inactive Fock matrix
+    t0=timer()
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_i(int1,int2)
     else
       call compute_f_i_df(int1,int2)
     endif
+    t1=timer()
+    write(*,*)'f_i',t1-t0
 
     ! calculate active Fock matrix
+    t0=timer()
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_a(den1,int2)
     else
       call compute_f_a_df(den1,int2)
     endif
+    t1=timer()
+    write(*,*)'f_a',t1-t0
+
 
     ! calculate auxiliary q matrix
+    t0=timer()
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_q(den2,int2)
     else
       call compute_q_df(den2,int2)
     endif
+    t1=timer()
+    write(*,*)'q',t1-t0
+
  
     ! calculate auxiliary z matrix
+    t0=timer()
     call compute_z(den1)
- 
+    t1=timer()
+    write(*,*)'z',t1-t0 
+
     ! compute gradient
     call compute_orbital_gradient()
 
@@ -407,25 +422,40 @@ module focas_gradient
     ! Because only those D2 elements with all four indeces \in A are nonzero, we have v \in A
     ! Also, m is a general orbital index && sym_m == sym_v
     real(wp), intent(in) :: den2(:),int2(:)
-    integer :: mw_sym,x_sym,y_sym,w_sym,m_sym,m_class,m,v,w,x,y,mdf,vdf,wdf,xdf,ydf
+    integer :: mw_sym,x_sym,y_sym,w_sym,m_sym,m_class,m,v,w,x,y,mdf,wdf,xdf,ydf
     integer :: xy_den,vw_den
     integer(ip) :: mw,xy,nQ
-    integer :: den_ind,den_sym_offset
+    integer :: den_ind,den_sym_offset,int_col,int_row,y_last
+    integer :: imw,ixy
+    integer :: max_nmopi,max_ngempi,error
     real(wp) :: val,int_val,ddot
     real(wp) :: v_mw(df_vars_%nQ)
 
+    type sym_block
+      real(wp), allocatable :: mw_df(:,:)
+      real(wp), allocatable :: xy_df(:,:)
+      real(wp), allocatable :: ints(:,:)
+    end type sym_block
+
+    type(sym_block) :: gaaa(nirrep_)
+
     nQ = int(df_vars_%nQ,kind=ip)
+
+    max_nmopi  = maxval(nactpi_)
+    max_ngempi = max_nmopi * max_nmopi 
+
+    error = allocate_gaaa()
 
     ! initialize
     q_ = 0.0_wp
 
-    ! loop over classes for m
+    ! loop over symmetries for m
 
-    do m_class = 1 , 3
+    do m_sym = 1 , nirrep_
 
-      ! loop over symmetries for m
+      ! loop over classes for m
 
-      do m_sym = 1 , nirrep_
+      do m_class = 1 , 3
 
         ! loop over orbital index m
 
@@ -435,18 +465,82 @@ module focas_gradient
 
           mdf = df_vars_%class_to_df_map(m)
 
+          ! *************************************
+          ! gather df integrals (:|mw) and (:|xy)
+          ! *************************************
+
+          do w_sym = 1 , nirrep_
+
+            if ( nactpi_(w_sym) == 0 ) cycle
+    
+            imw = 0    
+
+            mw_sym = group_mult_tab_(m_sym,w_sym)
+
+            do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+ 
+              wdf = df_vars_%class_to_df_map(w)
+ 
+              mw  = df_pq_index(wdf,mdf)
+
+              imw = imw + 1
+
+              call dcopy(nQ,int2(mw+1:mw+nQ),1,gaaa(w_sym)%mw_df(:,imw),1)
+
+            end do ! end w loop
+
+            ixy = 0
+
+            do x_sym = 1 , nirrep_
+
+              y_sym = group_mult_tab_(x_sym,mw_sym)
+ 
+              if ( y_sym > x_sym ) cycle
+
+              do x = first_index_(x_sym,2) , last_index_(x_sym,2) 
+
+                xdf = df_vars_%class_to_df_map(x)
+
+                y_last = last_index_(y_sym,2)
+                if ( y_sym == x_sym ) y_last = x
+
+                do y = first_index_(y_sym,2) , y_last
+
+                  ydf     = df_vars_%class_to_df_map(y)
+
+                  xy      = df_pq_index(xdf,ydf)
+
+                  ixy     = ixy + 1
+
+                  call dcopy(df_vars_%nQ,int2(xy+1:xy+nQ),1,gaaa(w_sym)%xy_df(:,ixy),1)
+
+                end do ! end y loop  
+
+              end do ! end x loop
+
+            end do ! end x_sym loop
+
+            if ( ixy == 0 ) cycle
+
+            ! *******************************************************************************************
+            ! multiply 3-index integral matrices to get the 4-index integrals (xy|mw) for all w,x,y \in A
+            ! *******************************************************************************************
+
+            call dgemm('t','n',ixy,imw,df_vars_%nQ,         &
+                     & 1.0_wp,gaaa(w_sym)%xy_df(:,1:ixy),df_vars_%nQ,&
+                     &        gaaa(w_sym)%mw_df(:,1:imw),df_vars_%nQ,&
+                     & 0.0_wp,gaaa(w_sym)%ints,nirrep_*max_ngempi)
+
+          end do ! end w_sym loop
+
           ! loop over orbital index v
 
 #ifdef OMP
 !$omp parallel shared(m_class,nQ,m_sym,m,mdf,first_index_,last_index_,df_vars_,den2,int2,dens_,q_) num_threads(nthread_use_)
-!$omp do private(val,v,v_mw,vdf,w_sym,mw_sym,den_Sym_offset,w,wdf,mw,vw_den,x_sym,y_sym,x,y,xdf,ydf,xy,xy_den,den_ind,int_val)
+!$omp do private(ixy,imw,val,v,w_sym,mw_sym,den_sym_offset,w,vw_den,x_sym,y_sym,x,y,xy_den,den_ind,int_val)
 #endif
 
           do v = first_index_(m_sym,2) , last_index_(m_sym,2)
-
-            ! v index in df order
-
-            vdf = df_vars_%class_to_df_map(v)
 
             ! initialize matrix element
   
@@ -455,6 +549,8 @@ module focas_gradient
             ! loop over symmetries for w
 
             do w_sym = 1 , nirrep_
+
+              imw = 0
 
               ! symmetry of mw geminal
 
@@ -468,16 +564,10 @@ module focas_gradient
  
               do w = first_index_(w_sym,2) , last_index_(w_sym,2)
 
-                ! w indef in df order
-           
-                wdf    = df_vars_%class_to_df_map(w)
+                ixy = 0   
 
-                ! mw geminal index in df order
+                imw = imw + 1
 
-                mw     = df_pq_index(mdf,wdf) 
-
-                call dcopy(df_vars_%nQ,int2(mw+1:mw+nQ),1,v_mw,1)
-              
                 ! vw geminal index for density
 
                 vw_den = dens_%gemind(v,w)
@@ -496,19 +586,13 @@ module focas_gradient
  
                     do x = first_index_(x_sym,2) , last_index_(x_sym,2)
 
-                      ! x index in df order
-     
-                      xdf = df_vars_%class_to_df_map(x)
-
                       ! ***********************************************
                       ! loop over y orbital index (x>y) --> factor of 2
                       ! ***********************************************
 
                       do y = first_index_(y_sym,2) , x - 1
 
-                        ! y index in df order
-                        
-                        ydf     = df_vars_%class_to_df_map(y)
+                        ixy = ixy + 1
 
                         ! xy geminal index and density index
 
@@ -518,11 +602,9 @@ module focas_gradient
                         ! xy geminal index in df order
                         xy  = df_pq_index(xdf,ydf)   
 
-                        int_val = ddot(df_vars_%nQ,v_mw,1,int2(xy+1:xy+nQ),1)
-
                         ! update matrix element
 
-                        val = val + 2.0_wp * int_val * den2(den_ind)
+                        val = val + 2.0_wp * gaaa(w_sym)%ints(ixy,imw) * den2(den_ind)
 
                       end do ! end y loop
 
@@ -533,14 +615,14 @@ module focas_gradient
                       xy_den  = dens_%gemind(x,x)
                       den_ind = pq_index(vw_den,xy_den) + den_sym_offset
 
+                      ixy = ixy + 1
+
                       ! xy geminal index in df order
                       xy  = df_pq_index(xdf,xdf) 
 
-                      int_val = ddot(df_vars_%nQ,v_mw,1,int2(xy+1:xy+nQ),1)
-
                       ! update matrix element
 
-                      val = val + int_val * den2(den_ind)
+                      val = val + gaaa(w_sym)%ints(ixy,imw) * den2(den_ind)
 
                     end do ! end x loop
 
@@ -550,19 +632,12 @@ module focas_gradient
 
                     do x = first_index_(x_sym,2) , last_index_(x_sym,2)
 
-                      ! x index in df order
-
-                      xdf = df_vars_%class_to_df_map(x)
 
                       ! ***********************************************
                       ! loop over y orbital index (x>y) --> factor of 2
                       ! ***********************************************
 
                       do y = first_index_(y_sym,2) , last_index_(y_sym,2)
-
-                        ! y index in df order
-
-                        ydf     = df_vars_%class_to_df_map(y)
 
                         ! xy geminal index and density index
 
@@ -572,11 +647,11 @@ module focas_gradient
                         ! xy geminal index in df order
                         xy  = df_pq_index(xdf,ydf) 
 
-                        int_val = ddot(df_vars_%nQ,v_mw,1,int2(xy+1:xy+nQ),1)
+                        ixy = ixy + 1
 
                         ! update matrix element
 
-                        val = val + 2.0_wp * int_val * den2(den_ind)
+                        val = val + 2.0_wp * gaaa(w_sym)%ints(ixy,imw) * den2(den_ind)
 
                       end do ! end y loop
 
@@ -603,11 +678,51 @@ module focas_gradient
 
         end do ! end m loop
 
-      end do ! end m_sym loop 
+      end do ! end m_class loop 
 
-    end do ! end m_class loop
+    end do ! end m_sym loop
+ 
+    error = deallocate_gaaa()
 
     return
+
+    contains
+
+      integer function allocate_gaaa()
+
+        implicit none
+
+        integer :: w_sym
+
+        do w_sym = 1 , nirrep_
+
+          if ( nactpi_(w_sym) == 0 ) cycle
+ 
+          allocate(gaaa(w_sym)%mw_df(df_vars_%nQ,nactpi_(w_sym)))
+          allocate(gaaa(w_sym)%xy_df(df_vars_%nQ,nirrep_*max_ngempi))
+          allocate(gaaa(w_sym)%ints(nirrep_*max_ngempi,max_nmopi)) 
+
+        end do
+ 
+        allocate_gaaa = 0
+
+      end function allocate_gaaa
+
+      integer function deallocate_gaaa
+
+        integer :: w_sym
+
+        do w_sym = 1 , nirrep_       
+
+          if (allocated(gaaa(w_sym)%mw_df)) deallocate(gaaa(w_sym)%mw_df)
+          if (allocated(gaaa(w_sym)%xy_df)) deallocate(gaaa(w_sym)%xy_df)
+          if (allocated(gaaa(w_sym)%ints))  deallocate(gaaa(w_sym)%ints)
+
+        end do
+
+        deallocate_gaaa = 0
+
+      end function deallocate_gaaa 
 
   end subroutine compute_q_df
 

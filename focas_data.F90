@@ -86,6 +86,7 @@ module focas_data
     real(wp), allocatable :: c(:)                                  ! coefficent vector for DIIS interpolation
     integer, allocatable  :: ip(:)                                 ! temporary matrix used during solution of A * x = c
     real(wp), allocatable :: dP(:,:)                               ! dP vectors (npair,max_num_diis)
+    real(wp), allocatable :: P(:,:)
   end type diis_info
 
   ! *** allocatable derived types
@@ -100,14 +101,11 @@ module focas_data
   type(rot_info)   :: rot_pair_                                    ! info for rotation pair indexing
   type(df_info)    :: df_vars_
 
-  ! *** indexing arrays
-
-  integer :: ndocpi_(max_nirrep_)                                  ! number of doubly occupied orbitals per irrep
-  integer :: nactpi_(max_nirrep_)                                  ! number of active orbitals per irrep
-  integer :: nextpi_(max_nirrep_)                                  ! number of external orbitals per irrep
-
   ! *** allocatable orbital index arrays
 
+  integer, allocatable :: ndocpi_(:)                               ! number of doubly occupied orbitals per irrep
+  integer, allocatable :: nactpi_(:)                               ! number of active orbitals per irrep
+  integer, allocatable :: nextpi_(:)                               ! number of external orbitals per irrep  
   integer, allocatable :: first_index_(:,:)                        ! index of first orbital in this class and irrep (nirrep,3)
   integer, allocatable :: last_index_(:,:)                         ! index of last orbital in this class and irrep (nirrep,3)
   integer, allocatable :: orb_sym_scr_(:)                          ! scratch array to store the symmetries of orbitals

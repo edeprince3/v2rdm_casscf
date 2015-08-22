@@ -44,6 +44,8 @@ module focas_driver
     ! other variables
     logical :: fexist
 
+!    real(wp), allocatable :: P(:)
+
     ! set up variables based on input jacobi_data
     nthread_use_                = int(orbopt_data(1))
     include_aa_rot_             = int(orbopt_data(2))
@@ -110,6 +112,8 @@ module focas_driver
     ! *** at this point, everything is allocated and we are ready to do the optimization
     ! **********************************************************************************
 
+!    allocate(P(rot_pair_%n_tot))
+!    P = 0.0_wp
 
     last_energy             = 0.0_wp
     max_iter                = 20
@@ -151,9 +155,17 @@ module focas_driver
       ! update kappa_
       step_size = 1.0_wp
       kappa_    = - step_size * orbital_gradient_
+!      P = P + kappa_
 
       ! possible DIIS extrapolation
-      if ( diis_%do_diis == 1 ) call diis_extrapolate(-kappa_)
+
+!      write(*,*)'before'
+!      write(*,*)P
+!
+!      if ( diis_%do_diis == 1 ) call diis_extrapolate(P,-kappa_)
+!
+!      write(*,*)'after',diis_%do_diis
+!      write(*,*)kappa_
 
       t1 = timer()
       t_gh = t1 - t0
@@ -193,6 +205,8 @@ module focas_driver
         write(fid_,'(a)')'gradient descent did not converge'
       endif
     endif
+
+    stop
 
     orbopt_data(10) = real(iter,kind=wp)
     orbopt_data(11) = grad_norm_
@@ -413,9 +427,15 @@ module focas_driver
     allocate(first_index_(nirrep_,3))
     allocate(last_index_(nirrep_,3))
     allocate(orb_sym_scr_(nmo_tot_))
+    allocate(ndocpi_(nirrep_))
+    allocate(nactpi_(nirrep_))
+    allocate(nextpi_(nirrep_))
     first_index_ = 0
     last_index_  = 0
     orb_sym_scr_ = 0
+    ndocpi_      = 0
+    nactpi_      = 0
+    nextpi_      =0
     return 
   end subroutine allocate_indexing_arrays
 
@@ -435,6 +455,9 @@ module focas_driver
     if (allocated(first_index_)) deallocate(first_index_)
     if (allocated(last_index_))  deallocate(last_index_)
     if (allocated(orb_sym_scr_)) deallocate(orb_sym_scr_)
+    if (allocated(ndocpi_))      deallocate(ndocpi_)
+    if (allocated(nactpi_))      deallocate(nactpi_)
+    if (allocated(nextpi_))      deallocate(nextpi_)    
     call deallocate_indexing_arrays_help(dens_)
     call deallocate_indexing_arrays_help(ints_)
     return
@@ -483,6 +506,10 @@ module focas_driver
     do irrep=1,nirrep_
       last_index_(irrep,3) = first_index_(irrep,3) + nextpi(irrep)-1
     end do
+    ! determine number of orbitals per irrep for each class
+    ndocpi_ = last_index_(:,1) - first_index_(:,1) + 1
+    nactpi_ = last_index_(:,2) - first_index_(:,2) + 1
+    nextpi_ = last_index_(:,3) - first_index_(:,3) + 1
     ! ** save orbital symmetries so that we can set up geminal indices **
     do oclass=1,3
       do irrep=1,nirrep_
