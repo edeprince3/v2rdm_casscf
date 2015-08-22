@@ -21,7 +21,7 @@ psi4 --new-plugin-makefile
 sed -i -e "s|LDFLAGS +=|LDFLAGS += ${F90_LIB}|g" Makefile
 sed -i -e "s|BINOBJ = |BINOBJ = *.o |g" Makefile
 
-#make clean
+make clean
 
 ${F90} ${F90_FLAGS} focas_data.F90 -c
 ${F90} ${F90_FLAGS} focas_diis.F90 focas_data.o -c
