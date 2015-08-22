@@ -206,7 +206,7 @@ module focas_driver
       endif
     endif
 
-    stop
+!    stop
 
     orbopt_data(10) = real(iter,kind=wp)
     orbopt_data(11) = grad_norm_

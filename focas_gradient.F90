@@ -18,7 +18,7 @@ module focas_gradient
       call compute_f_i_df(int1,int2)
     endif
     t1=timer()
-    write(*,*)'f_i',t1-t0
+!    write(*,*)'f_i',t1-t0
 
     ! calculate active Fock matrix
     t0=timer()
@@ -28,7 +28,7 @@ module focas_gradient
       call compute_f_a_df(den1,int2)
     endif
     t1=timer()
-    write(*,*)'f_a',t1-t0
+!    write(*,*)'f_a',t1-t0
 
 
     ! calculate auxiliary q matrix
@@ -39,14 +39,16 @@ module focas_gradient
       call compute_q_df(den2,int2)
     endif
     t1=timer()
-    write(*,*)'q',t1-t0
+!    write(*,*)'q',t1-t0
 
  
     ! calculate auxiliary z matrix
     t0=timer()
     call compute_z(den1)
     t1=timer()
-    write(*,*)'z',t1-t0 
+!    write(*,*)'z',t1-t0 
+
+  !  stop
 
     ! compute gradient
     call compute_orbital_gradient()
