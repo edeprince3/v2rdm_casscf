@@ -200,6 +200,25 @@ module focas_data
       return
     end function df_ga_index
 
+    pure function df_gd_index(g,d,d_sym)
+! function to return the column index of df(:,ga) where 
+! g is a general index and d is an doubly-occupied index
+! assumes that for each general index g, all the d indeces are stored in contiguous order
+      integer, intent(in)  :: g,d,d_sym
+      integer  :: d_i,g_i,df_gd_index
+
+      ! adjust for the number of doubly-ococcupied orbital in this irrep
+      d_i = trans_%class_to_irrep_map(d)
+
+      ! orbital index within irrep
+      g_i = trans_%class_to_irrep_map(g)
+
+
+      df_gd_index = ( g_i - 1 ) * ndocpi_(d_sym) + d_i
+
+      return
+    end function df_gd_index
+
     pure function df_pq_index(i,j)
 ! this function computes the two-electron index index (lower triangular reference)
 ! index = ii*(ii+1)/2+jj where ii=max(i,j) and jj=min(i,j)
