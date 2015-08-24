@@ -158,6 +158,48 @@ module focas_data
       end if
     end function pq_index
 
+    pure function df_aa_index(g,a,a_sym)
+! function to return the column index of df(:,ga) where 
+! both g & a are an active orbitals (LT storage)
+      integer, intent(in)  :: g,a,a_sym
+      integer  :: a_i,g_i,df_aa_index
+
+      ! adjust for the number of doubly-ococcupied orbital in this irrep
+      a_i = trans_%class_to_irrep_map(a)-ndocpi_(a_sym)
+
+      ! orbital index within irrep
+      g_i = trans_%class_to_irrep_map(g)-ndocpi_(a_sym)
+
+      if (a_i.ge.g_i) then
+        df_aa_index=ishft(a_i*(a_i-1),-1)+g_i
+        return
+      else
+        df_aa_index=ishft(g_i*(g_i-1),-1)+a_i
+        return
+      end if
+
+      return
+    end function df_aa_index
+
+    pure function df_ga_index(g,a,a_sym)
+! function to return the column index of df(:,ga) where 
+! g is a general index and a is an active index
+! assumes that for each general index g, all the a indeces are stored in contiguous order
+      integer, intent(in)  :: g,a,a_sym
+      integer  :: a_i,g_i,df_ga_index
+
+      ! adjust for the number of doubly-ococcupied orbital in this irrep
+      a_i = trans_%class_to_irrep_map(a)-ndocpi_(a_sym)
+
+      ! orbital index within irrep
+      g_i = trans_%class_to_irrep_map(g)
+
+
+      df_ga_index = ( g_i - 1 ) * nactpi_(a_sym) + a_i
+
+      return
+    end function df_ga_index
+
     pure function df_pq_index(i,j)
 ! this function computes the two-electron index index (lower triangular reference)
 ! index = ii*(ii+1)/2+jj where ii=max(i,j) and jj=min(i,j)
