@@ -88,7 +88,7 @@ void v2RDMSolver::DF_TEI() {
     }
     d1_plus_core_dim_ = 0;
     for ( int h = 0; h < nirrep_; h++) {
-        d1_plus_core_dim_ += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
+        d1_plus_core_dim_ += (rstdpi_[h] + frzcpi_[h] + amopi_[h]) * ( rstdpi_[h] + frzcpi_[h] + amopi_[h] + 1 ) / 2;
     }
     oei_full_sym_ = (double*)malloc(oei_full_dim_*sizeof(double));
     d1_plus_core_sym_  = (double*)malloc(d1_plus_core_dim_*sizeof(double));
@@ -161,7 +161,7 @@ void v2RDMSolver::TEI() {
     }
     d1_plus_core_dim_ = 0;
     for ( int h = 0; h < nirrep_; h++) {
-        d1_plus_core_dim_ += (frzcpi_[h] + amopi_[h]) * ( frzcpi_[h] + amopi_[h] + 1 ) / 2;
+        d1_plus_core_dim_ += (rstdpi_[h] + frzcpi_[h] + amopi_[h]) * ( rstdpi_[h] + frzcpi_[h] + amopi_[h] + 1 ) / 2;
     }
     oei_full_sym_ = (double*)malloc(oei_full_dim_*sizeof(double));
     d1_plus_core_sym_  = (double*)malloc(d1_plus_core_dim_*sizeof(double));
@@ -182,12 +182,12 @@ void v2RDMSolver::TEI() {
     efzc_ = 0.0;
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
-        for (long int i = 0; i < frzcpi_[h]; i++) {
+        for (long int i = 0; i < rstdpi_[h] + frzcpi_[h]; i++) {
             efzc_ += 2.0 * K1->pointer(h)[i][i];
 
         long int offset2 = 0;
             for (int h2 = 0; h2 < nirrep_; h2++) {
-          for (long int j = 0; j < frzcpi_[h2]; j++) {
+          for (long int j = 0; j < rstdpi_[h2] + frzcpi_[h2]; j++) {
                     efzc_ += (2.0 * temptei[(i+offset)*n3+(i+offset) *n2+(j+offset2)*(long int)nmo_+(j+offset2)]
                                   - temptei[(i+offset)*n3+(j+offset2)*n2+(i+offset) *(long int)nmo_+(j+offset2)]);
                 }
@@ -199,15 +199,15 @@ void v2RDMSolver::TEI() {
 
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
-        for (long int i = frzcpi_[h]; i < nmopi_[h] - frzvpi_[h]; i++) {
-            for (long int j = frzcpi_[h]; j < nmopi_[h] - frzvpi_[h]; j++) {
+        for (long int i = rstdpi_[h] + frzcpi_[h]; i < nmopi_[h] - rstupi_[h] - frzvpi_[h]; i++) {
+            for (long int j = rstdpi_[h] + frzcpi_[h]; j < nmopi_[h] - rstupi_[h] - frzvpi_[h]; j++) {
 
                 double dum = 0.0;
 
                 int offset2 = 0;
                 for (int h2 = 0; h2 < nirrep_; h2++) {
 
-                    for (long int k = 0; k < frzcpi_[h2]; k++) {
+                    for (long int k = 0; k < rstdpi_[h2] + frzcpi_[h2]; k++) {
                     dum += (2.0 * temptei[(i+offset)*n3+(j+offset) *n2+(k+offset2)*(long int)nmo_+(k+offset2)]
                                 - temptei[(i+offset)*n3+(k+offset2)*n2+(k+offset2)*(long int)nmo_+(j+offset)]);
                     }
@@ -229,14 +229,14 @@ void v2RDMSolver::TEI() {
                 //c_p[d1aoff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = K1->pointer(h)[i][j];
                 //c_p[d1boff[h] + (i-frzcpi_[h])*amopi_[h] + (j-frzcpi_[h])] = K1->pointer(h)[i][j];
 
-                c_p[d1aoff[h] + i*amopi_[h] + j] = K1->pointer(h)[i+frzcpi_[h]][j+frzcpi_[h]];
-                c_p[d1boff[h] + i*amopi_[h] + j] = K1->pointer(h)[i+frzcpi_[h]][j+frzcpi_[h]];
+                c_p[d1aoff[h] + i*amopi_[h] + j] = K1->pointer(h)[i + rstdpi_[h] + frzcpi_[h]][j+rstdpi_[h] + frzcpi_[h]];
+                c_p[d1boff[h] + i*amopi_[h] + j] = K1->pointer(h)[i + rstdpi_[h] + frzcpi_[h]][j+rstdpi_[h] + frzcpi_[h]];
             }
         }
     }
 
-    long int na = nalpha_ - nfrzc_;
-    long int nb = nbeta_ - nfrzc_;
+    long int na = nalpha_ - nrstd_ - nfrzc_;
+    long int nb = nbeta_ - nrstd_ - nfrzc_;
     for (int h = 0; h < nirrep_; h++) {
         for (long int ij = 0; ij < gems_ab[h]; ij++) {
             long int i = bas_ab_sym[h][ij][0];

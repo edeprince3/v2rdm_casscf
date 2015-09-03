@@ -94,8 +94,6 @@ int read_options(std::string name, Options& options)
 
         /* flag to optimize orbitals using a one-step type approach */
         options.add_int("ORBOPT_ONE_STEP",1);
-        /*- number of truly frozen orbitals (not optimized by orbital optimization) -*/
-        options.add_int("ORBOPT_FROZEN_CORE",0);
         /*- do rotate active/active orbital pairs? -*/
         options.add_bool("ORBOPT_ACTIVE_ACTIVE_ROTATIONS",false);
         /*- convergence in gradient norm -*/

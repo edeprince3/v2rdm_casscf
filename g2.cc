@@ -473,8 +473,8 @@ void v2RDMSolver::G2_constraints_Au_spin_adapted(SharedVector A,SharedVector u){
         offset += gems_ab[h]*gems_ab[h];
     }
     // contraction condition:
-    /*int na = nalpha_ - nfrzc;
-    int nb = nbeta_ - nfrzc;
+    /*int na = nalpha_ - nrstd_ - nfrzc_;
+    int nb = nbeta_ - nrstd_ - nfrzc_;
     int ms = (multiplicity_ - 1)/2;
     for (int h = 0; h < nirrep_; h++) {
         for (int klg = 0; klg < gems_ab[h]; klg++) {
@@ -795,8 +795,8 @@ void v2RDMSolver::G2_constraints_ATu_spin_adapted(SharedVector A,SharedVector u)
         offset += gems_ab[h]*gems_ab[h];
     }
     // contraction condition:
-    /*int na = nalpha_ - nfrzc;
-    int nb = nbeta_ - nfrzc;
+    /*int na = nalpha_ - nrstd_ - nfrzc_;
+    int nb = nbeta_ - nrstd_ - nfrzc_;
     int ms = (multiplicity_ - 1)/2;
     for (int h = 0; h < nirrep_; h++) {
         for (int klg = 0; klg < gems_ab[h]; klg++) {
