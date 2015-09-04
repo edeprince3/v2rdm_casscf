@@ -164,7 +164,7 @@ void  v2RDMSolver::common_init(){
         }
     }
     if (options_["FROZEN_UOCC"].has_changed()) {
-        throw PsiException("FROZEN_UOCC is currently disabled.",__FILE__,__LINE__);
+        //throw PsiException("FROZEN_UOCC is currently disabled.",__FILE__,__LINE__);
         if (options_["FROZEN_UOCC"].size() != nirrep_) {
             throw PsiException("The FROZEN_UOCC array has the wrong dimensions_",__FILE__,__LINE__);
         }
@@ -2899,6 +2899,7 @@ void v2RDMSolver::RotateOrbitals(){
     // notes for truly frozen virtuals:
     // 1.  orbopt_transformation_matrix_ should exclude frozen virtuals
     // 2.  oei_full_dim_, tei_full_dim_ should exclude frozen virtuals
+    // 3.  does symmetry_energy_order need to be the right length?
 
     OrbOpt(orbopt_transformation_matrix_,
           oei_full_sym_,oei_full_dim_,tei_full_sym_,tei_full_dim_,
