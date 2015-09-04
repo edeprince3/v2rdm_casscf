@@ -20,10 +20,12 @@
  *@END LICENSE
  */
 
-#include"psi4-dec.h"
-#include<psifiles.h>
-#include<libiwl/iwl.h>
+#include "psi4-dec.h"
+#include <psifiles.h>
+#include <libiwl/iwl.h>
 #include <libpsio/psio.hpp>
+#include <libtrans/integraltransform.h>
+
 #include "v2rdm_solver.h"
 
 using namespace psi;
@@ -31,14 +33,6 @@ using namespace psi;
 
 
 namespace psi{namespace v2rdm_casscf{
-
-// position in a symmetric packed matrix
-long int Position(long int i,long int j){
-  if (i<j){
-    return ((j*(j+1))>>1)+i;
-  }
-  return ((i*(i+1))>>1)+j;
-}
 
 void ReadAllIntegrals(iwlbuf *Buf,double*tei,int nmo) {
 
@@ -63,9 +57,9 @@ void ReadAllIntegrals(iwlbuf *Buf,double*tei,int nmo) {
       r = (ULI) lblptr[idx++];
       s = (ULI) lblptr[idx++];
 
-      pq   = Position(p,q);
-      rs   = Position(r,s);
-      pqrs = Position(pq,rs);
+      pq   = INDEX(p,q);
+      rs   = INDEX(r,s);
+      pqrs = INDEX(pq,rs);
 
       double val = (double)valptr[Buf->idx];
 
@@ -92,9 +86,9 @@ void ReadAllIntegrals(iwlbuf *Buf,double*tei,int nmo) {
           r = (ULI) lblptr[idx++];
           s = (ULI) lblptr[idx++];
 
-          pq   = Position(p,q);
-          rs   = Position(r,s);
-          pqrs = Position(pq,rs);
+          pq   = INDEX(p,q);
+          rs   = INDEX(r,s);
+          pqrs = INDEX(pq,rs);
 
           double val = (double)valptr[Buf->idx];
 

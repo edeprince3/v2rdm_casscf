@@ -107,8 +107,8 @@ void  v2RDMSolver::common_init(){
         is_df_ = true;
     }
 
-    // This function is a copy of common_init() from SDPSolver
-    escf_      = reference_wavefunction_->reference_energy();
+    enuc_     = Process::environment.molecule()->nuclear_repulsion_energy();
+    escf_     = reference_wavefunction_->reference_energy();
     nalpha_   = reference_wavefunction_->nalpha();
     nbeta_    = reference_wavefunction_->nbeta();
     nalphapi_ = reference_wavefunction_->nalphapi();
@@ -1027,17 +1027,12 @@ void  v2RDMSolver::common_init(){
 
     // for casscf, need d2 and 3- or 4-index integrals
 
-    // allocate memory for full ERI tensor blocked by symmetry for Greg
-    tei_full_dim_ = 0;
+    // storage requirements for full d2
     for (int h = 0; h < nirrep_; h++) {
-        tei_full_dim_ += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+        tot += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
     }
-    d2_plus_core_dim_ = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        d2_plus_core_dim_ += gems_plus_core[h] * ( gems_plus_core[h] + 1 ) / 2;
-    }
-    tot += d2_plus_core_dim_;
     if ( is_df_ ) {
+        // storage requirements for df integrals
         nQ_ = Process::environment.globals["NAUX (SCF)"];
         if ( options_.get_str("SCF_TYPE") == "DF" ) {
             boost::shared_ptr<BasisSet> primary = BasisSet::pyconstruct_orbital(molecule_,
@@ -1052,11 +1047,10 @@ void  v2RDMSolver::common_init(){
         }
         tot += (long int)nQ_*(long int)nmo_*((long int)nmo_+1)/2;
     }else {
-        tei_full_dim_ = 0;
+        // storage requirements for four-index integrals
         for (int h = 0; h < nirrep_; h++) {
-            tei_full_dim_ += gems_full[h] * ( gems_full[h] + 1 ) / 2;
+            tot += (long int)gems_full[h] * ( (long int)gems_full[h] + 1L ) / 2L;
         }
-        tot += tei_full_dim_;
         tot += nmo_*nmo_*nmo_*nmo_; // for four-index integrals stored stupidly 
     }
     
@@ -2374,10 +2368,6 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                         int iifull = ibas_full_sym[0][ifull][ifull];
                         int jjfull = ibas_full_sym[0][jfull][jfull];
 
-                        //if ( fabs(d2_plus_core_sym_[INDEX(iifull,jjfull)]) < 1e-10 ) {
-                        //    en += tei_full_sym_[INDEX(iifull,jjfull)];
-                        //}
-
                         d2_plus_core_sym_[INDEX(iifull,jjfull)] =  1.0;
 
                     }else {
@@ -2385,25 +2375,14 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                         int iifull = ibas_full_sym[0][ifull][ifull];
                         int jjfull = ibas_full_sym[0][jfull][jfull];
 
-                        //if ( fabs(d2_plus_core_sym_[INDEX(iifull,jjfull)]) < 1e-10 ) {
-                        //    en += 4.0 * tei_full_sym_[INDEX(iifull,jjfull)];
-                        //}
-
                         d2_plus_core_sym_[INDEX(iifull,jjfull)] =  4.0;
 
-                        int offset2 = 0;
-                        for (int myh = 0; myh < hij; myh++) {
-                            offset2 += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
-                        }
                         offset = 0;
                         for (int myh = 0; myh < hij; myh++) {
                             offset += gems_plus_core[myh] * ( gems_plus_core[myh] + 1 ) / 2;
                         }
 
                         int ijfull = ibas_full_sym[hij][ifull][jfull];
-                        //if ( fabs(d2_plus_core_sym_[offset + INDEX(ijfull,ijfull)]) < 1e-10 ) {
-                        //    en -= 2.0 * tei_full_sym_[offset2 + INDEX(ijfull,ijfull)];
-                        //}
 
                         d2_plus_core_sym_[offset + INDEX(ijfull,ijfull)] = -2.0;
                     }
@@ -2549,7 +2528,7 @@ void v2RDMSolver::RepackIntegralsDF(){
             }
         }
         offset += nmopi_[h] - frzvpi_[h];
-        offset3 += (nmopi_[h] - frzvpi_[h]) * (nmopi_[h]-frzvpi_[h] + 1 ) / 2;
+        offset3 += ( nmopi_[h] - frzvpi_[h] ) * ( nmopi_[h] - frzvpi_[h] + 1 ) / 2;
     }
 
     double* c_p = c->pointer();
@@ -2584,7 +2563,7 @@ void v2RDMSolver::RepackIntegralsDF(){
             }
         }
         offset += nmopi_[h] - frzvpi_[h];
-        offset3 += (nmopi_[h] - frzvpi_[h]) * (nmopi_[h]-frzvpi_[h]+1)/2;
+        offset3 += ( nmopi_[h] - frzvpi_[h] ) * ( nmopi_[h] - frzvpi_[h] + 1 ) / 2;
     }
 
     // two-electron part
@@ -2664,7 +2643,7 @@ void v2RDMSolver::RepackIntegrals(){
 
                     int myoff = 0;
                     for (int myh = 0; myh < hij; myh++) {
-                        myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
+                        myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
                     }
                     efzc_ += (2.0 * tei_full_sym_[INDEX(ii,jj)] - tei_full_sym_[myoff + INDEX(ij,ij)]);
                 }
@@ -2704,7 +2683,7 @@ void v2RDMSolver::RepackIntegrals(){
 
                         int myoff = 0;
                         for (int myh = 0; myh < hik; myh++) {
-                            myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
+                            myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
                         }
 
                         dum += (2.0 * tei_full_sym_[INDEX(ij,kk)] - tei_full_sym_[myoff+INDEX(ik,jk)]);
@@ -2749,7 +2728,7 @@ void v2RDMSolver::RepackIntegrals(){
 
                 int myoff = 0;
                 for (int myh = 0; myh < hik; myh++) {
-                    myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
+                    myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
                 }
 
                 c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = tei_full_sym_[myoff + INDEX(ik,jl)];
@@ -2785,7 +2764,7 @@ void v2RDMSolver::RepackIntegrals(){
 
                 int myoff = 0;
                 for (int myh = 0; myh < hik; myh++) {
-                    myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
+                    myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
                 }
 
                 c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * tei_full_sym_[myoff + INDEX(ik,jl)];
@@ -2799,7 +2778,7 @@ void v2RDMSolver::RepackIntegrals(){
 
                 myoff = 0;
                 for (int myh = 0; myh < hil; myh++) {
-                    myoff += gems_full[myh] * ( gems_full[myh] + 1 ) / 2;
+                    myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
                 }
 
                 c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym_[myoff + INDEX(il,jk)];
@@ -2917,7 +2896,7 @@ void v2RDMSolver::RotateOrbitals(){
     // 1.  symmetry_energy_order should start with first restricted orbital
     // 2.  orbopt_transformation_matrix_ should exclude frozen core
 
-    // notes for truly frozen core:
+    // notes for truly frozen virtuals:
     // 1.  orbopt_transformation_matrix_ should exclude frozen virtuals
     // 2.  oei_full_dim_, tei_full_dim_ should exclude frozen virtuals
 

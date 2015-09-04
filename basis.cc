@@ -264,7 +264,7 @@ void v2RDMSolver::BuildBasis() {
     }
     for (int h = 0; h < nirrep_; h++) {
         std::vector < std::pair<int,int> > mygems;
-        for (int i = 0; i < nmo_; i++) {
+        for (int i = 0; i < nmo_ - nfrzv_; i++) {
             for (int j = 0; j <= i; j++) {
                 int sym = SymmetryPair(symmetry_full[i],symmetry_full[j]);
                 if (h==sym) {
@@ -391,7 +391,7 @@ void v2RDMSolver::BuildBasis() {
     memset((void*)gems_full,'\0',nirrep_*sizeof(int));
     memset((void*)gems_plus_core,'\0',nirrep_*sizeof(int));
 
-    for (int ieo = 0; ieo < nmo_; ieo++) {
+    for (int ieo = 0; ieo < nmo_ - nfrzv_; ieo++) {
         int ifull = energy_to_pitzer_order[ieo];
         int hi    = symmetry_full[ifull];
         int i     = ifull - pitzer_offset_full[hi];

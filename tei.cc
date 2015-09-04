@@ -66,11 +66,11 @@ void v2RDMSolver::TEI() {
     // one-electron integrals:  
     boost::shared_ptr<Matrix> K1 = GetOEI();
 
-    // size of the tei buffer, blocked by symmetry
+    // size of the tei buffer
     if ( is_df_ ) {
 
         // size of the 3-index integral buffer
-        tei_full_dim_ = (long int) nQ_ * (long int) nmo_ * ( (long int) nmo_ + 1 ) /2 ;
+        tei_full_dim_ = (long int) nQ_ * (long int) ( nmo_ - nfrzv_ ) * ( (long int) ( nmo_ - nfrzv_ ) + 1L ) / 2L ;
 
         // just point to 3-index integral buffer
         tei_full_sym_      = Qmo_;
@@ -98,7 +98,7 @@ void v2RDMSolver::TEI() {
     memset((void*)d2_plus_core_sym_,'\0',d2_plus_core_dim_*sizeof(double));
 
 
-    // allocate memory for full oei tensor, blocked by symmetry 
+    // allocate memory for oei tensor, blocked by symmetry, excluding frozen virtuals
     oei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
         oei_full_dim_ += ( nmopi_[h] - frzvpi_[h] ) * ( nmopi_[h] - frzvpi_[h] + 1 ) / 2;
@@ -118,15 +118,13 @@ void v2RDMSolver::TEI() {
 
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
-        for (long int i = 0; i < nmopi_[h]; i++) {
-            for (long int j = i; j < nmopi_[h]; j++) {
+        for (long int i = 0; i < nmopi_[h] - frzvpi_[h]; i++) {
+            for (long int j = i; j < nmopi_[h] - frzvpi_[h]; j++) {
                 oei_full_sym_[offset + INDEX(i,j)] = K1->pointer(h)[i][j];
             }
         }
-        offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
+        offset += ( nmopi_[h] - frzvpi_[h] ) * ( nmopi_[h] - frzvpi_[h] + 1 ) / 2;
     }
-
-
 
     if ( is_df_ ) {
         // build tei's from 3-index integrals 
@@ -135,8 +133,6 @@ void v2RDMSolver::TEI() {
         // read tei's from disk
         TEIFromDisk();
     }
-
-    enuc_ = Process::environment.molecule()->nuclear_repulsion_energy();
 
 }
 
