@@ -1150,10 +1150,10 @@ void  v2RDMSolver::common_init(){
     orbopt_data_[12] = 0.0;  // converged?
     orbopt_converged_ = false;
 
-    orbopt_transformation_matrix_ = (double*)malloc(nmo_*nmo_*sizeof(double));
-    memset((void*)orbopt_transformation_matrix_,'\0',nmo_*nmo_*sizeof(double));
-    for (int i = 0; i < nmo_; i++) {
-        orbopt_transformation_matrix_[i*nmo_+i] = 1.0;
+    orbopt_transformation_matrix_ = (double*)malloc((nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
+    memset((void*)orbopt_transformation_matrix_,'\0',(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
+    for (int i = 0; i < nmo_-nfrzc_-nfrzv_; i++) {
+        orbopt_transformation_matrix_[i*(nmo_-nfrzc_-nfrzv_)+i] = 1.0;
     }
 
     // don't change the length of this filename
@@ -1181,11 +1181,7 @@ double v2RDMSolver::compute_energy() {
     Guess();
 
     // get integrals
-    if ( is_df_ ) {
-        DF_TEI();
-    }else {
-        TEI();
-    }
+    TEI();
 
     // generate constraint vector
     BuildConstraints();
@@ -2866,7 +2862,7 @@ void v2RDMSolver::FinalTransformationMatrix() {
             double * temp = (double*)malloc(nmopi_[h] * sizeof(double));
 
             // new basis function i in energy order
-            for (int ieo = 0; ieo < nmo_; ieo++) {
+            for (int ieo = nfrzc_; ieo < nmo_-nfrzv_; ieo++) {
                 int ifull = energy_to_pitzer_order[ieo];
                 int hi    = symmetry_full[ifull];
                 if ( h != hi ) continue;
@@ -2881,7 +2877,7 @@ void v2RDMSolver::FinalTransformationMatrix() {
                     if ( h != hj ) continue;
                     int j     = jfull - pitzer_offset_full[hj];
 
-                    dum += ca_p[mu][j] * orbopt_transformation_matrix_[jeo*nmo_+ieo];
+                    dum += ca_p[mu][j] * orbopt_transformation_matrix_[(jeo-nfrzc_)*(nmo_-nfrzc_-nfrzv_)+(ieo-nfrzc_)];
                 }
                 temp[i] = dum;
             }
@@ -2915,6 +2911,16 @@ void v2RDMSolver::RotateOrbitals(){
     outfile->Printf("\n");
 
     //int frzc = nfrzc_ + nrstc_;
+
+    // notes for truly frozen core:
+    //
+    // 1.  symmetry_energy_order should start with first restricted orbital
+    // 2.  orbopt_transformation_matrix_ should exclude frozen core
+
+    // notes for truly frozen core:
+    // 1.  orbopt_transformation_matrix_ should exclude frozen virtuals
+    // 2.  oei_full_dim_, tei_full_dim_ should exclude frozen virtuals
+
     OrbOpt(orbopt_transformation_matrix_,
           oei_full_sym_,oei_full_dim_,tei_full_sym_,tei_full_dim_,
           d1_plus_core_sym_,d1_plus_core_dim_,d2_plus_core_sym_,d2_plus_core_dim_,
