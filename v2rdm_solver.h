@@ -326,6 +326,9 @@ class v2RDMSolver: public Wavefunction{
     void RepackIntegrals();
     void RepackIntegralsDF();
 
+    /// compute frozen core energy and adjust oeis
+    void FrozenCoreEnergy();
+
     /// function to rotate orbitals
     void RotateOrbitals();
 
