@@ -115,12 +115,12 @@ void v2RDMSolver::BuildBasis() {
 
     // symmetry of ACTIVE orbitals
     for (int h = 0; h < nirrep_; h++) {
-        count_full += rstdpi_[h] + frzcpi_[h];
-        for (int norb = rstdpi_[h] + frzcpi_[h]; norb < nmopi_[h] - rstupi_[h] - frzvpi_[h]; norb++){
+        count_full += rstcpi_[h] + frzcpi_[h];
+        for (int norb = rstcpi_[h] + frzcpi_[h]; norb < nmopi_[h] - rstvpi_[h] - frzvpi_[h]; norb++){
             full_basis[count] = count_full++;
             symmetry[count++] = h;
         }
-        count_full += rstupi_[h] + frzvpi_[h];
+        count_full += rstvpi_[h] + frzvpi_[h];
     }
 
     // symmetry of ALL orbitals
@@ -133,7 +133,7 @@ void v2RDMSolver::BuildBasis() {
     // symmetry of ALL orbitals, except restricted and frozen virtual
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
-        for (int norb = 0; norb < amopi_[h] + rstdpi_[h] + frzcpi_[h]; norb++){
+        for (int norb = 0; norb < amopi_[h] + rstcpi_[h] + frzcpi_[h]; norb++){
             symmetry_plus_core[count++] = h;
         }
     }
@@ -154,12 +154,12 @@ void v2RDMSolver::BuildBasis() {
     // energy within each type of orbital
 
     // core
-    for (int i = 0; i < nrstd_ + nfrzc_; i++){
+    for (int i = 0; i < nrstc_ + nfrzc_; i++){
 
         int me = 0;
         min = 1.0e99;
         for (int h = 0; h < nirrep_; h++) {
-            for (int j = 0; j < rstdpi_[h] + frzcpi_[h]; j++){
+            for (int j = 0; j < rstcpi_[h] + frzcpi_[h]; j++){
                 if ( epsilon_a_->pointer(h)[j] < min ) {
                     if ( !skip[me] ) {
                         min = epsilon_a_->pointer(h)[j];
@@ -169,7 +169,7 @@ void v2RDMSolver::BuildBasis() {
                 }
                 me++;
             }
-            me += nmopi_[h] - rstdpi_[h] - frzcpi_[h];
+            me += nmopi_[h] - rstcpi_[h] - frzcpi_[h];
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
@@ -177,13 +177,13 @@ void v2RDMSolver::BuildBasis() {
         energy_to_pitzer_order[i] = imin;
     }
     // active
-    for (int i = nrstd_ + nfrzc_; i < amo_ + nrstd_ + nfrzc_; i++){
+    for (int i = nrstc_ + nfrzc_; i < amo_ + nrstc_ + nfrzc_; i++){
 
         int me = 0;
         min = 1.0e99;
         for (int h = 0; h < nirrep_; h++) {
-            me += rstdpi_[h] + frzcpi_[h];
-            for (int j = rstdpi_[h] + frzcpi_[h]; j < rstdpi_[h] + frzcpi_[h]+amopi_[h]; j++){
+            me += rstcpi_[h] + frzcpi_[h];
+            for (int j = rstcpi_[h] + frzcpi_[h]; j < rstcpi_[h] + frzcpi_[h]+amopi_[h]; j++){
                 if ( epsilon_a_->pointer(h)[j] < min ) {
                     if ( !skip[me] ) {
                         min = epsilon_a_->pointer(h)[j];
@@ -193,7 +193,7 @@ void v2RDMSolver::BuildBasis() {
                 }
                 me++;
             }
-            me += rstupi_[h] + frzvpi_[h];
+            me += rstvpi_[h] + frzvpi_[h];
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
@@ -201,13 +201,13 @@ void v2RDMSolver::BuildBasis() {
         energy_to_pitzer_order[i] = imin;
     }
     // virtual
-    for (int i = amo_ + nrstd_ + nfrzc_; i < nmo_; i++){
+    for (int i = amo_ + nrstc_ + nfrzc_; i < nmo_; i++){
 
         int me = 0;
         min = 1.0e99;
         for (int h = 0; h < nirrep_; h++) {
-            me += rstdpi_[h] + frzcpi_[h] + amopi_[h];
-            for (int j = rstdpi_[h] + frzcpi_[h] + amopi_[h]; j < nmopi_[h]; j++){
+            me += rstcpi_[h] + frzcpi_[h] + amopi_[h];
+            for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h]; j < nmopi_[h]; j++){
                 if ( epsilon_a_->pointer(h)[j] < min ) {
                     if ( !skip[me] ) {
                         min = epsilon_a_->pointer(h)[j];
@@ -230,7 +230,7 @@ void v2RDMSolver::BuildBasis() {
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset[h] = count;
-        count += nmopi_[h] - rstdpi_[h] - frzcpi_[h] - rstupi_[h] - frzvpi_[h];
+        count += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -240,7 +240,7 @@ void v2RDMSolver::BuildBasis() {
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset_plus_core[h] = count;
-        count += nmopi_[h] - rstupi_[h] - frzvpi_[h];
+        count += nmopi_[h] - rstvpi_[h] - frzvpi_[h];
     }
     // symmetry pairs:
     int ** sympairs = (int**)malloc(nirrep_*sizeof(int*));
@@ -277,7 +277,7 @@ void v2RDMSolver::BuildBasis() {
     }
     for (int h = 0; h < nirrep_; h++) {
         std::vector < std::pair<int,int> > mygems;
-        for (int i = 0; i < amo_ + nrstd_ + nfrzc_; i++) {
+        for (int i = 0; i < amo_ + nrstc_ + nfrzc_; i++) {
             for (int j = 0; j <= i; j++) {
                 int sym = SymmetryPair(symmetry_plus_core[i],symmetry_plus_core[j]);
                 if (h==sym) {
@@ -406,7 +406,7 @@ void v2RDMSolver::BuildBasis() {
             bas_full_sym[hij][gems_full[hij]][0] = ifull;
             bas_full_sym[hij][gems_full[hij]][1] = jfull;
             gems_full[hij]++;
-            if ( ieo < amo_ + nrstd_ + nfrzc_ && jeo < amo_ + nrstd_ + nfrzc_ ) {
+            if ( ieo < amo_ + nrstc_ + nfrzc_ && jeo < amo_ + nrstc_ + nfrzc_ ) {
                 gems_plus_core[hij]++;
             }
         }

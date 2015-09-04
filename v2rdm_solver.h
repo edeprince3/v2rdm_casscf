@@ -112,19 +112,19 @@ class v2RDMSolver: public Wavefunction{
     int nfrzv_;
 
     /// total number of restricted doubly occupied orbitals
-    int nrstd_;
+    int nrstc_;
 
     /// total number of restricted unoccupied orbitals
-    int nrstu_;
+    int nrstv_;
 
     /// active molecular orbitals per irrep
     int * amopi_;
 
     /// restricted core orbitals per irrep.  these will be optimized optimized
-    int * rstdpi_;
+    int * rstcpi_;
 
     /// restricted virtual orbitals per irrep.  these will be optimized optimized
-    int * rstupi_;
+    int * rstvpi_;
 
     /// total number of constraints (dimension of dual solution vector)
     long int nconstraints_;
