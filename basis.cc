@@ -116,7 +116,7 @@ void v2RDMSolver::BuildBasis() {
             full_basis[count] = count_full++;
             symmetry[count++] = h;
         }
-        count_full += rstvpi_[h]+ frzvpi_[h];
+        count_full += rstvpi_[h]; // + frzvpi_[h];
     }
 
     // symmetry of ALL orbitals
