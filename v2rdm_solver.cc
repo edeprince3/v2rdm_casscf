@@ -2267,8 +2267,8 @@ void v2RDMSolver::UnpackDensityPlusCore() {
             int j            = bas_ab_sym[h][ij][1];
             int hi           = symmetry[i];
             int hj           = symmetry[j];
-            int ifull        = i - pitzer_offset[hi] + pitzer_offset_full[hi] + frzcpi_[hi] + rstcpi_[hi];
-            int jfull        = j - pitzer_offset[hj] + pitzer_offset_full[hj] + frzcpi_[hj] + rstcpi_[hj];
+            int ifull        = full_basis[i];
+            int jfull        = full_basis[j];
             int ij_ab        = ibas_ab_sym[h][i][j];
             int ji_ab        = ibas_ab_sym[h][j][i];
             int ij_aa        = ibas_aa_sym[h][i][j];
@@ -2278,8 +2278,8 @@ void v2RDMSolver::UnpackDensityPlusCore() {
                 int l          = bas_ab_sym[h][kl][1];
                 int hk         = symmetry[k];
                 int hl         = symmetry[l];
-                int kfull      = k - pitzer_offset[hk] + pitzer_offset_full[hk] + frzcpi_[hk] + rstcpi_[hk];
-                int lfull      = l - pitzer_offset[hl] + pitzer_offset_full[hl] + frzcpi_[hl] + rstcpi_[hl];
+                int kfull      = full_basis[k];
+                int lfull      = full_basis[l];
                 int kl_ab      = ibas_ab_sym[h][k][l];
                 int lk_ab      = ibas_ab_sym[h][l][k];
                 int kl_aa      = ibas_aa_sym[h][k][l];
@@ -2402,11 +2402,11 @@ void v2RDMSolver::UnpackDensityPlusCore() {
             for (int hj = 0; hj < nirrep_; hj++) {
                 for (int j = 0; j < amopi_[hj]; j++) {
 
-                    int jfull      = j + pitzer_offset_full[hj] + rstcpi_[hj] + frzcpi_[hj];
+                    int jfull      = full_basis[j];
 
                     for (int l = j; l < amopi_[hj]; l++) {
 
-                        int lfull      = l + pitzer_offset_full[hj] + rstcpi_[hj] + frzcpi_[hj];
+                        int lfull      = full_basis[l];
 
                         int jlfull = ibas_full_sym[0][jfull][lfull];
 

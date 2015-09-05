@@ -286,19 +286,6 @@ void v2RDMSolver::BuildBasis() {
         }
         gems.push_back(mygems);
     }
-    for (int h = 0; h < nirrep_; h++) {
-        std::vector < std::pair<int,int> > mygems;
-        for (int i = 0; i < nmo_ - nfrzv_; i++) {
-            for (int j = 0; j <= i; j++) {
-                int sym = SymmetryPair(symmetry_full[i],symmetry_full[j]);
-                if (h==sym) {
-                    mygems.push_back(std::make_pair(i,j));
-                }
-
-            }
-        }
-        gems_fullspace.push_back(mygems);
-    }
 
     bas_ab_sym         = (int***)malloc(nirrep_*sizeof(int**));
     bas_aa_sym         = (int***)malloc(nirrep_*sizeof(int**));

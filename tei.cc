@@ -125,14 +125,11 @@ void v2RDMSolver::GetIntegrals() {
         offset += ( nmopi_[h] - frzvpi_[h] ) * ( nmopi_[h] - frzvpi_[h] + 1 ) / 2;
     }
 
-    if ( is_df_ ) {
-        // build tei's from 3-index integrals 
-        RepackIntegrals();
-    }else {
+    if ( !is_df_ ) {
         // read tei's from disk
         GetTEIFromDisk();
-        RepackIntegrals();
     }
+    RepackIntegrals();
 
 }
 

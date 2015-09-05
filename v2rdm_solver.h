@@ -94,10 +94,8 @@ class v2RDMSolver: public Wavefunction{
     int * pitzer_offset;
     int * pitzer_offset_full;
 
-    /// geminals for each symmetry:
+    /// active-space geminals for each symmetry:
     std::vector < std::vector < std::pair<int,int> > > gems;
-    std::vector < std::vector < std::pair<int,int> > > gems_fullspace;
-    std::vector < std::vector < std::pair<int,int> > > gems_plus_corespace;
 
     /// total number of active molecular orbitals
     int amo_;
