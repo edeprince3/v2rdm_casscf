@@ -97,15 +97,17 @@ void v2RDMSolver::BuildBasis() {
 
     // orbitals are in pitzer order:
     symmetry               = (int*)malloc(nmo_*sizeof(int));
-    symmetry_full          = (int*)malloc(nmo_*sizeof(int));
-    symmetry_energy_order  = (int*)malloc(nmo_*sizeof(int));
-    energy_to_pitzer_order = (int*)malloc(nmo_*sizeof(int));
+    symmetry_full          = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
+    symmetry_energy_order  = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
+    energy_to_pitzer_order = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
+    full_basis             = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
 
     memset((void*)symmetry,'\0',nmo_*sizeof(int));
-    memset((void*)symmetry_full,'\0',nmo_*sizeof(int));
-    memset((void*)symmetry_energy_order,'\0',nmo_*sizeof(int));
-    memset((void*)energy_to_pitzer_order,'\0',nmo_*sizeof(int));
-    full_basis = (int*)malloc(nmo_*sizeof(int));
+    memset((void*)symmetry_full,'\0',(nmo_-nfrzv_)*sizeof(int));
+    memset((void*)symmetry_energy_order,'\0',(nmo_-nfrzv_)*sizeof(int));
+    memset((void*)energy_to_pitzer_order,'\0',(nmo_-nfrzv_)*sizeof(int));
+    memset((void*)full_basis,'\0',(nmo_-nfrzv_)*sizeof(int));
+
     int count = 0;
     int count_full = 0;
 
@@ -122,7 +124,7 @@ void v2RDMSolver::BuildBasis() {
     // symmetry of ALL orbitals
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
-        for (int norb = 0; norb < nmopi_[h]; norb++){
+        for (int norb = 0; norb < nmopi_[h] - frzvpi_[h]; norb++){
             symmetry_full[count++] = h;
         }
     }
@@ -232,47 +234,42 @@ void v2RDMSolver::BuildBasis() {
         energy_to_pitzer_order[i] = imin;
     }
     // frozen virtual
-    for (int i = amo_ + nrstc_ + nfrzc_ + nrstv_; i < nmo_; i++){
-
-        int me = 0;
-        min = 1.0e99;
-        for (int h = 0; h < nirrep_; h++) {
-            me += rstcpi_[h] + frzcpi_[h] + amopi_[h] + rstvpi_[h];
-            for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h] + rstvpi_[h]; j < nmopi_[h]; j++){
-                if ( epsilon_a_->pointer(h)[j] < min ) {
-                    if ( !skip[me] ) {
-                        min = epsilon_a_->pointer(h)[j];
-                        imin = me;
-                        isym = h;
-                    }
-                }
-                me++;
-            }
-        }
-        skip[imin] = 1;
-        symmetry_energy_order[i] = isym + 1;
-        energy_to_pitzer_order[i] = imin;
-    }
+    //for (int i = amo_ + nrstc_ + nfrzc_ + nrstv_; i < nmo_; i++){
+    //    int me = 0;
+    //    min = 1.0e99;
+    //    for (int h = 0; h < nirrep_; h++) {
+    //        me += rstcpi_[h] + frzcpi_[h] + amopi_[h] + rstvpi_[h];
+    //        for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h] + rstvpi_[h]; j < nmopi_[h]; j++){
+    //            if ( epsilon_a_->pointer(h)[j] < min ) {
+    //                if ( !skip[me] ) {
+    //                    min = epsilon_a_->pointer(h)[j];
+    //                    imin = me;
+    //                    isym = h;
+    //                }
+    //            }
+    //            me++;
+    //        }
+    //    }
+    //    skip[imin] = 1;
+    //    symmetry_energy_order[i] = isym + 1;
+    //    energy_to_pitzer_order[i] = imin;
+    //}
+    free(skip);
 
     pitzer_offset           = (int*)malloc(nirrep_*sizeof(int));
     pitzer_offset_full      = (int*)malloc(nirrep_*sizeof(int));
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset[h] = count;
-        count += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
+        count += amopi_[h]; 
     }
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset_full[h] = count;
         count += nmopi_[h];
     }
-    // symmetry pairs:
-    int ** sympairs = (int**)malloc(nirrep_*sizeof(int*));
-    for (int h = 0; h < nirrep_; h++) {
-        sympairs[h] = (int*)malloc(amo_*sizeof(int));
-        memset((void*)sympairs[h],'\0',amo_*sizeof(int));
-    }
 
+    // geminals, by symmetry
     for (int h = 0; h < nirrep_; h++) {
         std::vector < std::pair<int,int> > mygems;
         for (int i = 0; i < amo_; i++) {

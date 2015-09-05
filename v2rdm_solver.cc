@@ -2510,23 +2510,23 @@ void v2RDMSolver::FinalTransformationMatrix() {
     /*offset = 0;
     double diff = 0.0;
     for (int h = 0; h < nirrep_; h++) {
-        for (int ieo = 0; ieo < nmo_; ieo++) {
+        for (int ieo = 0; ieo < nmo_-nfrzv_; ieo++) {
             int ifull = energy_to_pitzer_order[ieo];
             int hi    = symmetry_full[ifull];
             if ( h != hi ) continue;
             int i     = ifull - pitzer_offset_full[hi];
-            for (int jeo = 0; jeo < nmo_; jeo++) {
+            for (int jeo = 0; jeo < nmo_-nfrzv_; jeo++) {
                 int jfull = energy_to_pitzer_order[jeo];
                 int hj    = symmetry_full[jfull];
                 if ( h != hj ) continue;
                 int j     = jfull - pitzer_offset_full[hj];
                 double dum = 0.0;
-                for (int keo = 0; keo < nmo_; keo++) {
+                for (int keo = 0; keo < nmo_-nfrzv_; keo++) {
                     int kfull = energy_to_pitzer_order[keo];
                     int hk    = symmetry_full[kfull];
                     if ( h != hk ) continue;
                     int k     = kfull - pitzer_offset_full[hk];
-                    for (int leo = 0; leo < nmo_; leo++) {
+                    for (int leo = 0; leo < nmo_-nfrzv_; leo++) {
                         int lfull = energy_to_pitzer_order[leo];
                         int hl    = symmetry_full[lfull];
                         if ( h != hl ) continue;
@@ -2563,7 +2563,7 @@ void v2RDMSolver::FinalTransformationMatrix() {
                 double dum = 0.0;
 
                 // old basis function j in energy order
-                for (int jeo = 0; jeo < nmo_; jeo++) {
+                for (int jeo = 0; jeo < nmo_-nfrzv_; jeo++) {
                     int jfull = energy_to_pitzer_order[jeo];
                     int hj    = symmetry_full[jfull];
                     if ( h != hj ) continue;
