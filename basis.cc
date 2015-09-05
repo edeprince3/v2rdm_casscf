@@ -98,13 +98,11 @@ void v2RDMSolver::BuildBasis() {
     // orbitals are in pitzer order:
     symmetry               = (int*)malloc(nmo_*sizeof(int));
     symmetry_full          = (int*)malloc(nmo_*sizeof(int));
-    symmetry_plus_core     = (int*)malloc(nmo_*sizeof(int));
     symmetry_energy_order  = (int*)malloc(nmo_*sizeof(int));
     energy_to_pitzer_order = (int*)malloc(nmo_*sizeof(int));
 
     memset((void*)symmetry,'\0',nmo_*sizeof(int));
     memset((void*)symmetry_full,'\0',nmo_*sizeof(int));
-    memset((void*)symmetry_plus_core,'\0',nmo_*sizeof(int));
     memset((void*)symmetry_energy_order,'\0',nmo_*sizeof(int));
     memset((void*)energy_to_pitzer_order,'\0',nmo_*sizeof(int));
     full_basis = (int*)malloc(nmo_*sizeof(int));
@@ -126,13 +124,6 @@ void v2RDMSolver::BuildBasis() {
     for (int h = 0; h < nirrep_; h++) {
         for (int norb = 0; norb < nmopi_[h]; norb++){
             symmetry_full[count++] = h;
-        }
-    }
-    // symmetry of ALL orbitals, except restricted and frozen virtual
-    count = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (int norb = 0; norb < amopi_[h] + rstcpi_[h] + frzcpi_[h]; norb++){
-            symmetry_plus_core[count++] = h;
         }
     }
     // symmetry of ALL orbitals in energy order
@@ -313,19 +304,6 @@ void v2RDMSolver::BuildBasis() {
             }
         }
         gems_fullspace.push_back(mygems);
-    }
-    for (int h = 0; h < nirrep_; h++) {
-        std::vector < std::pair<int,int> > mygems;
-        for (int i = 0; i < amo_ + nrstc_ + nfrzc_; i++) {
-            for (int j = 0; j <= i; j++) {
-                int sym = SymmetryPair(symmetry_plus_core[i],symmetry_plus_core[j]);
-                if (h==sym) {
-                    mygems.push_back(std::make_pair(i,j));
-                }
-
-            }
-        }
-        gems_plus_corespace.push_back(mygems);
     }
 
     bas_ab_sym         = (int***)malloc(nirrep_*sizeof(int**));
