@@ -90,7 +90,6 @@ class v2RDMSolver: public Wavefunction{
     int * symmetry;
     int * symmetry_full;
     int * symmetry_plus_core;
-    int * pitzer_to_energy_order;
     int * energy_to_pitzer_order;
     int * symmetry_energy_order;
     int * pitzer_offset;           // for orbital indexing within an irrep

@@ -100,14 +100,12 @@ void v2RDMSolver::BuildBasis() {
     symmetry_full          = (int*)malloc(nmo_*sizeof(int));
     symmetry_plus_core     = (int*)malloc(nmo_*sizeof(int));
     symmetry_energy_order  = (int*)malloc(nmo_*sizeof(int));
-    pitzer_to_energy_order = (int*)malloc(nmo_*sizeof(int));
     energy_to_pitzer_order = (int*)malloc(nmo_*sizeof(int));
 
     memset((void*)symmetry,'\0',nmo_*sizeof(int));
     memset((void*)symmetry_full,'\0',nmo_*sizeof(int));
     memset((void*)symmetry_plus_core,'\0',nmo_*sizeof(int));
     memset((void*)symmetry_energy_order,'\0',nmo_*sizeof(int));
-    memset((void*)pitzer_to_energy_order,'\0',nmo_*sizeof(int));
     memset((void*)energy_to_pitzer_order,'\0',nmo_*sizeof(int));
     full_basis = (int*)malloc(nmo_*sizeof(int));
     int count = 0;
@@ -172,7 +170,6 @@ void v2RDMSolver::BuildBasis() {
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
-        pitzer_to_energy_order[imin] = i;
         energy_to_pitzer_order[i] = imin;
     }
     // active
@@ -196,7 +193,6 @@ void v2RDMSolver::BuildBasis() {
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
-        pitzer_to_energy_order[imin] = i;
         energy_to_pitzer_order[i] = imin;
     }
     // active
@@ -220,7 +216,6 @@ void v2RDMSolver::BuildBasis() {
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
-        pitzer_to_energy_order[imin] = i;
         energy_to_pitzer_order[i] = imin;
     }
     // restricted virtual
@@ -243,7 +238,6 @@ void v2RDMSolver::BuildBasis() {
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
-        pitzer_to_energy_order[imin] = i;
         energy_to_pitzer_order[i] = imin;
     }
     // frozen virtual
@@ -266,7 +260,6 @@ void v2RDMSolver::BuildBasis() {
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
-        pitzer_to_energy_order[imin] = i;
         energy_to_pitzer_order[i] = imin;
     }
 
