@@ -60,7 +60,7 @@ using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
-void v2RDMSolver::TEI() {
+void v2RDMSolver::GetIntegrals() {
 
     
     // one-electron integrals:  
@@ -97,7 +97,6 @@ void v2RDMSolver::TEI() {
     d2_plus_core_sym_  = (double*)malloc(d2_plus_core_dim_*sizeof(double));
     memset((void*)d2_plus_core_sym_,'\0',d2_plus_core_dim_*sizeof(double));
 
-
     // allocate memory for oei tensor, blocked by symmetry, excluding frozen virtuals
     oei_full_dim_ = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -128,15 +127,16 @@ void v2RDMSolver::TEI() {
 
     if ( is_df_ ) {
         // build tei's from 3-index integrals 
-        RepackIntegralsDF();
+        RepackIntegrals();
     }else {
         // read tei's from disk
-        TEIFromDisk();
+        GetTEIFromDisk();
+        RepackIntegrals();
     }
 
 }
 
-void v2RDMSolver::TEIFromDisk() {
+void v2RDMSolver::GetTEIFromDisk() {
 
     double * temptei = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
     memset((void*)temptei,'\0',nmo_*nmo_*nmo_*nmo_*sizeof(double));
@@ -162,12 +162,10 @@ void v2RDMSolver::TEIFromDisk() {
     }
 
     free(temptei);
-
-    RepackIntegrals();
 }
 
 // repack rotated full-space integrals into active-space integrals
-void v2RDMSolver::RepackIntegralsDF(){
+void v2RDMSolver::RepackIntegrals(){
 
     FrozenCoreEnergy();
 
@@ -192,7 +190,10 @@ void v2RDMSolver::RepackIntegralsDF(){
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                c_p[d2aboff[h] + ij*gems_ab[h]+kl] = C_DDOT(nQ_,Qmo_+nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,ll),1);
+                int hik = SymmetryPair(symmetry[i],symmetry[k]);
+
+                c_p[d2aboff[h] + ij*gems_ab[h]+kl] = TEI(ii,kk,jj,ll,hik);
+
             }
         }
     }
@@ -213,8 +214,11 @@ void v2RDMSolver::RepackIntegralsDF(){
                 long int kk = full_basis[k];
                 long int ll = full_basis[l];
 
-                double dum1 = C_DDOT(nQ_,Qmo_+nQ_*INDEX(ii,kk),1,Qmo_+nQ_*INDEX(jj,ll),1);
-                double dum2 = C_DDOT(nQ_,Qmo_+nQ_*INDEX(ii,ll),1,Qmo_+nQ_*INDEX(jj,kk),1);
+                int hik = SymmetryPair(symmetry[i],symmetry[k]);
+                int hil = SymmetryPair(symmetry[i],symmetry[l]);
+
+                double dum1 = TEI(ii,kk,jj,ll,hik);
+                double dum2 = TEI(ii,ll,jj,kk,hil);
 
                 c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
                 c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
@@ -223,108 +227,7 @@ void v2RDMSolver::RepackIntegralsDF(){
     }
 
 }
-
-// repack rotated full-space integrals into active-space integrals
-void v2RDMSolver::RepackIntegrals(){
-
-    FrozenCoreEnergy();
-
-    double* c_p = c->pointer();
-
-    int na = nalpha_ - nrstc_ - nfrzc_;
-    int nb = nbeta_ - nrstc_ - nfrzc_;
-    for (int h = 0; h < nirrep_; h++) {
-        for (int ij = 0; ij < gems_ab[h]; ij++) {
-            int i = bas_ab_sym[h][ij][0];
-            int j = bas_ab_sym[h][ij][1];
-
-            int hi = symmetry[i];
-            int ifull = i - pitzer_offset[hi] + pitzer_offset_full[hi] + rstcpi_[hi] + frzcpi_[hi];
-
-            int hj = symmetry[j];
-            int jfull = j - pitzer_offset[hj] + pitzer_offset_full[hj] + rstcpi_[hj] + frzcpi_[hj];
-
-            for (int kl = 0; kl < gems_ab[h]; kl++) {
-                int k = bas_ab_sym[h][kl][0];
-                int l = bas_ab_sym[h][kl][1];
-
-                int hk = symmetry[k];
-                int kfull = k - pitzer_offset[hk] + pitzer_offset_full[hk] + rstcpi_[hk] + frzcpi_[hk];
-
-                int hl = symmetry[l];
-                int lfull = l - pitzer_offset[hl] + pitzer_offset_full[hl] + rstcpi_[hl] + frzcpi_[hl];
-
-                int hik = SymmetryPair(symmetry_full[ifull],symmetry_full[kfull]);
-                int ik  = ibas_full_sym[hik][ifull][kfull];
-                int jl  = ibas_full_sym[hik][jfull][lfull];
-
-                int myoff = 0;
-                for (int myh = 0; myh < hik; myh++) {
-                    myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
-                }
-
-                c_p[d2aboff[h] + ij*gems_ab[h]+kl]    = tei_full_sym_[myoff + INDEX(ik,jl)];
-
-            }
-        }
-    }
-
-    for (int h = 0; h < nirrep_; h++) {
-        for (int ij = 0; ij < gems_aa[h]; ij++) {
-            int i = bas_aa_sym[h][ij][0];
-            int j = bas_aa_sym[h][ij][1];
-
-            int hi = symmetry[i];
-            int ifull = i - pitzer_offset[hi] + pitzer_offset_full[hi] + rstcpi_[hi] + frzcpi_[hi];
-
-            int hj = symmetry[j];
-            int jfull = j - pitzer_offset[hj] + pitzer_offset_full[hj] + rstcpi_[hj] + frzcpi_[hj];
-
-            for (int kl = 0; kl < gems_aa[h]; kl++) {
-                int k = bas_aa_sym[h][kl][0];
-                int l = bas_aa_sym[h][kl][1];
-
-                int hk = symmetry[k];
-                int kfull = k - pitzer_offset[hk] + pitzer_offset_full[hk] + rstcpi_[hk] + frzcpi_[hk];
-
-                int hl = symmetry[l];
-                int lfull = l - pitzer_offset[hl] + pitzer_offset_full[hl] + rstcpi_[hl] + frzcpi_[hl];
-
-                int hik = SymmetryPair(symmetry_full[ifull],symmetry_full[kfull]);
-                int ik  = ibas_full_sym[hik][ifull][kfull];
-                int jl  = ibas_full_sym[hik][jfull][lfull];
-
-                int myoff = 0;
-                for (int myh = 0; myh < hik; myh++) {
-                    myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
-                }
-
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = 0.5 * tei_full_sym_[myoff + INDEX(ik,jl)];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   += 0.5 * tei_full_sym_[myoff + INDEX(jl,ik)];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = 0.5 * tei_full_sym_[myoff + INDEX(ik,jl)];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   += 0.5 * tei_full_sym_[myoff + INDEX(jl,ik)];
-
-                int hil = SymmetryPair(symmetry_full[ifull],symmetry_full[lfull]);
-                int il  = ibas_full_sym[hil][ifull][lfull];
-                int jk  = ibas_full_sym[hil][jfull][kfull];
-
-                myoff = 0;
-                for (int myh = 0; myh < hil; myh++) {
-                    myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
-                }
-
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym_[myoff + INDEX(il,jk)];
-                c_p[d2aaoff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym_[myoff + INDEX(jk,il)];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym_[myoff + INDEX(il,jk)];
-                c_p[d2bboff[h] + ij*gems_aa[h]+kl]   -= 0.5 * tei_full_sym_[myoff + INDEX(jk,il)];
-
-            }
-        }
-    }
-}
-
 void v2RDMSolver::FrozenCoreEnergy() {
-
 
     // if frozen core, adjust oei's and compute frozen core energy:
     efzc_ = 0.0;
@@ -334,7 +237,6 @@ void v2RDMSolver::FrozenCoreEnergy() {
         for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
 
             int ifull = i + offset;
-            int ii    = ibas_full_sym[0][ifull][ifull];
 
             efzc_ += 2.0 * oei_full_sym_[offset3 + INDEX(i,i)];
 
@@ -343,22 +245,12 @@ void v2RDMSolver::FrozenCoreEnergy() {
                 for (int j = 0; j < rstcpi_[h2] + frzcpi_[h2]; j++) {
 
                     int jfull = j + offset2;
-                    int jj    = ibas_full_sym[0][jfull][jfull];
+
                     int hij = SymmetryPair(h,h2);
 
-                    int ij    = ibas_full_sym[hij][ifull][jfull];
-
-                    if ( ! is_df_ ) {
-                        int myoff = 0;
-                        for (int myh = 0; myh < hij; myh++) {
-                            myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
-                        }
-                        efzc_ += (2.0 * tei_full_sym_[INDEX(ii,jj)] - tei_full_sym_[myoff + INDEX(ij,ij)]);
-                    }else {
-                        double dum1 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ifull,ifull),1,Qmo_+nQ_*INDEX(jfull,jfull),1);
-                        double dum2 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ifull,jfull),1,Qmo_+nQ_*INDEX(ifull,jfull),1);
-                        efzc_ += 2.0 * dum1 - dum2;
-                    }
+                    double dum1 = TEI(ifull,ifull,jfull,jfull, 0);
+                    double dum2 = TEI(ifull,jfull,ifull,jfull, hij);
+                    efzc_ += 2.0 * dum1 - dum2;
 
                 }
                 offset2 += nmopi_[h2] - frzvpi_[h2];
@@ -382,8 +274,6 @@ void v2RDMSolver::FrozenCoreEnergy() {
 
                 int jfull = j + offset;
 
-                int ij = ibas_full_sym[0][ifull][jfull];
-
                 double dum = 0.0;
 
                 long int offset2 = 0;
@@ -392,27 +282,11 @@ void v2RDMSolver::FrozenCoreEnergy() {
 
                         int kfull = k + offset2;
 
-                        int kk = ibas_full_sym[0][kfull][kfull];
-
                         int hik = SymmetryPair(h,h2);
 
-                        int ik = ibas_full_sym[hik][ifull][kfull];
-                        int jk = ibas_full_sym[hik][jfull][kfull];
-
-
-
-                        if ( ! is_df_ ) {
-                            int myoff = 0;
-                            for (int myh = 0; myh < hik; myh++) {
-                                myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
-                            }
-                            dum += (2.0 * tei_full_sym_[INDEX(ij,kk)] - tei_full_sym_[myoff+INDEX(ik,jk)]);
-                        }else {
-                            double dum1 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ifull,jfull),1,Qmo_+nQ_*INDEX(kfull,kfull),1);
-                            double dum2 = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(ifull,kfull),1,Qmo_+nQ_*INDEX(jfull,kfull),1);
-                            dum += 2.0 * dum1 - dum2;
-                        }
-
+                        double dum1 = TEI(ifull,jfull,kfull,kfull,0);
+                        double dum2 = TEI(ifull,kfull,jfull,kfull,hik);
+                        dum += 2.0 * dum1 - dum2;
 
                     }
                     offset2 += nmopi_[h2] - frzvpi_[h2];
@@ -427,6 +301,29 @@ void v2RDMSolver::FrozenCoreEnergy() {
         offset3 += ( nmopi_[h] - frzvpi_[h] ) * ( nmopi_[h] - frzvpi_[h] + 1 ) / 2;
     }
 
+}
+
+double v2RDMSolver::TEI(int i, int j, int k, int l, int h) {
+    double dum = 0.0;
+
+    if ( is_df_ ) {
+
+        dum = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(i,j),1,Qmo_+nQ_*INDEX(k,l),1);
+
+    }else {
+
+        int myoff = 0;
+        for (int myh = 0; myh < h; myh++) {
+            myoff += (long int)gems_full[myh] * ( (long int)gems_full[myh] + 1L ) / 2L;
+        }
+
+        int ij    = ibas_full_sym[h][i][j];
+        int kl    = ibas_full_sym[h][k][l];
+
+        dum = tei_full_sym_[myoff + INDEX(ij,kl)];
+    }
+
+    return dum;
 }
 
 

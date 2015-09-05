@@ -234,11 +234,14 @@ class v2RDMSolver: public Wavefunction{
 
     void PrintHeader();
 
-    /// grab two-electron integrals
-    void TEI();
+    /// grab one- and two-electron integrals
+    void GetIntegrals();
 
     /// read two-electron integrals from disk
-    void TEIFromDisk();
+    void GetTEIFromDisk();
+
+    /// grab a specific two-electron integral
+    double TEI(int i, int j, int k, int l, int h);
 
     void BuildConstraints();
 

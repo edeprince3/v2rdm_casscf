@@ -1175,7 +1175,7 @@ double v2RDMSolver::compute_energy() {
     Guess();
 
     // get integrals
-    TEI();
+    GetIntegrals();
 
     // generate constraint vector
     BuildConstraints();
@@ -2629,11 +2629,7 @@ void v2RDMSolver::RotateOrbitals(){
         orbopt_converged_ = true;
     }
 
-    if ( is_df_ ) {
-        RepackIntegralsDF();
-    }else {
-        RepackIntegrals();
-    }
+    RepackIntegrals();
 }
 
 }} //end namespaces
