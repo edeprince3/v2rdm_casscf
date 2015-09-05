@@ -256,7 +256,6 @@ void v2RDMSolver::BuildBasis() {
 
     pitzer_offset           = (int*)malloc(nirrep_*sizeof(int));
     pitzer_offset_full      = (int*)malloc(nirrep_*sizeof(int));
-    pitzer_offset_plus_core = (int*)malloc(nirrep_*sizeof(int));
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset[h] = count;
@@ -266,11 +265,6 @@ void v2RDMSolver::BuildBasis() {
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset_full[h] = count;
         count += nmopi_[h];
-    }
-    count = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        pitzer_offset_plus_core[h] = count;
-        count += nmopi_[h] - rstvpi_[h] - frzvpi_[h];
     }
     // symmetry pairs:
     int ** sympairs = (int**)malloc(nirrep_*sizeof(int*));

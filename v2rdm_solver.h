@@ -91,9 +91,8 @@ class v2RDMSolver: public Wavefunction{
     int * symmetry_full;
     int * energy_to_pitzer_order;
     int * symmetry_energy_order;
-    int * pitzer_offset;           // for orbital indexing within an irrep
-    int * pitzer_offset_full;      // for orbital indexing within an irrep
-    int * pitzer_offset_plus_core; // for orbital indexing within an irrep
+    int * pitzer_offset;
+    int * pitzer_offset_full;
 
     /// geminals for each symmetry:
     std::vector < std::vector < std::pair<int,int> > > gems;
