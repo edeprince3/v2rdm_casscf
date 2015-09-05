@@ -266,7 +266,7 @@ void v2RDMSolver::BuildBasis() {
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset_full[h] = count;
-        count += nmopi_[h];
+        count += nmopi_[h] - frzvpi_[h];
     }
 
     // geminals, by symmetry
