@@ -210,6 +210,7 @@ class v2RDMSolver: public Wavefunction{
     int *** bas_aa_sym;
     int *** bas_00_sym;
     int *** bas_full_sym;
+    int *** bas_really_full_sym;
     int *** ibas_ab_sym;
     int *** ibas_aa_sym;
     int *** ibas_00_sym;

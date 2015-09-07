@@ -165,9 +165,9 @@ void  v2RDMSolver::common_init(){
     }
     if (options_["FROZEN_UOCC"].has_changed()) {
 
-        if ( !is_df_ ) {
-            throw PsiException("FROZEN_UOCC is currently enabled only for SCF_TYPE CD and DF.",__FILE__,__LINE__);
-        }
+        //if ( !is_df_ ) {
+        //    throw PsiException("FROZEN_UOCC is currently enabled only for SCF_TYPE CD and DF.",__FILE__,__LINE__);
+        //}
         if (options_["FROZEN_UOCC"].size() != nirrep_) {
             throw PsiException("The FROZEN_UOCC array has the wrong dimensions_",__FILE__,__LINE__);
         }

@@ -147,11 +147,11 @@ void v2RDMSolver::GetTEIFromDisk() {
     long int n3 = n2 * (long int)nmo_;
     for (int h = 0; h < nirrep_; h++) {
         for (long int ij = 0; ij < gems_full[h]; ij++) {
-            long int i = bas_full_sym[h][ij][0];
-            long int j = bas_full_sym[h][ij][1];
+            long int i = bas_really_full_sym[h][ij][0];
+            long int j = bas_really_full_sym[h][ij][1];
             for (long int kl = ij; kl < gems_full[h]; kl++) {
-                long int k = bas_full_sym[h][kl][0];
-                long int l = bas_full_sym[h][kl][1];
+                long int k = bas_really_full_sym[h][kl][0];
+                long int l = bas_really_full_sym[h][kl][1];
                 tei_full_sym_[offset + INDEX(ij,kl)] = temptei[i*n3+j*n2+k*(long int)nmo_+l];
             }
         }
