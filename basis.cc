@@ -129,9 +129,6 @@ void v2RDMSolver::BuildBasis() {
         }
     }
     // symmetry of ALL orbitals in energy order
-    double min = 1.0e99;
-    int imin = -999;
-    int isym = -999;
     int * skip = (int*)malloc(nmo_*sizeof(int));
     memset((void*)skip,'\0',nmo_*sizeof(int));
 
@@ -146,8 +143,10 @@ void v2RDMSolver::BuildBasis() {
 
     // frozen core
     for (int i = 0; i < nfrzc_; i++){
-        int me = 0;
-        min = 1.0e99;
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
         for (int h = 0; h < nirrep_; h++) {
             for (int j = 0; j < frzcpi_[h]; j++){
                 if ( epsilon_a_->pointer(h)[j] < min ) {
@@ -159,7 +158,10 @@ void v2RDMSolver::BuildBasis() {
                 }
                 me++;
             }
-            me += nmopi_[h] - frzcpi_[h];
+            me += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (frzc)",__FILE__,__LINE__);
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
@@ -168,8 +170,10 @@ void v2RDMSolver::BuildBasis() {
     // active
     for (int i = nfrzc_; i < nrstc_ + nfrzc_; i++){
 
-        int me = 0;
-        min = 1.0e99;
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
         for (int h = 0; h < nirrep_; h++) {
             me += frzcpi_[h];
             for (int j = frzcpi_[h]; j < rstcpi_[h] + frzcpi_[h]; j++){
@@ -182,7 +186,10 @@ void v2RDMSolver::BuildBasis() {
                 }
                 me++;
             }
-            me += amopi_[h] + rstvpi_[h] + frzvpi_[h];
+            me += amopi_[h] + rstvpi_[h];// + frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (rstc)",__FILE__,__LINE__);
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
@@ -191,8 +198,10 @@ void v2RDMSolver::BuildBasis() {
     // active
     for (int i = nrstc_ + nfrzc_; i < amo_ + nrstc_ + nfrzc_; i++){
 
-        int me = 0;
-        min = 1.0e99;
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
         for (int h = 0; h < nirrep_; h++) {
             me += rstcpi_[h] + frzcpi_[h];
             for (int j = rstcpi_[h] + frzcpi_[h]; j < rstcpi_[h] + frzcpi_[h]+amopi_[h]; j++){
@@ -205,7 +214,10 @@ void v2RDMSolver::BuildBasis() {
                 }
                 me++;
             }
-            me += rstvpi_[h] + frzvpi_[h];
+            me += rstvpi_[h];// + frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (active)",__FILE__,__LINE__);
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
@@ -214,8 +226,10 @@ void v2RDMSolver::BuildBasis() {
     // restricted virtual
     for (int i = amo_ + nrstc_ + nfrzc_; i < nmo_ - nfrzv_; i++){
 
-        int me = 0;
-        min = 1.0e99;
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
         for (int h = 0; h < nirrep_; h++) {
             me += rstcpi_[h] + frzcpi_[h] + amopi_[h];
             for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h]; j < nmopi_[h] - frzvpi_[h]; j++){
@@ -228,6 +242,10 @@ void v2RDMSolver::BuildBasis() {
                 }
                 me++;
             }
+            //me += frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (rstv)",__FILE__,__LINE__);
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
@@ -389,11 +407,11 @@ void v2RDMSolver::BuildBasis() {
     for (int ieo = 0; ieo < nmo_ - nfrzv_; ieo++) {
         int ifull = energy_to_pitzer_order[ieo];
         int hi    = symmetry_full[ifull];
-        int i     = ifull - pitzer_offset_full[hi];
+        //int i     = ifull - pitzer_offset_full[hi];
         for (int jeo = 0; jeo <= ieo; jeo++) {
             int jfull = energy_to_pitzer_order[jeo];
             int hj    = symmetry_full[jfull];
-            int j     = jfull - pitzer_offset_full[hj];
+            //int j     = jfull - pitzer_offset_full[hj];
 
             int hij = SymmetryPair(hi,hj);
             ibas_full_sym[hij][ifull][jfull] = gems_full[hij];
