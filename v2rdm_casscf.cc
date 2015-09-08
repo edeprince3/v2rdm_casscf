@@ -90,26 +90,32 @@ int read_options(std::string name, Options& options)
         /*- Tolerance for Cholesky decomposition of the ERI tensor -*/
         options.add_double("CHOLESKY_TOLERANCE",1e-4);
 
-        /*- SUBSECTION JACOBI -*/
+        /*- SUBSECTION ORBITAL OPTIMIZATION -*/
 
-        /*- number of truly frozen orbitals (not optimized by jacobi) -*/
-        options.add_int("JACOBI_FROZEN_CORE",0);
+        /* flag to optimize orbitals using a one-step type approach */
+        options.add_int("ORBOPT_ONE_STEP",1);
         /*- do rotate active/active orbital pairs? -*/
-        options.add_bool("JACOBI_ACTIVE_ACTIVE_ROTATIONS",false);
-        /*- tolerance for energy change for a given pair of orbitals -*/
-        options.add_double("JACOBI_ANGLE_TOLERANCE",1.0e-6);
+        options.add_bool("ORBOPT_ACTIVE_ACTIVE_ROTATIONS",false);
+        /*- convergence in gradient norm -*/
+        options.add_double("ORBOPT_GRADIENT_CONVERGENCE",1.0e-4);
         /*- convergence in energy for rotations -*/
-        options.add_double("JACOBI_E_CONVERGENCE",1.0e-8);
+        options.add_double("ORBOPT_ENERGY_CONVERGENCE",1.0e-8);
+        /* flag for using exact expresions for diagonal Hessian element */
+        options.add_int("ORBOPT_EXACT_DIAGONAL_HESSIAN",0);
+        /* number of DIIS vectors to keep in orbital optimization */ 
+        options.add_int("ORBOPT_NUM_DIIS_VECTORS",0);
+        /* frequency of orbital optimization -- optimization occurs every orbopt_frequency iterations */
+        options.add_int("ORBOPT_FREQUENCY",200);
         /*- Do write a MOLDEN output file?  If so, the filename will end in
         .molden, and the prefix is determined by |globals__writer_file_label|
         (if set), or else by the name of the output file plus the name of
         the current molecule. -*/
         options.add_bool("MOLDEN_WRITE", false);
-        /*- Do write a JACOBI output file?  If so, the filename will end in
+        /*- Do write a ORBOPT output file?  If so, the filename will end in
         .molden, and the prefix is determined by |globals__writer_file_label|
         (if set), or else by the name of the output file plus the name of
         the current molecule. -*/
-        options.add_bool("JACOBI_WRITE", false);
+        options.add_bool("ORBOPT_WRITE", false);
         /*- Base filename for text files written by PSI, such as the
         MOLDEN output file, the Hessian file, the internal coordinate file,
         etc. Use the add_str_i function to make this string case sensitive. -*/

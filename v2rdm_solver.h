@@ -89,18 +89,13 @@ class v2RDMSolver: public Wavefunction{
 
     int * symmetry;
     int * symmetry_full;
-    int * symmetry_plus_core;
-    int * pitzer_to_energy_order;
     int * energy_to_pitzer_order;
     int * symmetry_energy_order;
-    int * pitzer_offset;           // for orbital indexing within an irrep
-    int * pitzer_offset_full;      // for orbital indexing within an irrep
-    int * pitzer_offset_plus_core; // for orbital indexing within an irrep
+    int * pitzer_offset;
+    int * pitzer_offset_full;
 
-    /// geminals for each symmetry:
+    /// active-space geminals for each symmetry:
     std::vector < std::vector < std::pair<int,int> > > gems;
-    std::vector < std::vector < std::pair<int,int> > > gems_fullspace;
-    std::vector < std::vector < std::pair<int,int> > > gems_plus_corespace;
 
     /// total number of active molecular orbitals
     int amo_;
@@ -108,8 +103,23 @@ class v2RDMSolver: public Wavefunction{
     /// total number of frozen core orbitals
     int nfrzc_;
 
+    /// total number of frozen virtual orbitals
+    int nfrzv_;
+
+    /// total number of restricted doubly occupied orbitals
+    int nrstc_;
+
+    /// total number of restricted unoccupied orbitals
+    int nrstv_;
+
     /// active molecular orbitals per irrep
     int * amopi_;
+
+    /// restricted core orbitals per irrep.  these will be optimized optimized
+    int * rstcpi_;
+
+    /// restricted virtual orbitals per irrep.  these will be optimized optimized
+    int * rstvpi_;
 
     /// total number of constraints (dimension of dual solution vector)
     long int nconstraints_;
@@ -200,6 +210,7 @@ class v2RDMSolver: public Wavefunction{
     int *** bas_aa_sym;
     int *** bas_00_sym;
     int *** bas_full_sym;
+    int *** bas_really_full_sym;
     int *** ibas_ab_sym;
     int *** ibas_aa_sym;
     int *** ibas_00_sym;
@@ -219,11 +230,14 @@ class v2RDMSolver: public Wavefunction{
 
     void PrintHeader();
 
-    /// read two-electron integrals, sort the ones we need
-    void TEI();
+    /// grab one- and two-electron integrals
+    void GetIntegrals();
 
-    /// build subset of two-electron integrals from 3-index integrals
-    void DF_TEI();
+    /// read two-electron integrals from disk
+    void GetTEIFromDisk();
+
+    /// grab a specific two-electron integral
+    double TEI(int i, int j, int k, int l, int h);
 
     void BuildConstraints();
 
@@ -311,13 +325,16 @@ class v2RDMSolver: public Wavefunction{
     void RepackIntegrals();
     void RepackIntegralsDF();
 
+    /// compute frozen core energy and adjust oeis
+    void FrozenCoreEnergy();
+
     /// function to rotate orbitals
     void RotateOrbitals();
 
-    double * jacobi_transformation_matrix_;
-    double * jacobi_data_;
-    char * jacobi_outfile_;
-    bool jacobi_converged_;
+    double * orbopt_transformation_matrix_;
+    double * orbopt_data_;
+    char * orbopt_outfile_;
+    bool orbopt_converged_;
 
     /// are we using 3-index integrals?
     bool is_df_;

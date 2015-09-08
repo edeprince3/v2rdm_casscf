@@ -63,6 +63,7 @@ KNOWN ISSUES
 ---
 
 * For large jobs, when running with multiple threads, sometimes a thread will hang and the job will stall.
+* For large jobs, add "ulimit -s unlimited" to .bashrc to avoid segfault when calling the fortran orbital optimization routines.
 
 REFERENCES
 ---

@@ -5,19 +5,16 @@ module focas_driver
   use focas_hessian
   use focas_transform_driver
   use focas_exponential
+  use focas_diis
 
   implicit none
 
   contains
 
   subroutine focas_optimize(mo_coeff,int1,nnz_int1,int2,nnz_int2,den1,nnz_den1,den2,nnz_den2,    &
-                           & ndocpi,nactpi,nextpi,nirrep,gnorm_tol,dele_tol,gnorm_last,dele_last,&
-                           & converged,df_ints_in,nthread,fname,print_fl,aarot_fl)
+                           & ndocpi,nactpi,nextpi,nirrep,orbopt_data,fname)
  
     ! integer input
-    integer, intent(in)     :: nthread         ! number of threads to use
-    integer, intent(inout)  :: converged       ! flag for convergence
-    integer, intent(in)     :: df_ints_in      ! flag for using density-fitted 2-e integrals (0--> 4-index integrals, 1--> 3-index DF integrals)
     integer, intent(in)     :: nirrep          ! number of irreps in point group
     integer, intent(in)     :: nnz_int1        ! total number of nonzero 1-e integrals
     integer(ip), intent(in) :: nnz_int2        ! total number of nonzero 2-e integrals
@@ -26,14 +23,9 @@ module focas_driver
     integer, intent(in)     :: ndocpi(nirrep)  ! number of doubly occupied orbitals per irrep (includes frozen doubly occupied orbitals)
     integer, intent(in)     :: nactpi(nirrep)  ! number of active orbitals per irrep
     integer, intent(in)     :: nextpi(nirrep)  ! number of virtual orbitals per irrep (excluding forzen virtual orbitals) 
-    integer, intent(in)     :: print_fl        ! flag for printing output information
-    integer, intent(in)     :: aarot_fl        ! flag to include active-aactive rotations
     ! real input
+    real(wp), intent(inout) :: orbopt_data(13) ! input/output array
     real(wp), intent(inout) :: mo_coeff(:,:)   ! mo coefficient matrix
-    real(wp), intent(inout) :: dele_last       ! final energy change
-    real(wp), intent(inout) :: gnorm_last      ! final gradient norm
-    real(wp), intent(in)    :: dele_tol        ! final energy change threshold
-    real(wp), intent(in)    :: gnorm_tol       ! final gradient norm threshold
     real(wp), intent(in)    :: int1(nnz_int1)  ! nonzero 1-e integral matrix elements
     real(wp), intent(in)    :: int2(nnz_int2)  ! nonzero 2-e integral matrix elements 
     real(wp), intent(in)    :: den1(nnz_den1)  ! nonzero 1-e density matrix elements
@@ -47,17 +39,28 @@ module focas_driver
     ! iteration variables
     real(wp) :: current_energy,last_energy,delta_energy,gradient_norm_tolerance,delta_energy_tolerance
     real(wp) :: step_size,initial_energy
-    integer  :: iter,max_iter,error
+    integer  :: iter,max_iter,error,converged
   
     ! other variables
     logical :: fexist
+
+!    real(wp), allocatable :: P(:)
+
+    ! set up variables based on input jacobi_data
+    nthread_use_                = int(orbopt_data(1))
+    include_aa_rot_             = int(orbopt_data(2))
+    gradient_norm_tolerance     = orbopt_data(4)
+    delta_energy_tolerance      = orbopt_data(5)  
+    log_print_                  = int(orbopt_data(6))
+    use_exact_hessian_diagonal_ = int(orbopt_data(7))
+    diis_%max_num_diis          = int(orbopt_data(8)) 
+    df_vars_%use_df_teints      = int(orbopt_data(9))
 
     ! orbitals should be sorted accoring to 
     ! 1) class (doubly occupied, active, virtual)
     ! 2) within each class, orbitals should be sorted accoring to irrep
     ! 3) within each class and irrep, orbitals are sorted according to energy
 
-    log_print_ = print_fl
     if ( log_print_ == 1 ) then
       inquire(file=fname,exist=fexist)
       if (fexist) then
@@ -67,21 +70,11 @@ module focas_driver
       endif
     endif
 
-
-    ! set df integral flag
-    df_vars_%use_df_teints  = df_ints_in
-
     ! calculate the total number of orbitals in space
     ndoc_tot_ = sum(ndocpi)
     nact_tot_ = sum(nactpi)
     next_tot_ = sum(nextpi)
     nmo_tot_  = ndoc_tot_+nact_tot_+next_tot_
-
-    include_aa_rot_ = aarot_fl
-
-    ! figure out maxmimum number of threads to use
-    nthread_want_ = nthread
-    nthread_use_  =get_nthread()
 
     ! allocate indexing arrays
     call allocate_indexing_arrays(nirrep)
@@ -97,6 +90,9 @@ module focas_driver
 
     ! allocate temporary Fock matrices
     call allocate_temporary_fock_matrices()
+
+    ! allocate matrices for DIIS extrapolation
+    call allocate_diis_data()
 
     ! allocate remaining arrays/matrices
     call allocate_initial()
@@ -116,10 +112,10 @@ module focas_driver
     ! *** at this point, everything is allocated and we are ready to do the optimization
     ! **********************************************************************************
 
+!    allocate(P(rot_pair_%n_tot))
+!    P = 0.0_wp
 
     last_energy             = 0.0_wp
-    gradient_norm_tolerance = gnorm_tol
-    delta_energy_tolerance  = dele_tol
     max_iter                = 20
     iter                    = 0
     kappa_                  = 0.0_wp
@@ -157,8 +153,19 @@ module focas_driver
       call diagonal_inverse_hessian_preconditioner(orbital_gradient_,fock_i_,fock_a_,q_,z_,int2,den1,den2)
 
       ! update kappa_
-      step_size=1.0_wp
-      kappa_ = - step_size * orbital_gradient_
+      step_size = 1.0_wp
+      kappa_    = - step_size * orbital_gradient_
+!      P = P + kappa_
+
+      ! possible DIIS extrapolation
+
+!      write(*,*)'before'
+!      write(*,*)P
+!
+!      if ( diis_%do_diis == 1 ) call diis_extrapolate(P,-kappa_)
+!
+!      write(*,*)'after',diis_%do_diis
+!      write(*,*)kappa_
 
       t1 = timer()
       t_gh = t1 - t0
@@ -199,14 +206,21 @@ module focas_driver
       endif
     endif
 
-    dele_last      = last_energy - initial_energy
-    gnorm_last     = grad_norm_
+!    stop
+
+    orbopt_data(10) = real(iter,kind=wp)
+    orbopt_data(11) = grad_norm_
+    orbopt_data(12) = last_energy - initial_energy
+    orbopt_data(13) = real(converged,kind=wp)
 
     ! debug
     ! call compute_energy(int1,int2,den1,den2)
 
     ! deallocate indexing arrays
     call deallocate_indexing_arrays()
+
+    ! allocate matrices for DIIS extrapolation
+    call deallocate_diis_data()
 
     ! final deallocation
     call deallocate_final()
@@ -413,9 +427,15 @@ module focas_driver
     allocate(first_index_(nirrep_,3))
     allocate(last_index_(nirrep_,3))
     allocate(orb_sym_scr_(nmo_tot_))
+    allocate(ndocpi_(nirrep_))
+    allocate(nactpi_(nirrep_))
+    allocate(nextpi_(nirrep_))
     first_index_ = 0
     last_index_  = 0
     orb_sym_scr_ = 0
+    ndocpi_      = 0
+    nactpi_      = 0
+    nextpi_      =0
     return 
   end subroutine allocate_indexing_arrays
 
@@ -435,6 +455,9 @@ module focas_driver
     if (allocated(first_index_)) deallocate(first_index_)
     if (allocated(last_index_))  deallocate(last_index_)
     if (allocated(orb_sym_scr_)) deallocate(orb_sym_scr_)
+    if (allocated(ndocpi_))      deallocate(ndocpi_)
+    if (allocated(nactpi_))      deallocate(nactpi_)
+    if (allocated(nextpi_))      deallocate(nextpi_)    
     call deallocate_indexing_arrays_help(dens_)
     call deallocate_indexing_arrays_help(ints_)
     return
@@ -483,6 +506,10 @@ module focas_driver
     do irrep=1,nirrep_
       last_index_(irrep,3) = first_index_(irrep,3) + nextpi(irrep)-1
     end do
+    ! determine number of orbitals per irrep for each class
+    ndocpi_ = last_index_(:,1) - first_index_(:,1) + 1
+    nactpi_ = last_index_(:,2) - first_index_(:,2) + 1
+    nextpi_ = last_index_(:,3) - first_index_(:,3) + 1
     ! ** save orbital symmetries so that we can set up geminal indices **
     do oclass=1,3
       do irrep=1,nirrep_

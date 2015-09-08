@@ -139,8 +139,8 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
         offset += amopi_[h]*amopi_[h];
     }
 
-    int na = nalpha_ - nfrzc_;
-    int nb = nbeta_ - nfrzc_;
+    int na = nalpha_ - nrstc_ - nfrzc_;
+    int nb = nbeta_ - nrstc_ - nfrzc_;
 
     int poff = 0;
 
@@ -161,7 +161,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
             }
         }
         offset += amopi_[h]*amopi_[h];
-        poff   += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
 
     // contraction: D2ab -> D1 b
@@ -181,7 +181,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
             }
         }
         offset += amopi_[h]*amopi_[h];
-        poff   += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
 
     //contract D2aa -> D1 a
@@ -204,7 +204,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
             }
         }
         offset += amopi_[h]*amopi_[h];
-        poff   += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
 
     //contract D2bb -> D1 b
@@ -227,7 +227,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
             }
         }
         offset += amopi_[h]*amopi_[h];
-        poff   += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
 }
 
@@ -317,8 +317,8 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
         offset += amopi_[h]*amopi_[h];
     }
 
-    int na = nalpha_ - nfrzc_;
-    int nb = nbeta_ - nfrzc_;
+    int na = nalpha_ - nrstc_ - nfrzc_;
+    int nb = nbeta_ - nrstc_ - nfrzc_;
     double n = na + nb;
 
     // contraction: D2aa + D2ab -> D1 a
@@ -342,7 +342,7 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
             }
         }
         offset += amopi_[h]*amopi_[h];
-        poff   += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
 
     // contraction: D2ab -> D1 b
@@ -363,7 +363,7 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
             }
         }
         offset += amopi_[h]*amopi_[h];
-        poff   += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
 
     //contract D2aa -> D1 a
@@ -387,7 +387,7 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
             }
         }
         offset += amopi_[h]*amopi_[h];
-        poff   += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
 
     //contract D2bb -> D1 b
@@ -411,9 +411,8 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
             }
         }
         offset += amopi_[h]*amopi_[h];
-        poff   += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
 }
-
 
 }}

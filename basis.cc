@@ -97,50 +97,52 @@ void v2RDMSolver::BuildBasis() {
 
     // orbitals are in pitzer order:
     symmetry               = (int*)malloc(nmo_*sizeof(int));
-    symmetry_full          = (int*)malloc(nmo_*sizeof(int));
-    symmetry_plus_core     = (int*)malloc(nmo_*sizeof(int));
-    symmetry_energy_order  = (int*)malloc(nmo_*sizeof(int));
-    pitzer_to_energy_order = (int*)malloc(nmo_*sizeof(int));
-    energy_to_pitzer_order = (int*)malloc(nmo_*sizeof(int));
+    symmetry_full          = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
+    symmetry_energy_order  = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
+    energy_to_pitzer_order = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
+    full_basis             = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
+
+    // including frozen virtuals
+    int * symmetry_really_full               = (int*)malloc(nmo_*sizeof(int));
+    int * energy_to_pitzer_order_really_full = (int*)malloc(nmo_*sizeof(int));
 
     memset((void*)symmetry,'\0',nmo_*sizeof(int));
-    memset((void*)symmetry_full,'\0',nmo_*sizeof(int));
-    memset((void*)symmetry_plus_core,'\0',nmo_*sizeof(int));
-    memset((void*)symmetry_energy_order,'\0',nmo_*sizeof(int));
-    memset((void*)pitzer_to_energy_order,'\0',nmo_*sizeof(int));
-    memset((void*)energy_to_pitzer_order,'\0',nmo_*sizeof(int));
-    full_basis = (int*)malloc(nmo_*sizeof(int));
+    memset((void*)symmetry_full,'\0',(nmo_-nfrzv_)*sizeof(int));
+    memset((void*)symmetry_energy_order,'\0',(nmo_-nfrzv_)*sizeof(int));
+    memset((void*)energy_to_pitzer_order,'\0',(nmo_-nfrzv_)*sizeof(int));
+    memset((void*)full_basis,'\0',(nmo_-nfrzv_)*sizeof(int));
+
+    memset((void*)symmetry_really_full,'\0',nmo_*sizeof(int));
+    memset((void*)energy_to_pitzer_order_really_full,'\0',nmo_*sizeof(int));
+
     int count = 0;
     int count_full = 0;
 
     // symmetry of ACTIVE orbitals
     for (int h = 0; h < nirrep_; h++) {
-        count_full += frzcpi_[h];
-        for (int norb = frzcpi_[h]; norb < nmopi_[h] - frzvpi_[h]; norb++){
+        count_full += rstcpi_[h] + frzcpi_[h];
+        for (int norb = rstcpi_[h] + frzcpi_[h]; norb < nmopi_[h] - rstvpi_[h] - frzvpi_[h]; norb++){
             full_basis[count] = count_full++;
             symmetry[count++] = h;
         }
-        count_full += frzvpi_[h];
+        count_full += rstvpi_[h]; // + frzvpi_[h];
     }
 
-    // symmetry of ALL orbitals
+    // symmetry of all orbitals, except frozen virtuals
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
-        for (int norb = 0; norb < nmopi_[h]; norb++){
+        for (int norb = 0; norb < nmopi_[h] - frzvpi_[h]; norb++){
             symmetry_full[count++] = h;
         }
     }
-    // symmetry of ALL orbitals, except frozen virtual
+    // ok, including frozen virtuals
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
-        for (int norb = 0; norb < amopi_[h] + frzcpi_[h]; norb++){
-            symmetry_plus_core[count++] = h;
+        for (int norb = 0; norb < nmopi_[h]; norb++){
+            symmetry_really_full[count++] = h;
         }
     }
-    // symmetry of ALL orbitals in energy order
-    double min = 1.0e99;
-    int imin = -999;
-    int isym = -999;
+
     int * skip = (int*)malloc(nmo_*sizeof(int));
     memset((void*)skip,'\0',nmo_*sizeof(int));
 
@@ -153,11 +155,12 @@ void v2RDMSolver::BuildBasis() {
     // TODO: the orbital ordering should be according to 
     // energy within each type of orbital
 
-    // core
+    // frozen core
     for (int i = 0; i < nfrzc_; i++){
-
-        int me = 0;
-        min = 1.0e99;
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
         for (int h = 0; h < nirrep_; h++) {
             for (int j = 0; j < frzcpi_[h]; j++){
                 if ( epsilon_a_->pointer(h)[j] < min ) {
@@ -169,21 +172,213 @@ void v2RDMSolver::BuildBasis() {
                 }
                 me++;
             }
-            me += nmopi_[h] - frzcpi_[h];
+            me += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (frzc)",__FILE__,__LINE__);
         }
         skip[imin] = 1;
         symmetry_energy_order[i] = isym + 1;
-        pitzer_to_energy_order[imin] = i;
         energy_to_pitzer_order[i] = imin;
     }
     // active
-    for (int i = nfrzc_; i < amo_ + nfrzc_; i++){
+    for (int i = nfrzc_; i < nrstc_ + nfrzc_; i++){
 
-        int me = 0;
-        min = 1.0e99;
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
         for (int h = 0; h < nirrep_; h++) {
             me += frzcpi_[h];
-            for (int j = frzcpi_[h]; j < frzcpi_[h]+amopi_[h]; j++){
+            for (int j = frzcpi_[h]; j < rstcpi_[h] + frzcpi_[h]; j++){
+                if ( epsilon_a_->pointer(h)[j] < min ) {
+                    if ( !skip[me] ) {
+                        min = epsilon_a_->pointer(h)[j];
+                        imin = me;
+                        isym = h;
+                    }
+                }
+                me++;
+            }
+            me += amopi_[h] + rstvpi_[h];// + frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (rstc)",__FILE__,__LINE__);
+        }
+        skip[imin] = 1;
+        symmetry_energy_order[i] = isym + 1;
+        energy_to_pitzer_order[i] = imin;
+    }
+    // active
+    for (int i = nrstc_ + nfrzc_; i < amo_ + nrstc_ + nfrzc_; i++){
+
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
+        for (int h = 0; h < nirrep_; h++) {
+            me += rstcpi_[h] + frzcpi_[h];
+            for (int j = rstcpi_[h] + frzcpi_[h]; j < rstcpi_[h] + frzcpi_[h]+amopi_[h]; j++){
+                if ( epsilon_a_->pointer(h)[j] < min ) {
+                    if ( !skip[me] ) {
+                        min = epsilon_a_->pointer(h)[j];
+                        imin = me;
+                        isym = h;
+                    }
+                }
+                me++;
+            }
+            me += rstvpi_[h];// + frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (active)",__FILE__,__LINE__);
+        }
+        skip[imin] = 1;
+        symmetry_energy_order[i] = isym + 1;
+        energy_to_pitzer_order[i] = imin;
+    }
+    // restricted virtual
+    for (int i = amo_ + nrstc_ + nfrzc_; i < nmo_ - nfrzv_; i++){
+
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
+        for (int h = 0; h < nirrep_; h++) {
+            me += rstcpi_[h] + frzcpi_[h] + amopi_[h];
+            for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h]; j < nmopi_[h] - frzvpi_[h]; j++){
+                if ( epsilon_a_->pointer(h)[j] < min ) {
+                    if ( !skip[me] ) {
+                        min = epsilon_a_->pointer(h)[j];
+                        imin = me;
+                        isym = h;
+                    }
+                }
+                me++;
+            }
+            //me += frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (rstv)",__FILE__,__LINE__);
+        }
+        skip[imin] = 1;
+        symmetry_energy_order[i] = isym + 1;
+        energy_to_pitzer_order[i] = imin;
+    }
+    // frozen virtual
+    //for (int i = amo_ + nrstc_ + nfrzc_ + nrstv_; i < nmo_; i++){
+    //    int me = 0;
+    //    min = 1.0e99;
+    //    for (int h = 0; h < nirrep_; h++) {
+    //        me += rstcpi_[h] + frzcpi_[h] + amopi_[h] + rstvpi_[h];
+    //        for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h] + rstvpi_[h]; j < nmopi_[h]; j++){
+    //            if ( epsilon_a_->pointer(h)[j] < min ) {
+    //                if ( !skip[me] ) {
+    //                    min = epsilon_a_->pointer(h)[j];
+    //                    imin = me;
+    //                    isym = h;
+    //                }
+    //            }
+    //            me++;
+    //        }
+    //    }
+    //    skip[imin] = 1;
+    //    symmetry_energy_order[i] = isym + 1;
+    //    energy_to_pitzer_order[i] = imin;
+    //}
+
+    // again, including frozen virtuals:
+    memset((void*)skip,'\0',nmo_*sizeof(int));
+
+    // frozen core
+    for (int i = 0; i < nfrzc_; i++){
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
+        for (int h = 0; h < nirrep_; h++) {
+            for (int j = 0; j < frzcpi_[h]; j++){
+                if ( epsilon_a_->pointer(h)[j] < min ) {
+                    if ( !skip[me] ) {
+                        min = epsilon_a_->pointer(h)[j];
+                        imin = me;
+                        isym = h;
+                    }
+                }
+                me++;
+            }
+            me += nmopi_[h] - frzcpi_[h];// - frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (frzc)",__FILE__,__LINE__);
+        }
+        skip[imin] = 1;
+        energy_to_pitzer_order_really_full[i] = imin;
+    }
+    // active
+    for (int i = nfrzc_; i < nrstc_ + nfrzc_; i++){
+
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
+        for (int h = 0; h < nirrep_; h++) {
+            me += frzcpi_[h];
+            for (int j = frzcpi_[h]; j < rstcpi_[h] + frzcpi_[h]; j++){
+                if ( epsilon_a_->pointer(h)[j] < min ) {
+                    if ( !skip[me] ) {
+                        min = epsilon_a_->pointer(h)[j];
+                        imin = me;
+                        isym = h;
+                    }
+                }
+                me++;
+            }
+            me += amopi_[h] + rstvpi_[h] + frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (rstc)",__FILE__,__LINE__);
+        }
+        skip[imin] = 1;
+        energy_to_pitzer_order_really_full[i] = imin;
+    }
+    // active
+    for (int i = nrstc_ + nfrzc_; i < amo_ + nrstc_ + nfrzc_; i++){
+
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
+        for (int h = 0; h < nirrep_; h++) {
+            me += rstcpi_[h] + frzcpi_[h];
+            for (int j = rstcpi_[h] + frzcpi_[h]; j < rstcpi_[h] + frzcpi_[h]+amopi_[h]; j++){
+                if ( epsilon_a_->pointer(h)[j] < min ) {
+                    if ( !skip[me] ) {
+                        min = epsilon_a_->pointer(h)[j];
+                        imin = me;
+                        isym = h;
+                    }
+                }
+                me++;
+            }
+            me += rstvpi_[h] + frzvpi_[h];
+        }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (active)",__FILE__,__LINE__);
+        }
+        skip[imin] = 1;
+        energy_to_pitzer_order_really_full[i] = imin;
+    }
+    // restricted virtual
+    for (int i = amo_ + nrstc_ + nfrzc_; i < nmo_ - nfrzv_; i++){
+
+        int me     = 0;
+        double min = 1.0e99;
+        int imin   = -999;
+        int isym   = -999;
+        for (int h = 0; h < nirrep_; h++) {
+            me += rstcpi_[h] + frzcpi_[h] + amopi_[h];
+            for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h]; j < nmopi_[h] - frzvpi_[h]; j++){
                 if ( epsilon_a_->pointer(h)[j] < min ) {
                     if ( !skip[me] ) {
                         min = epsilon_a_->pointer(h)[j];
@@ -195,19 +390,21 @@ void v2RDMSolver::BuildBasis() {
             }
             me += frzvpi_[h];
         }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (rstv)",__FILE__,__LINE__);
+        }
         skip[imin] = 1;
-        symmetry_energy_order[i] = isym + 1;
-        pitzer_to_energy_order[imin] = i;
-        energy_to_pitzer_order[i] = imin;
+        energy_to_pitzer_order_really_full[i] = imin;
     }
-    // virtual
-    for (int i = amo_ + nfrzc_; i < nmo_; i++){
-
+    // frozen virtual
+    for (int i = amo_ + nrstc_ + nfrzc_ + nrstv_; i < nmo_; i++){
         int me = 0;
-        min = 1.0e99;
+        double min = 1.0e99;
+        int imin = -999;
+        int isym = -999;
         for (int h = 0; h < nirrep_; h++) {
-            me += frzcpi_[h] + amopi_[h];
-            for (int j = frzcpi_[h] + amopi_[h]; j < nmopi_[h]; j++){
+            me += rstcpi_[h] + frzcpi_[h] + amopi_[h] + rstvpi_[h];
+            for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h] + rstvpi_[h]; j < nmopi_[h]; j++){
                 if ( epsilon_a_->pointer(h)[j] < min ) {
                     if ( !skip[me] ) {
                         min = epsilon_a_->pointer(h)[j];
@@ -218,37 +415,28 @@ void v2RDMSolver::BuildBasis() {
                 me++;
             }
         }
+        if ( imin < 0 ) {
+            throw PsiException("cannot determine energy-to-pitzer order (frzv)",__FILE__,__LINE__);
+        }
         skip[imin] = 1;
-        symmetry_energy_order[i] = isym + 1;
-        pitzer_to_energy_order[imin] = i;
-        energy_to_pitzer_order[i] = imin;
+        energy_to_pitzer_order_really_full[i] = imin;
     }
+    free(skip);
 
     pitzer_offset           = (int*)malloc(nirrep_*sizeof(int));
     pitzer_offset_full      = (int*)malloc(nirrep_*sizeof(int));
-    pitzer_offset_plus_core = (int*)malloc(nirrep_*sizeof(int));
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset[h] = count;
-        count += nmopi_[h] - frzcpi_[h] - frzvpi_[h];
+        count += amopi_[h]; 
     }
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset_full[h] = count;
-        count += nmopi_[h];
-    }
-    count = 0;
-    for (int h = 0; h < nirrep_; h++) {
-        pitzer_offset_plus_core[h] = count;
         count += nmopi_[h] - frzvpi_[h];
     }
-    // symmetry pairs:
-    int ** sympairs = (int**)malloc(nirrep_*sizeof(int*));
-    for (int h = 0; h < nirrep_; h++) {
-        sympairs[h] = (int*)malloc(amo_*sizeof(int));
-        memset((void*)sympairs[h],'\0',amo_*sizeof(int));
-    }
 
+    // geminals, by symmetry
     for (int h = 0; h < nirrep_; h++) {
         std::vector < std::pair<int,int> > mygems;
         for (int i = 0; i < amo_; i++) {
@@ -262,37 +450,12 @@ void v2RDMSolver::BuildBasis() {
         }
         gems.push_back(mygems);
     }
-    for (int h = 0; h < nirrep_; h++) {
-        std::vector < std::pair<int,int> > mygems;
-        for (int i = 0; i < nmo_; i++) {
-            for (int j = 0; j <= i; j++) {
-                int sym = SymmetryPair(symmetry_full[i],symmetry_full[j]);
-                if (h==sym) {
-                    mygems.push_back(std::make_pair(i,j));
-                }
-
-            }
-        }
-        gems_fullspace.push_back(mygems);
-    }
-    for (int h = 0; h < nirrep_; h++) {
-        std::vector < std::pair<int,int> > mygems;
-        for (int i = 0; i < amo_ + nfrzc_; i++) {
-            for (int j = 0; j <= i; j++) {
-                int sym = SymmetryPair(symmetry_plus_core[i],symmetry_plus_core[j]);
-                if (h==sym) {
-                    mygems.push_back(std::make_pair(i,j));
-                }
-
-            }
-        }
-        gems_plus_corespace.push_back(mygems);
-    }
 
     bas_ab_sym         = (int***)malloc(nirrep_*sizeof(int**));
     bas_aa_sym         = (int***)malloc(nirrep_*sizeof(int**));
     bas_00_sym         = (int***)malloc(nirrep_*sizeof(int**));
     bas_full_sym       = (int***)malloc(nirrep_*sizeof(int**));
+    bas_really_full_sym       = (int***)malloc(nirrep_*sizeof(int**));
 
     ibas_ab_sym        = (int***)malloc(nirrep_*sizeof(int**));
     ibas_aa_sym        = (int***)malloc(nirrep_*sizeof(int**));
@@ -316,6 +479,7 @@ void v2RDMSolver::BuildBasis() {
         bas_aa_sym[h]         = (int**)malloc(amo_*amo_*sizeof(int*));
         bas_00_sym[h]         = (int**)malloc(amo_*amo_*sizeof(int*));
         bas_full_sym[h]       = (int**)malloc(nmo_*nmo_*sizeof(int*));
+        bas_really_full_sym[h]       = (int**)malloc(nmo_*nmo_*sizeof(int*));
 
         // active space geminals
         for (int i = 0; i < amo_; i++) {
@@ -347,8 +511,10 @@ void v2RDMSolver::BuildBasis() {
         }
         for (int i = 0; i < nmo_*nmo_; i++) {
             bas_full_sym[h][i] = (int*)malloc(2*sizeof(int));
+            bas_really_full_sym[h][i] = (int*)malloc(2*sizeof(int));
             for (int j = 0; j < 2; j++) {
                 bas_full_sym[h][i][j] = -999;
+                bas_really_full_sym[h][i][j] = -999;
             }
         }
 
@@ -391,14 +557,15 @@ void v2RDMSolver::BuildBasis() {
     memset((void*)gems_full,'\0',nirrep_*sizeof(int));
     memset((void*)gems_plus_core,'\0',nirrep_*sizeof(int));
 
-    for (int ieo = 0; ieo < nmo_; ieo++) {
+    // everything except frozen virtuals
+    for (int ieo = 0; ieo < nmo_ - nfrzv_; ieo++) {
         int ifull = energy_to_pitzer_order[ieo];
         int hi    = symmetry_full[ifull];
-        int i     = ifull - pitzer_offset_full[hi];
+        //int i     = ifull - pitzer_offset_full[hi];
         for (int jeo = 0; jeo <= ieo; jeo++) {
             int jfull = energy_to_pitzer_order[jeo];
             int hj    = symmetry_full[jfull];
-            int j     = jfull - pitzer_offset_full[hj];
+            //int j     = jfull - pitzer_offset_full[hj];
 
             int hij = SymmetryPair(hi,hj);
             ibas_full_sym[hij][ifull][jfull] = gems_full[hij];
@@ -406,11 +573,30 @@ void v2RDMSolver::BuildBasis() {
             bas_full_sym[hij][gems_full[hij]][0] = ifull;
             bas_full_sym[hij][gems_full[hij]][1] = jfull;
             gems_full[hij]++;
-            if ( ieo < amo_ + nfrzc_ && jeo < amo_ + nfrzc_ ) {
+            if ( ieo < amo_ + nrstc_ + nfrzc_ && jeo < amo_ + nrstc_ + nfrzc_ ) {
                 gems_plus_core[hij]++;
             }
         }
     }
+    // including frozen virtuals
+    int * gems_really_full = (int *)malloc(nirrep_*sizeof(int));
+    memset((void*)gems_really_full,'\0',nirrep_*sizeof(int));
+    for (int ieo = 0; ieo < nmo_; ieo++) {
+        int ifull = energy_to_pitzer_order_really_full[ieo];
+        int hi    = symmetry_really_full[ifull];
+        //int i     = ifull - pitzer_offset_full[hi];
+        for (int jeo = 0; jeo <= ieo; jeo++) {
+            int jfull = energy_to_pitzer_order_really_full[jeo];
+            int hj    = symmetry_really_full[jfull];
+            //int j     = jfull - pitzer_offset_full[hj];
+
+            int hij = SymmetryPair(hi,hj);
+            bas_really_full_sym[hij][gems_really_full[hij]][0] = ifull;
+            bas_really_full_sym[hij][gems_really_full[hij]][1] = jfull;
+            gems_really_full[hij]++;
+        }
+    }
+
     if ( constrain_t1_ || constrain_t2_ || constrain_d3_ ) {
         // make all triplets
         for (int h = 0; h < nirrep_; h++) {
@@ -514,6 +700,10 @@ void v2RDMSolver::BuildBasis() {
             trip_aba[h] = count_aba;
         }
     }
+
+    free(gems_really_full);
+    free(symmetry_really_full);
+    free(energy_to_pitzer_order_really_full);
 }
 
 

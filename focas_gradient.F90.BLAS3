@@ -8,50 +8,51 @@ module focas_gradient
   subroutine orbital_gradient(int1,int2,den1,den2)
     implicit none
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
+    integer :: omp_get_max_threads
     real(wp) :: t0,t1
 
-!    write(fid_,*)'************'
-!    write(fid_,*)'new gradient'
-!    write(fid_,*)'************'
+    write(fid_,*)'************'
+    write(fid_,*)'new gradient'
+    write(fid_,*)'************'
 
     ! calculate inactive Fock matrix
-!    t0=timer()
+    t0=timer()
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_i(int1,int2)
     else
       call compute_f_i_df(int1,int2)
     endif
-!    t1=timer()
-!    write(fid_,'(a5,1x,f10.6)')'f_i',t1-t0
+    t1=timer()
+    write(fid_,'(a5,1x,f10.6)')'f_i',t1-t0
 
     ! calculate active Fock matrix
-!    t0=timer()
+    t0=timer()
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_a(den1,int2)
     else
       call compute_f_a_df(den1,int2)
     endif
-!    t1=timer()
-!    write(fid_,'(a5,1x,f10.6)')'f_a',t1-t0
+    t1=timer()
+    write(fid_,'(a5,1x,f10.6)')'f_a',t1-t0
 
     ! calculate auxiliary q matrix
-!    t0=timer()
+    t0=timer()
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_q(den2,int2)
     else
       call compute_q_df(den2,int2)
     endif
-!    t1=timer()
-!    write(fid_,'(a5,1x,f10.6)')'q',t1-t0
+    t1=timer()
+    write(fid_,'(a5,1x,f10.6)')'q',t1-t0
 
     ! calculate auxiliary z matrix
-!    t0=timer()
+    t0=timer()
     call compute_z(den1)
-!    t1=timer()
-!    write(fid_,'(a5,1x,f10.6)')'z',t1-t0
-!    write(fid_,*)
-!    call flush(fid_)
- 
+    t1=timer()
+    write(fid_,'(a5,1x,f10.6)')'z',t1-t0 
+    write(fid_,*)
+    call flush(fid_)
+
     ! compute gradient
     call compute_orbital_gradient()
 
@@ -134,6 +135,8 @@ module focas_gradient
     if ( mod(newline,4) /= 0 ) write(fid_,*)
 
     write(fid_,'(a,1x,es10.3)')'gradient norm:',grad_norm_
+
+    call flush(fid_)
 
     return
 
@@ -251,7 +254,7 @@ module focas_gradient
 
     end if
 
-    grad_norm_ = ddot(rot_pair_%n_tot,orbital_gradient_,1,orbital_gradient_,1)
+    grad_norm_ = sqrt(ddot(rot_pair_%n_tot,orbital_gradient_,1,orbital_gradient_,1))
 
     return 
 
@@ -320,26 +323,44 @@ module focas_gradient
     ! Q(v,m) = \SUM[w,x,y \in A] { d2(vw|xy) * g(mw|xy) }
     ! Because only those D2 elements with all four indeces \in A are nonzero, we have v \in A
     ! Also, m is a general orbital index && sym_m == sym_v
+    ! Integrals are stored in 3-index format. Instead of doing many ddots, the set of integrals
+    ! (mw|xy) is computed using dgemm g(mw|xy) = sum_Q xy_df(xy,Q) * mw_df(Q,mw) 
+    ! this requires extra storage but not too much:  g ~ nact^3 xy_df ~ nQ*nirrep*nact^2 mw_df ~ nQ*nact   
     real(wp), intent(in) :: den2(:),int2(:)
-    integer :: mw_sym,x_sym,y_sym,w_sym,m_sym,m_class,m,v,w,x,y,mdf,vdf,wdf,xdf,ydf
+    integer :: mw_sym,x_sym,y_sym,w_sym,m_sym,m_class,m,v,w,x,y,mdf,wdf,xdf,ydf
     integer :: xy_den,vw_den
     integer(ip) :: mw,xy,nQ
-    integer :: den_ind,den_sym_offset
+    integer :: den_ind,den_sym_offset,int_col,int_row,y_last
+    integer :: imw,ixy
+    integer :: max_nmopi,max_ngempi,error
     real(wp) :: val,int_val,ddot
     real(wp) :: v_mw(df_vars_%nQ)
 
+    type sym_block
+      real(wp), allocatable :: mw_df(:,:)
+      real(wp), allocatable :: xy_df(:,:)
+      real(wp), allocatable :: ints(:,:)
+    end type sym_block
+
+    type(sym_block) :: df_q(nirrep_)
+
     nQ = int(df_vars_%nQ,kind=ip)
+
+    max_nmopi  = maxval(nactpi_)
+    max_ngempi = max_nmopi * max_nmopi 
+
+    error = allocate_df_q()
 
     ! initialize
     q_ = 0.0_wp
 
-    ! loop over classes for m
+    ! loop over symmetries for m
 
-    do m_class = 1 , 3
+    do m_sym = 1 , nirrep_
 
-      ! loop over symmetries for m
+      ! loop over classes for m
 
-      do m_sym = 1 , nirrep_
+      do m_class = 1 , 3
 
         ! loop over orbital index m
 
@@ -349,20 +370,82 @@ module focas_gradient
 
           mdf = df_vars_%class_to_df_map(m)
 
+          ! *************************************
+          ! gather df integrals (:|mw) and (:|xy)
+          ! *************************************
+
+          do w_sym = 1 , nirrep_
+
+            if ( nactpi_(w_sym) == 0 ) cycle
+    
+            imw = 0    
+
+            mw_sym = group_mult_tab_(m_sym,w_sym)
+
+            do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+ 
+              wdf = df_vars_%class_to_df_map(w)
+ 
+              mw  = df_pq_index(wdf,mdf)
+
+              imw = imw + 1
+
+              call dcopy(nQ,int2(mw+1:mw+nQ),1,df_q(w_sym)%mw_df(:,imw),1)
+
+            end do ! end w loop
+
+            ixy = 0
+
+            do x_sym = 1 , nirrep_
+
+              y_sym = group_mult_tab_(x_sym,mw_sym)
+ 
+              if ( y_sym > x_sym ) cycle
+
+              do x = first_index_(x_sym,2) , last_index_(x_sym,2) 
+
+                xdf = df_vars_%class_to_df_map(x)
+
+                y_last = last_index_(y_sym,2)
+                if ( y_sym == x_sym ) y_last = x
+
+                do y = first_index_(y_sym,2) , y_last
+
+                  ydf     = df_vars_%class_to_df_map(y)
+
+                  xy      = df_pq_index(xdf,ydf)
+
+                  ixy     = ixy + 1
+
+                  call dcopy(df_vars_%nQ,int2(xy+1:xy+nQ),1,df_q(w_sym)%xy_df(:,ixy),1)
+
+                end do ! end y loop  
+
+              end do ! end x loop
+
+            end do ! end x_sym loop
+
+            if ( ixy == 0 ) cycle
+
+            ! *******************************************************************************************
+            ! multiply 3-index integral matrices to get the 4-index integrals (xy|mw) for all w,x,y \in A
+            ! *******************************************************************************************
+
+            call dgemm('t','n',ixy,imw,df_vars_%nQ,         &
+                     & 1.0_wp,df_q(w_sym)%xy_df(:,1:ixy),df_vars_%nQ,&
+                     &        df_q(w_sym)%mw_df(:,1:imw),df_vars_%nQ,&
+                     & 0.0_wp,df_q(w_sym)%ints,nirrep_*max_ngempi)
+
+          end do ! end w_sym loop
+
           ! loop over orbital index v
 
 #ifdef OMP
-!$omp parallel shared(m_class,nQ,m_sym,m,mdf,first_index_,last_index_, &
-!$omp df_vars_,den2,int2,dens_,q_) num_threads(nthread_use_)
-!$omp do private(val,v,v_mw,vdf,w_sym,mw_sym,den_Sym_offset,w,wdf,mw,  &
-!$omp vw_den,x_sym,y_sym,x,y,xdf,ydf,xy,xy_den,den_ind,int_val)
+!$omp parallel shared(m_class,nQ,m_sym,m,mdf,first_index_,last_index_,df_vars_,den2,int2,dens_,q_) num_threads(nthread_use_)
+!$omp do private(ixy,imw,val,v,w_sym,mw_sym,den_sym_offset,w,vw_den,x_sym,y_sym,x,y,xy_den,den_ind,int_val)
 #endif
 
           do v = first_index_(m_sym,2) , last_index_(m_sym,2)
-
-            ! v index in df order
-
-            vdf = df_vars_%class_to_df_map(v)
 
             ! initialize matrix element
   
@@ -371,6 +454,8 @@ module focas_gradient
             ! loop over symmetries for w
 
             do w_sym = 1 , nirrep_
+
+              imw = 0
 
               ! symmetry of mw geminal
 
@@ -384,16 +469,10 @@ module focas_gradient
  
               do w = first_index_(w_sym,2) , last_index_(w_sym,2)
 
-                ! w indef in df order
-           
-                wdf    = df_vars_%class_to_df_map(w)
+                ixy = 0   
 
-                ! mw geminal index in df order
+                imw = imw + 1
 
-                mw     = df_pq_index(mdf,wdf) 
-
-                call dcopy(df_vars_%nQ,int2(mw+1:mw+nQ),1,v_mw,1)
-              
                 ! vw geminal index for density
 
                 vw_den = dens_%gemind(v,w)
@@ -412,33 +491,21 @@ module focas_gradient
  
                     do x = first_index_(x_sym,2) , last_index_(x_sym,2)
 
-                      ! x index in df order
-     
-                      xdf = df_vars_%class_to_df_map(x)
-
                       ! ***********************************************
                       ! loop over y orbital index (x>y) --> factor of 2
                       ! ***********************************************
 
                       do y = first_index_(y_sym,2) , x - 1
 
-                        ! y index in df order
-                        
-                        ydf     = df_vars_%class_to_df_map(y)
+                        ixy = ixy + 1
 
                         ! xy geminal index and density index
 
                         xy_den  = dens_%gemind(x,y)
                         den_ind = pq_index(vw_den,xy_den) + den_sym_offset
                     
-                        ! xy geminal index in df order
-                        xy  = df_pq_index(xdf,ydf)   
-
-                        int_val = ddot(df_vars_%nQ,v_mw,1,int2(xy+1:xy+nQ),1)
-
                         ! update matrix element
-
-                        val = val + 2.0_wp * int_val * den2(den_ind)
+                        val = val + 2.0_wp * df_q(w_sym)%ints(ixy,imw) * den2(den_ind)
 
                       end do ! end y loop
 
@@ -449,14 +516,13 @@ module focas_gradient
                       xy_den  = dens_%gemind(x,x)
                       den_ind = pq_index(vw_den,xy_den) + den_sym_offset
 
+                      ixy = ixy + 1
+
                       ! xy geminal index in df order
                       xy  = df_pq_index(xdf,xdf) 
 
-                      int_val = ddot(df_vars_%nQ,v_mw,1,int2(xy+1:xy+nQ),1)
-
                       ! update matrix element
-
-                      val = val + int_val * den2(den_ind)
+                      val = val + df_q(w_sym)%ints(ixy,imw) * den2(den_ind)
 
                     end do ! end x loop
 
@@ -466,33 +532,21 @@ module focas_gradient
 
                     do x = first_index_(x_sym,2) , last_index_(x_sym,2)
 
-                      ! x index in df order
-
-                      xdf = df_vars_%class_to_df_map(x)
-
                       ! ***********************************************
                       ! loop over y orbital index (x>y) --> factor of 2
                       ! ***********************************************
 
                       do y = first_index_(y_sym,2) , last_index_(y_sym,2)
 
-                        ! y index in df order
-
-                        ydf     = df_vars_%class_to_df_map(y)
-
                         ! xy geminal index and density index
 
                         xy_den  = dens_%gemind(x,y)
                         den_ind = pq_index(vw_den,xy_den) + den_sym_offset
 
-                        ! xy geminal index in df order
-                        xy  = df_pq_index(xdf,ydf) 
-
-                        int_val = ddot(df_vars_%nQ,v_mw,1,int2(xy+1:xy+nQ),1)
+                        ixy = ixy + 1
 
                         ! update matrix element
-
-                        val = val + 2.0_wp * int_val * den2(den_ind)
+                        val = val + 2.0_wp * df_q(w_sym)%ints(ixy,imw) * den2(den_ind)
 
                       end do ! end y loop
 
@@ -519,11 +573,51 @@ module focas_gradient
 
         end do ! end m loop
 
-      end do ! end m_sym loop 
+      end do ! end m_class loop 
 
-    end do ! end m_class loop
+    end do ! end m_sym loop
+ 
+    error = deallocate_df_q()
 
     return
+
+    contains
+
+      integer function allocate_df_q()
+
+        implicit none
+
+        integer :: w_sym
+
+        do w_sym = 1 , nirrep_
+
+          if ( nactpi_(w_sym) == 0 ) cycle
+ 
+          allocate(df_q(w_sym)%mw_df(df_vars_%nQ,nactpi_(w_sym)))
+          allocate(df_q(w_sym)%xy_df(df_vars_%nQ,nirrep_*max_ngempi))
+          allocate(df_q(w_sym)%ints(nirrep_*max_ngempi,max_nmopi)) 
+
+        end do
+ 
+        allocate_df_q = 0
+
+      end function allocate_df_q
+
+      integer function deallocate_df_q()
+
+        integer :: w_sym
+
+        do w_sym = 1 , nirrep_       
+
+          if (allocated(df_q(w_sym)%mw_df)) deallocate(df_q(w_sym)%mw_df)
+          if (allocated(df_q(w_sym)%xy_df)) deallocate(df_q(w_sym)%xy_df)
+          if (allocated(df_q(w_sym)%ints))  deallocate(df_q(w_sym)%ints)
+
+        end do
+
+        deallocate_df_q = 0
+
+      end function deallocate_df_q
 
   end subroutine compute_q_df
 
@@ -624,7 +718,6 @@ module focas_gradient
       end do ! end w_sym loop
 
     end do ! end m_sym loop
- 
 
     return
   end subroutine compute_q
@@ -639,11 +732,112 @@ module focas_gradient
     real(wp), intent(in) :: den1(:),int2(:)
     integer :: m_class,n_class,m_sym,m,n,v,w,w_sym,mdf,ndf,wdf,vdf
     integer :: den_ind,mn_fock
-    integer(ip) :: mn,vw,mw,vn,wn,ww,nQ 
+    integer(ip) :: mn,vw,mw,nQ
+    integer :: max_nmopi,max_nactpi
+    integer :: m_dgemm,n_dgemm,k_dgemm,mc_l,mc_f
+    integer :: df_ind,error,mn_J
+    integer :: coulomb_ind,exchange_row,exchange_col
     real(wp) :: val,ival,dval,ddot
     real(wp) :: v_mn(df_vars_%nQ),v_mw(df_vars_%nQ)
 
+    type df_int_block
+      real(wp), allocatable :: df_int(:,:)
+    end type df_int_block
+
+    type w_sym_block
+      type(df_int_block), allocatable :: w_irr(:)
+    end type w_sym_block
+
+    type m_sym_block  
+      type(w_sym_block), allocatable :: m_irr(:)
+    end type m_sym_block
+
+    type int_block
+      real(wp), allocatable :: ints(:,:)
+    end type int_block
+
+    type(int_block)  :: Km(nirrep_)
+    type(int_block)  :: Jm(nirrep_)
+
+    type(m_sym_block)  :: mw_df
+    type(w_sym_block)  :: vw_df
+    type(df_int_block) :: mn_df
+
     nQ = int(df_vars_%nQ,kind=ip)
+
+    max_nmopi = maxval(trans_%nmopi)
+    max_nactpi = maxval(nactpi_)
+
+    error = allocate_df_fa()
+
+    ! *****************************
+    ! collect all mw df vectors 
+    ! m is a general orbital index
+    ! w is an active orbital index
+    ! this adds nQ*nact*nmo storage
+    ! *****************************
+
+    do m_sym = 1 , nirrep_
+
+      do w_sym = 1 , nirrep_
+
+        df_ind = 0
+
+        do m_class = 1 , 3
+
+          do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
+
+            mdf = df_vars_%class_to_df_map(m)
+
+            do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+
+              wdf    = df_vars_%class_to_df_map(w)
+
+              mw     = df_pq_index(mdf,wdf)
+
+              df_ind = df_ind + 1
+
+              call dcopy(df_vars_%nQ,int2(mw+1:mw+nQ),1,mw_df%m_irr(m_sym)%w_irr(w_sym)%df_int(:,df_ind),1)
+
+            end do
+
+          end do
+
+        end do
+
+      end do
+
+    end do
+
+    ! ******************************************
+    ! collect all vw df vectors
+    ! v&w are both active orbital indeces
+    ! this adds nQ*nact*(nact+1)/2 extra storage
+    ! ******************************************
+
+    do w_sym = 1 ,nirrep_
+
+      df_ind = 0
+
+      do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+
+        wdf = df_vars_%class_to_df_map(w)
+
+        do v = first_index_(w_sym,2) , w
+
+          vdf = df_vars_%class_to_df_map(v)
+ 
+          vw  = df_pq_index(vdf,wdf) 
+
+          df_ind = df_ind + 1
+          
+          call dcopy(df_vars_%nQ,int2(vw+1:vw+nQ),1,vw_df%w_irr(w_sym)%df_int(:,df_ind),1)
+ 
+        end do
+
+      end do
+ 
+    end do
 
     ! initialize
     fock_a_ = 0.0_wp
@@ -663,89 +857,128 @@ module focas_gradient
           ! orbital index in df order
           mdf = df_vars_%class_to_df_map(m)
 
+          ! **********************************
+          ! gather ALL df integrals for this m
+          ! this adds nQ*nmo extra storage
+          ! **********************************
+
+          df_ind = 0
+
+          ! this used to include all classes
+          do n_class = 1 , m_class
+
+            do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
+
+              ndf = df_vars_%class_to_df_map(n)
+
+              mn = df_pq_index(mdf,ndf)
+
+              df_ind = df_ind + 1
+
+              call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,mn_df%df_int(:,df_ind),1)
+
+            end do
+
+          end do
+
+          ! *******************************************************
+          ! form ALL exchange/coulomb integrals for this value of m
+          ! this adds 2 * nact*nact*nmo extra storage
+          ! *******************************************************
+
+          do w_sym = 1 , nirrep_
+
+            if ( nactpi_(w_sym) == 0 ) cycle   
+
+            mc_f = ( trans_%class_to_irrep_map(m) - 1 ) * nactpi_(w_sym)
+            mc_l = mc_f + nactpi_(w_sym)
+
+            m_dgemm = nactpi_(w_sym) * trans_%nmopi(m_sym)
+            n_dgemm = nactpi_(w_sym)
+            k_dgemm = df_vars_%nQ
+
+            if ( ( m_dgemm > 0 ) .and. ( n_dgemm > 0 ) ) then
+
+              call dgemm('t','n',m_dgemm,n_dgemm,k_dgemm,1.0_wp,                        &
+                       & mw_df%m_irr(m_sym)%w_irr(w_sym)%df_int,k_dgemm,                &
+                       & mw_df%m_irr(m_sym)%w_irr(w_sym)%df_int(:,mc_f+1:mc_l),k_dgemm, &
+                     & 0.0_wp,Km(w_sym)%ints(1:m_dgemm,1:n_dgemm),m_dgemm)
+
+            end if
+
+            m_dgemm = nactpi_(w_sym) * ( nactpi_(w_sym) + 1 ) /2
+            n_dgemm = df_ind !trans_%nmopi(m_sym)
+
+            if ( ( m_dgemm > 0 ) .and. ( n_dgemm > 0 ) ) then    
+
+              ! vw --> df_int [ nQ          , na*(na+1)/2 ]
+              ! mn --> df_int [ nQ          , max_nmo     ]
+              ! Jm -->        [ na*(na+1)/2 , max_nmo     ]
+
+              call dgemm('t','n',m_dgemm,n_dgemm,k_dgemm,1.0_wp,vw_df%w_irr(w_sym)%df_int, &
+                       & k_dgemm,mn_df%df_int(:,1:n_dgemm),k_dgemm,0.0_wp,                 & 
+                       & Jm(w_sym)%ints(:,1:n_dgemm),m_dgemm)
+
+            end if
+
+          end do
+ 
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
 
 #ifdef OMP
-!$omp parallel shared(ints_,nQ,dens_,m_class,m_sym,m,mdf,first_index_,  &
-!$omp last_index_,df_vars_,den1,int2) num_threads(nthread_use_)
-!$omp do private(n,ndf,mn,val,v_mn,v_mw,w_sym,w,wdf,v,den_ind,dval,vdf, &
-!$omp vw,ival,ww,mw,wn,vn,mn_fock)
+!$omp parallel shared(m_sym,m_class,m,nirrep_,first_index_,trans_,den1,Jm,Km,nactpi_) num_threads(nthread_use_)
+!$omp do private(n,mn_J,val,den_ind,w_sym,coulomb_ind,exchange_col,w,exchange_row,v)
 #endif
 
           do n = first_index_(m_sym,m_class) , m
 
-            ! orbital index in df order
-            ndf = df_vars_%class_to_df_map(n)
-
-            ! mn-geminal index in df order
-            mn  = df_pq_index(mdf,ndf) 
-
-            call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,v_mn,1)
+            mn_J = trans_%class_to_irrep_map(n)
 
             ! initialize Fock matrix element
             val = 0.0_wp
 
             ! loop over irreps for v
 
+            den_ind = 0
+
             do w_sym = 1 , nirrep_
+
+              coulomb_ind  = 0 
+              exchange_col = 0
 
               ! loop over w indeces
 
-              do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+              do w = 1, nactpi_(w_sym) !first_index_(w_sym,2) , last_index_(w_sym,2)
 
-                ! orbital index in df order
-                wdf = df_vars_%class_to_df_map(w)
-
-                mw      = df_pq_index(mdf,wdf)
-
-                call dcopy(df_vars_%nQ,int2(mw+1:mw+nQ),1,v_mw,1)
+                exchange_row = df_ga_index(n,first_index_(w_sym,2),w_sym) - 1
+ 
+                exchange_col = exchange_col + 1
 
                 ! *** w > v --> factor of 2
 
                 ! loop over v indeces
 
-                do v = first_index_(w_sym,2) , w - 1 
+                do v = 1 , w - 1 !first_index_(w_sym,2) , w - 1 
 
-                  ! 1-e density element
-                  den_ind = dens_%gemind(v,w)
-                  dval    = den1(den_ind)
+                  den_ind      = den_ind + 1
+                  coulomb_ind  = coulomb_ind + 1
+                  exchange_row = exchange_row + 1
 
-                  ! orbital index in df order
-                  vdf     = df_vars_%class_to_df_map(v)
-
-                  ! 2-e coulomb contribution 2 g(mn|vw)
-                  vw      = df_pq_index(wdf,vdf) 
-
-                  ival    = 2.0_wp * ddot(df_vars_%nQ,v_mn,1,int2(vw+1:vw+nQ),1)
-
-                  ! 2-e exchange contribution - g(mw|vn)
-                  vn      = df_pq_index(vdf,ndf) 
-
-                  ival    = ival - ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
-
-                  ! contract with integral/density matrix elements
-                  val     = val + dval * ival
+                  ! :: d1(v|w) * [ 2 * g(mn|vw) - g(mw|wn) ]
+                  val = val + den1(den_ind) * ( 2.0_wp * Jm(w_sym)%ints(coulomb_ind,mn_J) - & 
+                                            &  Km(w_sym)%ints(exchange_row,exchange_col) )
 
                 end do ! end v loop
 
                 ! **** w == v --> factor of 1
 
-                ! 1-e density element
-                den_ind = dens_%gemind(w,w)
-                dval    = den1(den_ind)
-
-                ! 2-e coulomb contribution 2 g(mn|ww)
-                ww      = df_pq_index(wdf,wdf)
-
-                ival    = ddot(df_vars_%nQ,v_mn,1,int2(ww+1:ww+nQ),1)
-
-                ! 2-e exchange contribution - g(mw|wn)
-                wn      = df_pq_index(wdf,ndf) 
-
-                ival    = ival - 0.5_wp * ddot(df_vars_%nQ,v_mw,1,int2(wn+1:wn+nQ),1)
-
-                ! contract with integral/density matrix elements
-                val     = val + dval * ival
+                den_ind      = den_ind + 1
+                coulomb_ind  = coulomb_ind + 1
+                exchange_row = exchange_row + 1
+ 
+                ! :: d1(v|w) * [ g(mn|vw) - 0.5 * g(mw|wn) ]
+                val = val + den1(den_ind) * ( Jm(w_sym)%ints(coulomb_ind,mn_J) -  &
+                                          & 0.5_wp * Km(w_sym)%ints(exchange_row,exchange_col) )
 
               end do ! end w loop
 
@@ -769,86 +1002,60 @@ module focas_gradient
             ! loop over n indeces
 
 #ifdef OMP
-!$omp parallel shared(n_class,nQ,ints_,dens_,m_class,m_sym,m,mdf,first_index_, &
-!$omp last_index_,df_vars_,den1,int2) num_threads(nthread_use_)
-!$omp do private(n,ndf,mn,val,v_mn,v_mw,w_sym,w,wdf,v,den_ind,dval,vdf,vw,ival,&
-!$omp mw,wn,mn_fock)
+!$omp parallel shared(m_sym,n_class,m,nirrep_,first_index_,trans_,den1,Jm,Km,nactpi_) num_threads(nthread_use_)
+!$omp do private(n,mn_J,val,den_ind,w_sym,coulomb_ind,exchange_col,w,exchange_row,v)
 #endif
+
 
             do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
 
-              ! orbital index in df order
-              ndf = df_vars_%class_to_df_map(n)
-
-              ! mn-geminal index in df order
-              mn  = df_pq_index(mdf,ndf) 
-
-              call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,v_mn,1)
+              mn_J = trans_%class_to_irrep_map(n)
 
               ! initialize Fock matrix element
               val = 0.0_wp
+
+              den_ind = 0
 
               ! loop over irreps for v
 
               do w_sym = 1 , nirrep_
 
+                coulomb_ind  = 0
+                exchange_col = 0
+
                 ! loop over w indeces
 
-                do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+                do w = 1 , nactpi_(w_sym) !first_index_(w_sym,2) , last_index_(w_sym,2)
 
-                  ! orbital index in df order
-                  wdf = df_vars_%class_to_df_map(w)
+                  exchange_row = df_ga_index(n,first_index_(w_sym,2),w_sym) - 1
 
-                  mw      = df_pq_index(mdf,wdf)                  
-
-                  call dcopy(df_vars_%nQ,int2(mw+1:mw+nQ),1,v_mw,1)
+                  exchange_col = exchange_col + 1
 
                   ! *** w > v --> factor of 2 
 
                   ! loop over v indeces
 
-                  do v = first_index_(w_sym,2) , w -1 
+                  do v = 1 , w - 1 !first_index_(w_sym,2) , w -1 
 
-                    ! 1-e density element
-                    den_ind = dens_%gemind(v,w)
-                    dval    = den1(den_ind)
+                    den_ind      = den_ind + 1
+                    coulomb_ind  = coulomb_ind + 1
+                    exchange_row = exchange_row + 1
 
-                    ! orbital index in df order
-                    vdf     = df_vars_%class_to_df_map(v)
-
-                    ! 2-e coulomb contribution 2 g(mn|vw)
-                    vw      = df_pq_index(wdf,vdf) 
-
-                    ival    = 2.0_wp * ddot(df_vars_%nQ,v_mn,1,int2(vw+1:vw+nQ),1)
-
-                    ! 2-e exchange contribution - g(mw|vn)
-                    vn      = df_pq_index(vdf,ndf) 
-
-                    ival    = ival - ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
-
-                    ! contract with integral/density matrix elements
-                    val     = val + dval * ival
+                    ! :: d1(v|w) * [ 2 * g(mn|vw) - g(mw|wn) ]
+                    val = val + den1(den_ind) * ( 2.0_wp * Jm(w_sym)%ints(coulomb_ind,mn_J) - & 
+                                             &       Km(w_sym)%ints(exchange_row,exchange_col) )
 
                   end do ! end v loop
 
                   ! *** w == v --> factor of 1
 
-                  ! 1-e density element
-                  den_ind = dens_%gemind(w,w)
-                  dval    = den1(den_ind)
+                  den_ind      = den_ind + 1
+                  coulomb_ind  = coulomb_ind + 1
+                  exchange_row = exchange_row + 1
 
-                  ! 2-e coulomb contribution 2 g(mn|ww)
-                  ww      = df_pq_index(wdf,wdf) 
-
-                  ival    = ddot(df_vars_%nQ,v_mn,1,int2(ww+1:ww+nQ),1)
-
-                  ! 2-e exchange contribution - g(mw|wn)
-                  wn      = df_pq_index(wdf,ndf) 
-
-                  ival    = ival - 0.5_wp * ddot(df_vars_%nQ,v_mw,1,int2(wn+1:wn+nQ),1)
-
-                  ! contract with integral/density matrix elements
-                  val     = val + dval * ival
+                  ! :: d1(v|w) * [ g(mn|vw) - 0.5 * g(mw|wn) ]
+                  val = val + den1(den_ind) * ( Jm(w_sym)%ints(coulomb_ind,mn_J) -       &
+                                    & 0.5_wp * Km(w_sym)%ints(exchange_row,exchange_col) )
 
                 end do ! end w loop
 
@@ -873,7 +1080,108 @@ module focas_gradient
 
     end do ! end m_class loop
 
+    error = deallocate_df_fa()
+
     return
+
+    contains
+
+      integer function allocate_df_fa()
+
+        implicit none
+
+        integer :: m_sym,w_sym,nact,n_m,n_w
+
+        allocate(mw_df%m_irr(nirrep_))
+
+        do m_sym = 1 , nirrep_
+
+          allocate(mw_df%m_irr(m_sym)%w_irr(nirrep_))
+
+          n_m = trans_%nmopi(m_sym) 
+  
+          if ( n_m == 0 ) cycle
+
+          do w_sym = 1 , nirrep_
+
+            n_w = nactpi_(w_sym)
+
+            if ( n_w == 0 ) cycle
+
+            allocate(mw_df%m_irr(m_sym)%w_irr(w_sym)%df_int(df_vars_%nQ,n_m*n_w))
+ 
+          end do
+
+        end do
+
+        allocate(vw_df%w_irr(nirrep_))
+
+        do w_sym = 1 , nirrep_
+
+          n_w = nactpi_(w_sym)
+
+          if ( n_w == 0 ) cycle
+
+          allocate(vw_df%w_irr(w_sym)%df_int(df_vars_%nQ,n_w*(n_w+1)/2))
+
+        end do
+
+        allocate(mn_df%df_int(df_vars_%nQ,max_nmopi))
+
+        do m_sym = 1 , nirrep_
+
+          allocate(Km(m_sym)%ints(max_nactpi*max_nmopi,max_nactpi))
+
+        end do
+
+        do w_sym = 1 , nirrep_
+
+          n_w = nactpi_(w_sym)
+
+          if ( n_w == 0 ) cycle
+
+          allocate(Jm(w_sym)%ints(n_w*(n_w+1)/2,max_nmopi))
+
+        end do
+        
+        allocate_df_fa = 0
+
+        return
+
+      end function allocate_df_fa
+
+      integer function deallocate_df_fa()
+
+        integer :: m_sym,w_sym
+
+        do m_sym = 1 , nirrep_
+
+          do w_sym = 1 , nirrep_
+
+            if (allocated(mw_df%m_irr(m_sym)%w_irr(w_sym)%df_int)) deallocate(mw_df%m_irr(m_sym)%w_irr(w_sym)%df_int)
+
+          end do
+
+          if (allocated(vw_df%w_irr(m_sym)%df_int)) deallocate(vw_df%w_irr(m_sym)%df_int)
+
+          if (allocated(Km(m_sym)%ints))            deallocate(Km(m_sym)%ints)
+
+          if (allocated(Jm(m_sym)%ints))            deallocate(Jm(m_sym)%ints)
+
+          deallocate(mw_df%m_irr(m_sym)%w_irr)
+
+        end do
+
+        deallocate(mw_df%m_irr)
+
+        deallocate(vw_df%w_irr)
+
+        if (allocated(mn_df%df_int)) deallocate(mn_df%df_int)
+
+        deallocate_df_fa = 0
+
+      end function deallocate_df_fa
+
   end subroutine compute_f_a_df
 
   subroutine compute_f_a(den1,int2)
@@ -1035,11 +1343,106 @@ module focas_gradient
     real(wp), intent(in) :: int1(:),int2(:)
     integer :: m_class,n_class,m_sym,m,n,i,i_sym,mdf,ndf,idf
     integer :: mn_fock,mn_int1
-    integer(ip) :: mn,ii,mi,in,nQ
-    real(wp) :: val,int_val,ddot
-    real(wp) :: v_mn(df_vars_%nQ)
+    integer :: error,max_nmopi,max_ndocpi,df_ind
+    integer :: mc_f,mc_l,m_dgemm,n_dgemm,k_dgemm
+    integer :: ni_K,mi_k,mn_J,ii_J
+    integer(ip) :: mn,ii,mi,nQ
+    real(wp) :: oeval,exchange,coulomb
+
+    type df_int_block
+      real(wp), allocatable :: df_int(:,:)
+    end type df_int_block
+
+    type i_sym_block
+      type(df_int_block), allocatable :: i_irr(:)
+    end type i_sym_block
+
+    type m_sym_block
+      type(i_sym_block), allocatable :: m_irr(:)
+    end type m_sym_block
+
+    type int_block
+      real(wp),  allocatable :: ints(:,:)
+    end type int_block
+
+    type(i_sym_block)  :: ii_df
+    type(df_int_block) :: mn_df
+    type(m_sym_block)  :: mi_df
+    type(int_block)    :: Km(nirrep_)
+    type(int_block)    :: Jm(nirrep_)
 
     nQ = int(df_vars_%nQ,kind=ip) 
+
+    max_nmopi  = maxval(trans_%nmopi)
+    max_ndocpi = maxval(ndocpi_)
+
+    error = allocate_df_f_i()
+
+    ! ************************************
+    ! gather mi df integrals for all m & i
+    ! this adds nQ*nmo*ndoc storage
+    ! ************************************
+
+    do m_sym = 1 , nirrep_
+
+      if ( trans_%nmopi(m_sym) == 0 ) cycle
+
+      do i_sym = 1 , nirrep_
+   
+        if ( ndocpi_(i_sym) == 0 ) cycle
+
+        df_ind = 0
+
+        do m_class = 1 , 3
+
+          do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
+
+            mdf = df_vars_%class_to_df_map(m)
+
+            do i = first_index_(i_sym,1) , last_index_(i_sym,1)
+
+              idf    = df_vars_%class_to_df_map(i)
+
+              mi     = df_pq_index(mdf,idf)
+
+              df_ind = df_ind + 1 
+
+              call dcopy(df_vars_%nQ,int2(mi+1:mi+nQ),1,mi_df%m_irr(m_sym)%i_irr(i_sym)%df_int(:,df_ind),1)
+
+            end do
+
+          end do
+
+        end do
+
+      end do
+
+    end do
+
+    ! ************************************
+    ! gather all ii df integrals for all i
+    ! this adds nQ*ndoc storage
+    ! ************************************
+
+    do i_sym = 1 , nirrep_
+ 
+      if ( ndocpi_(i_sym) == 0 ) cycle 
+
+      df_ind = 0
+ 
+      do i = first_index_(i_sym,1) , last_index_(i_sym,1)
+
+        idf    = df_vars_%class_to_df_map(i)
+  
+        ii     = df_pq_index(idf,idf)
+
+        df_ind = df_ind + 1
+
+        call dcopy(df_vars_%nQ,int2(ii+1:ii+nQ),1,ii_df%i_irr(i_sym)%df_int(:,df_ind),1)
+
+      end do
+
+    end do
 
     ! initialize
     fock_i_ = 0.0_wp
@@ -1059,13 +1462,71 @@ module focas_gradient
           ! orbital index in df order
           mdf = df_vars_%class_to_df_map(m)
 
+          ! ****************************************************
+          ! gather mn df integrals for this value of m and all n
+          ! this adds nQ*nmo storage
+          ! ****************************************************
+
+          df_ind = 0 
+  
+          ! this used to be up to 3
+          do n_class = 1 , m_class
+
+            do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
+
+              ndf    = df_vars_%class_to_df_map(n)
+
+              mn     = df_pq_index(mdf,ndf)
+ 
+              df_ind = df_ind + 1
+ 
+              call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,mn_df%df_int(:,df_ind),1)
+              
+            end do
+
+          end do
+ 
+          ! **********************************************************
+          ! form the Coulomb and exchange matrices for this value of m
+          ! **********************************************************
+
+          do i_sym =  1 , nirrep_
+
+            m_dgemm = ndocpi_(i_sym) * trans_%nmopi(m_sym)
+            n_dgemm = ndocpi_(i_sym)
+            k_dgemm = df_vars_%nQ
+
+            if ( ( m_dgemm > 0 ) .and. ( n_dgemm > 0 ) ) then
+
+              mc_f = ( trans_%class_to_irrep_map(m) - 1 ) * n_dgemm
+              mc_l = mc_f + n_dgemm
+ 
+              call dgemm('t','n',m_dgemm,n_dgemm,k_dgemm,1.0_wp,                        &
+                       & mi_df%m_irr(m_sym)%i_irr(i_sym)%df_int,k_dgemm, &
+                       & mi_df%m_irr(m_sym)%i_irr(i_sym)%df_int(:,mc_f+1:mc_l),k_dgemm, &
+                     & 0.0_wp,Km(i_sym)%ints(1:m_dgemm,1:n_dgemm),m_dgemm)
+
+            end if
+
+            m_dgemm = ndocpi_(i_sym)
+            n_dgemm = df_ind !trans_%nmopi(m_sym)
+
+            if ( ( m_dgemm > 0 ) .and. ( n_dgemm > 0 ) ) then
+
+              call dgemm('t','n',m_dgemm,n_dgemm,k_dgemm,1.0_wp,ii_df%i_irr(i_sym)%df_int, &
+                       & k_dgemm,mn_df%df_int(:,1:n_dgemm),k_dgemm,0.0_wp,                 &
+                       & Jm(i_sym)%ints(:,1:n_dgemm),m_dgemm)
+
+            end if 
+
+          end do 
+
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
 
 #ifdef OMP
-!$omp parallel shared(m,mdf,first_index_,last_index_,fock_i_,int2,int1,  &
-!$omp ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
-!$omp do private(n,v_mn,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock, &
-!$omp n_class)
+!$omp parallel shared(m_sym,m_class,m,nirrep_,first_index_,last_index_,int1,ints_, &
+!$omp ndocpi_,trans_,Km,Jm,fock_i_)
+!$omp do private(n,mn_int1,oeval,coulomb,exchange,i_sym,ni_K,mi_K,mn_J,mn_fock)
 #endif
 
           do n = first_index_(m_sym,m_class) , m
@@ -1074,15 +1535,10 @@ module focas_gradient
             mn_int1 = ints_%gemind(m,n)
 
             ! 1-e contribution h(m|n)
-            val     = int1(mn_int1)
+            oeval   = int1(mn_int1)
 
-            ! orbital index in df order
-            ndf = df_vars_%class_to_df_map(n)
-
-            ! mn-geminal index in df order
-            mn      = df_pq_index(mdf,ndf) 
-
-            call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,v_mn,1)
+            coulomb  = 0.0_wp
+            exchange = 0.0_wp
 
             ! loop over irreps for i
 
@@ -1090,38 +1546,32 @@ module focas_gradient
 
               ! loop over i indeces
 
-              do i = first_index_(i_sym,1) , last_index_(i_sym,1)
+              ni_K = ( trans_%class_to_irrep_map(n) - 1 ) * ndocpi_(i_sym)
+              mi_K = 0
 
-                ! orbital index in df order
-                idf        = df_vars_%class_to_df_map(i) 
+              if ( ndocpi_(i_sym) > 0 ) then
+ 
+                do i = 1 , ndocpi_(i_sym)
 
-                ! ii-geminal index in df order
-                ii         = df_pq_index(idf,idf)
+                  ni_K = ni_K + 1
+                  mi_K = mi_K + 1
+ 
+                  exchange = exchange + Km(i_sym)%ints(ni_K,mi_K)
 
-                ! 2-e coulomb contribution 2 g(mn|ii)
+                end do
 
-                int_val    = ddot(df_vars_%nQ,v_mn,1,int2(ii+1:ii+nQ),1)     
+                mn_J = trans_%class_to_irrep_map(n)
 
-                val        = val + 2.0_wp * int_val
+                coulomb = coulomb + sum(Jm(i_sym)%ints(1:ndocpi_(i_sym),mn_J))
 
-                ! geminal indeces in df order
-                mi         = df_pq_index(mdf,idf) 
-                in         = df_pq_index(idf,ndf)
-
-                ! 2-e exchange contribution - g(mi|in)
-
-                int_val    = ddot(df_vars_%nQ,int2(mi+1:mi+nQ),1,int2(in+1:in+nQ),1)
-
-                val        = val - int_val
-
-              end do ! end i loop
+              end if
 
             end do ! end i_sym loop
 
             ! save Fock matrix element
 
             mn_fock          = ints_%gemind(m,n)
-            fock_i_(mn_fock) = val
+            fock_i_(mn_fock) = oeval + 2.0_wp * coulomb - exchange
 
           end do ! end n loop
 
@@ -1137,60 +1587,48 @@ module focas_gradient
             ! loop over n indeces
 
 #ifdef OMP
-!$omp parallel shared(n_class,m,mdf,first_index_,last_index_,fock_i_,int2,int1, &
-!$omp ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
-!$omp do private(n,v_mn,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock)
+!$omp parallel shared(m_sym,n_class,m,nirrep_,first_index_,last_index_,int1,ints_, &
+!$omp ndocpi_,trans_,Km,Jm,fock_i_)
+!$omp do private(n,mn_int1,oeval,coulomb,exchange,i_sym,ni_K,mi_K,mn_J,mn_fock)
 #endif
             do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
 
               mn_int1 = ints_%gemind(m,n)
               ! 1-e contribution h(m|n)
-              val     = int1(mn_int1)
+              oeval   = int1(mn_int1)
 
-              ! orbital index in df order
-              ndf     = df_vars_%class_to_df_map(n)
-
-              ! mn geminal index in df order
-              mn      = df_pq_index(mdf,ndf)
-
-              call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,v_mn,1)
+              exchange = 0.0_wp
+              coulomb  = 0.0_wp
 
               ! loop over irreps for i
 
               do i_sym = 1 , nirrep_
 
-                ! loop over i indeces
+                if ( ndocpi_(i_sym) > 0 ) then
 
-                do i = first_index_(i_sym,1) , last_index_(i_sym,1)
+                  ni_K = ( trans_%class_to_irrep_map(n) - 1 ) * ndocpi_(i_sym)
+                  mi_K = 0
 
-                  ! orbital index in df order
-                  idf        = df_vars_%class_to_df_map(i)
+                  do i = 1 , ndocpi_(i_sym)
 
-                  ! ii-geminal index in df order
-                  ii         = df_pq_index(idf,idf) 
+                    ni_K = ni_K + 1
+                    mi_K = mi_K + 1
 
-                  ! 2-e coulomb contribution 2 g(mn|ii)
+                    exchange = exchange + Km(i_sym)%ints(ni_K,mi_K)
 
-                  int_val    = ddot(df_vars_%nQ,v_mn,1,int2(ii+1:ii+nQ),1)
+                  end do
 
-                  val        = val + 2.0_wp * int_val
+                  mn_J = trans_%class_to_irrep_map(n)
 
-                  ! geminal indeces in df order
-                  mi         = df_pq_index(mdf,idf) 
-                  in         = df_pq_index(idf,ndf) 
- 
-                  ! 2-e exchange contribution - g(mi|in)
-                  int_val    = ddot(df_vars_%nQ,int2(mi+1:mi+nQ),1,int2(in+1:in+nQ),1)
-
-                  val        = val - int_val
-
-                end do ! end i loop
+                  coulomb = coulomb + sum(Jm(i_sym)%ints(1:ndocpi_(i_sym),mn_J))
+  
+                end if
 
               end do ! end i_sym loop
 
               ! save Fock matrix element
               mn_fock          = ints_%gemind(m,n)
-              fock_i_(mn_fock) = val
+              fock_i_(mn_fock) = oeval + 2.0_wp * coulomb - exchange
 
             end do ! end n_loop
 
@@ -1207,7 +1645,110 @@ module focas_gradient
 
     end do ! end m_class loop
 
+    error = deallocate_df_f_i()
+
     return
+
+    contains
+
+      integer function allocate_df_f_i()
+
+        integer :: m_sym,i_sym
+        integer :: n_m,n_i
+ 
+        allocate(mi_df%m_irr(nirrep_))
+       
+        do m_sym = 1 , nirrep_
+  
+          allocate(mi_df%m_irr(m_sym)%i_irr(nirrep_))
+
+          n_m = trans_%nmopi(m_sym)
+
+          if ( n_m == 0 ) cycle
+
+          do i_sym = 1 , nirrep_
+
+            n_i = ndocpi_(i_sym)
+
+            if ( n_i == 0 ) cycle
+
+            allocate(mi_df%m_irr(m_sym)%i_irr(i_sym)%df_int(df_vars_%nQ,n_i*n_m))
+
+          end do
+            
+        end do
+
+        allocate(ii_df%i_irr(nirrep_))
+
+        do i_sym = 1 , nirrep_
+
+          n_i = ndocpi_(i_sym)
+
+          if ( n_i == 0 ) cycle
+
+          allocate(ii_df%i_irr(i_sym)%df_int(df_vars_%nQ,n_i))
+
+        end do
+
+        allocate(mn_df%df_int(df_vars_%nQ,max_nmopi))
+
+        do i_sym = 1 , nirrep_
+
+          if ( ( max_nmopi == 0 ) .or. ( max_ndocpi == 0 ) ) cycle
+
+          allocate(Km(i_sym)%ints(max_nmopi*max_ndocpi,max_ndocpi))
+
+        end do
+
+        do i_sym = 1 , nirrep_
+
+          n_i = ndocpi_(i_sym)
+
+          if ( n_i == 0 ) cycle
+
+          allocate(Jm(i_sym)%ints(n_i,max_nmopi))
+
+        end do
+
+        allocate_df_f_i = 0
+ 
+        return
+
+      end function allocate_df_f_i
+
+      integer function deallocate_df_f_i()
+
+        integer :: m_sym,i_sym
+
+        do m_sym = 1 , nirrep_
+
+         do i_sym = 1 , nirrep_
+
+           if ( allocated(mi_df%m_irr(m_sym)%i_irr(i_sym)%df_int) ) deallocate(mi_df%m_irr(m_sym)%i_irr(i_sym)%df_int)
+
+         end do
+
+         if ( allocated(ii_df%i_irr(m_sym)%df_int) ) deallocate(ii_df%i_irr(m_sym)%df_int)
+
+         if ( allocated(Km(m_sym)%ints) ) deallocate(Km(m_sym)%ints)
+
+         if ( allocated(Jm(m_sym)%ints) ) deallocate(Jm(m_sym)%ints)
+
+         deallocate(mi_df%m_irr(m_sym)%i_irr)
+
+        end do
+
+        deallocate(mi_df%m_irr)
+
+        deallocate(ii_df%i_irr)
+
+        if ( allocated(mn_df%df_int) ) deallocate(mn_df%df_int)
+
+        deallocate_df_f_i = 0
+
+        return
+
+      end function deallocate_df_f_i
 
   end subroutine compute_f_i_df
 
@@ -1363,6 +1904,7 @@ module focas_gradient
 
     if ( ( nij_negative /= 0 ) .and. ( log_print_ == 1 ) ) then
       write(fid_,'(a,1x,i9,1x,a)')'!warning!',nij_negative,'diagonal Hessian elements were negative'
+      call flush(fid_)
     end if
 
     return
@@ -1378,6 +1920,14 @@ module focas_gradient
     ! the row index here will be between 1-nact, while the column index is arbitrary
     allocate(q_(nact_tot_,nmo_tot_))
     allocate(z_(nact_tot_,nmo_tot_))
+    ! generalized Fock matrix
+    !
+    !        | F_dd F_da F_dv |   | F_dd F_da F_dv |
+    !F_gen = | F_ad F_aa F_av | = | F_ad F_aa F_av |
+    !        | F_vd F_va F_vv |   |  0    0    0   |
+    !
+    ! thus here we allocate more than needed, but that is not too much memory
+    !allocate(fock_gen_(nmo_tot_,nmo_tot_))
     return
   end subroutine allocate_temporary_fock_matrices
 
@@ -1387,6 +1937,7 @@ module focas_gradient
     if (allocated(fock_a_))   deallocate(fock_a_)
     if (allocated(q_))        deallocate(q_)
     if (allocated(z_))        deallocate(z_)
+    !if (allocated(fock_gen_)) deallocate(fock_gen_)
     return
   end subroutine deallocate_temporary_fock_matrices
 

@@ -1,7 +1,7 @@
 #
 #@BEGIN LICENSE
 #
-# v2rdm_casscf by Psi4 Developer, a plugin to:
+# . by Psi4 Developer, a plugin to:
 #
 # PSI4: an ab initio quantum chemistry software package
 #
@@ -35,11 +35,12 @@ NAME = $(shell basename `pwd`)
 CXXSRC = $(notdir $(wildcard *.cc))
 
 # Flags that were used to compile Psi4.
-CXX = /usr/bin/g++
-CXXDEFS = -DFC_SYMBOL=2 -DHAVE_SYSTEM_NATIVE_LAPACK -DHAVE_SYSTEM_NATIVE_BLAS -DHAS_CXX11_VARIADIC_TEMPLATES -DHAS_CXX11_STATIC_ASSERT -DHAS_CXX11_SIZEOF_MEMBER -DHAS_CXX11_RVALUE_REFERENCES -DHAS_CXX11_LIB_REGEX -DHAS_CXX11_NULLPTR -DHAS_CXX11_LONG_LONG -DHAS_CXX11_LAMBDA -DHAS_CXX11_INITIALIZER_LIST -DHAS_CXX11_DECLTYPE -DHAS_CXX11_CSTDINT_H -DHAS_CXX11_CONSTEXPR -DHAS_CXX11_AUTO_RET_TYPE -DHAS_CXX11_AUTO -DHAS_CXX11_FUNC -DHAS_CXX11 -DVAR_MFDS -DSYS_DARWIN
-CXXFLAGS = -DRESTRICT=__restrict__ -fPIC -std=c++11 -O3 -DNDEBUG -Wno-unused
-INCLUDES = -I/Users/deprince/psi4public/build-mac-test/src/lib -I/Users/deprince/psi4public/src/lib -I/Users/deprince/psi4public/include -I/Users/deprince/psi4public/build-mac-test/include -I/Users/deprince/psi4public/build-mac-test/boost/include -I/opt/local/Library/Frameworks/Python.framework/Versions/2.6/include/python2.6 -I/usr/include
-OBJDIR = /Users/deprince/psi4public/build-mac-test
+CXX = /edfs/users/edgroup/software/intel/bin/icpc
+CXXDEFS = -DFC_SYMBOL=2 -DHAVE_MKL_LAPACK -DHAVE_MKL_BLAS -DHAS_CXX11_VARIADIC_TEMPLATES -DHAS_CXX11_STATIC_ASSERT -DHAS_CXX11_SIZEOF_MEMBER -DHAS_CXX11_RVALUE_REFERENCES -DHAS_CXX11_NULLPTR -DHAS_CXX11_LONG_LONG -DHAS_CXX11_LAMBDA -DHAS_CXX11_INITIALIZER_LIST -DHAS_CXX11_DECLTYPE -DHAS_CXX11_CSTDINT_H -DHAS_CXX11_CONSTEXPR -DHAS_CXX11_AUTO_RET_TYPE -DHAS_CXX11_AUTO -DHAS_CXX11_FUNC -DHAS_CXX11 -DSYS_LINUX
+CXXFLAGS = -DRESTRICT=__restrict__ -Xlinker -export-dynamic -fPIC -std=c++11 -mkl=parallel -qopenmp -O3 -no-prec-div -DNDEBUG -xHost
+LDFLAGS = -shared-intel -shared-intel
+INCLUDES = -I/edfs/users/edgroup/software/psi4public/build-intel/src/lib -I/edfs/users/edgroup/software/psi4public/src/lib -I/edfs/users/edgroup/software/psi4public/include -I/edfs/users/edgroup/software/psi4public/build-intel/include -I/edfs/users/edgroup/software/psi4public/build-intel/boost/include -I/usr/include/python2.7 -I/usr/include -I/usr/include -I/usr/include -I/usr/include
+OBJDIR = /edfs/users/edgroup/software/psi4public/build-intel
 
 # Used to determine linking flags.
 UNAME = $(shell uname)
@@ -56,40 +57,23 @@ default:: $(PSITARGET)
 
 # Add the flags needed for shared library creation
 ifeq ($(UNAME), Linux)
-    LDFLAGS = -shared
+    LDFLAGS += -lifcore -shared
 endif
 ifeq ($(UNAME), Darwin)
-    LDFLAGS = -shared -undefined dynamic_lookup
+    LDFLAGS += -lifcore -shared -undefined dynamic_lookup
     CXXFLAGS += -fno-common
 endif
 
 # The object files
-BINOBJ = $(CXXSRC:%.cc=%.o)
-
-# fortran stuff
-F90       = gfortran-mp-4.8 #-fcheck=all -g -C
-F90SRC    = $(notdir $(wildcard *.F90))
-F90BINOBJ = $(F90SRC:%.F90=%.o)
-F90FLAGS  = -O2 
-LDFLAGS  += -L/opt/local/lib/gcc48/ -lgfortran
-
-fortran:
-	$(F90) jacobi_data.F90 -c
-	$(F90) jacobi_maxind_mod.F90 jacobi_data.o -c
-	$(F90) jacobi_mod.F90 jacobi_data.o jacobi_maxind_mod.o -c
-	$(F90) jacobi_interface.F90 jacobi_mod.o jacobi_data.o jacobi_maxind_mod.o -c
-	rm *.mod
-
-%.o: %.F90
-	$(F90) $(F90FLAGS) -c $<
+BINOBJ = *.o $(CXXSRC:%.cc=%.o)
 
 %.o: %.cc
 	$(CXX) $(CXXDEFS) $(CXXFLAGS) $(INCLUDES) -c $<
 
-$(PSITARGET): $(BINOBJ) $(F90BINOBJ)
+$(PSITARGET): $(BINOBJ)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(CXXDEFS) $(PSIPLUGIN)
 
 # Erase all compiled intermediate files
 clean:
-	rm -f $(F90BINOBJ) $(BINOBJ) $(PSITARGET) *.d *.pyc *.test output.dat psi.timer.dat
+	rm -f $(BINOBJ) $(PSITARGET) *.d *.pyc *.test output.dat psi.timer.dat
 
