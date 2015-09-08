@@ -972,7 +972,7 @@ void  v2RDMSolver::common_init(){
     for (int h = 0; h < nirrep_; h++) {
         outfile->Printf("%4s",labels[h]);
         if ( h < nirrep_ - 1 ) {
-            outfile->Printf(",",frzcpi_[h]);
+            outfile->Printf(",");
         }
     }
     outfile->Printf(" \n");
@@ -982,7 +982,7 @@ void  v2RDMSolver::common_init(){
     for (int h = 0; h < nirrep_; h++) {
         outfile->Printf("%4i",frzcpi_[h]);
         if ( h < nirrep_ - 1 ) {
-            outfile->Printf(",",frzcpi_[h]);
+            outfile->Printf(",");
         }
     }
     outfile->Printf(" ]\n");
@@ -990,7 +990,7 @@ void  v2RDMSolver::common_init(){
     for (int h = 0; h < nirrep_; h++) {
         outfile->Printf("%4i",rstcpi_[h]);
         if ( h < nirrep_ - 1 ) {
-            outfile->Printf(",",frzcpi_[h]);
+            outfile->Printf(",");
         }
     }
     outfile->Printf(" ]\n");
@@ -998,7 +998,7 @@ void  v2RDMSolver::common_init(){
     for (int h = 0; h < nirrep_; h++) {
         outfile->Printf("%4i",amopi_[h]);
         if ( h < nirrep_ - 1 ) {
-            outfile->Printf(",",frzcpi_[h]);
+            outfile->Printf(",");
         }
     }
     outfile->Printf(" ]\n");
@@ -1006,7 +1006,7 @@ void  v2RDMSolver::common_init(){
     for (int h = 0; h < nirrep_; h++) {
         outfile->Printf("%4i",rstvpi_[h]);
         if ( h < nirrep_ - 1 ) {
-            outfile->Printf(",",frzcpi_[h]);
+            outfile->Printf(",");
         }
     }
     outfile->Printf(" ]\n");
@@ -1014,7 +1014,7 @@ void  v2RDMSolver::common_init(){
     for (int h = 0; h < nirrep_; h++) {
         outfile->Printf("%4i",frzvpi_[h]);
         if ( h < nirrep_ - 1 ) {
-            outfile->Printf(",",frzcpi_[h]);
+            outfile->Printf(",");
         }
     }
     outfile->Printf(" ]\n");
