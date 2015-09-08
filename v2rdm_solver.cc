@@ -178,9 +178,27 @@ void  v2RDMSolver::common_init(){
 
     // user could specify active space with ACTIVE array
     if ( options_["ACTIVE"].has_changed() ) {
-        throw PsiException("The ACTIVE array is not yet enabled.",__FILE__,__LINE__);
+        //throw PsiException("The ACTIVE array is not yet enabled.",__FILE__,__LINE__);
         if (options_["ACTIVE"].size() != nirrep_) {
             throw PsiException("The ACTIVE array has the wrong dimensions_",__FILE__,__LINE__);
+        }
+
+        // warn user that active array takes precedence over restricted_uocc array
+        if (options_["RESTRICTED_UOCC"].has_changed()) {
+            outfile->Printf("\n");
+            outfile->Printf("    <<< WARNING!! >>>\n");
+            outfile->Printf("\n");
+            outfile->Printf("    The ACTIVE array takes precedence over the RESTRICTED_UOCC array.\n");
+            outfile->Printf("    Check below whether your active space was correctly specified.\n");
+            outfile->Printf("\n");
+        }
+
+        // overwrite rstvpi_ array using the information in the frozen_docc, 
+        // restricted_docc, active, and frozen_virtual arrays.  start with nso total
+        // orbitals and let the linear dependency check below adjust the spaces as needed
+        for (int h = 0; h < nirrep_; h++) {
+            amopi_[h]  = options_["ACTIVE"][h].to_double();
+            rstvpi_[h] = nsopi_[h] - frzcpi_[h] - rstcpi_[h] - frzvpi_[h] - amopi_[h];
         }
     }
 
@@ -216,7 +234,7 @@ void  v2RDMSolver::common_init(){
             outfile->Printf("\n");
             outfile->Printf("    No. orbitals removed per irrep: [");
             for (int h = 0; h < nirrep_; h++) 
-                outfile->Printf("%4i",lost[h]);
+                outfile->Printf("%4i",nsopi_[h] - nmopi_[h]);
             outfile->Printf(" ]\n");
             //outfile->Printf("    No. frozen virtuals per irrep:  [");
             //for (int h = 0; h < nirrep_; h++) 
@@ -952,34 +970,52 @@ void  v2RDMSolver::common_init(){
     char **labels = reference_wavefunction_->molecule()->irrep_labels();
     outfile->Printf("        Irrep:           ");
     for (int h = 0; h < nirrep_; h++) {
-        outfile->Printf("%4s,",labels[h]);
+        outfile->Printf("%4s",labels[h]);
+        if ( h < nirrep_ - 1 ) {
+            outfile->Printf(",",frzcpi_[h]);
+        }
     }
     outfile->Printf(" \n");
     outfile->Printf(" \n");
 
     outfile->Printf("        frozen_docc     [");
     for (int h = 0; h < nirrep_; h++) {
-        outfile->Printf("%4i,",frzcpi_[h]);
+        outfile->Printf("%4i",frzcpi_[h]);
+        if ( h < nirrep_ - 1 ) {
+            outfile->Printf(",",frzcpi_[h]);
+        }
     }
     outfile->Printf(" ]\n");
     outfile->Printf("        restricted_docc [");
     for (int h = 0; h < nirrep_; h++) {
-        outfile->Printf("%4i,",rstcpi_[h]);
+        outfile->Printf("%4i",rstcpi_[h]);
+        if ( h < nirrep_ - 1 ) {
+            outfile->Printf(",",frzcpi_[h]);
+        }
     }
     outfile->Printf(" ]\n");
     outfile->Printf("        active          [");
     for (int h = 0; h < nirrep_; h++) {
-        outfile->Printf("%4i,",amopi_[h]);
+        outfile->Printf("%4i",amopi_[h]);
+        if ( h < nirrep_ - 1 ) {
+            outfile->Printf(",",frzcpi_[h]);
+        }
     }
     outfile->Printf(" ]\n");
     outfile->Printf("        restricted_uocc [");
     for (int h = 0; h < nirrep_; h++) {
-        outfile->Printf("%4i,",rstvpi_[h]);
+        outfile->Printf("%4i",rstvpi_[h]);
+        if ( h < nirrep_ - 1 ) {
+            outfile->Printf(",",frzcpi_[h]);
+        }
     }
     outfile->Printf(" ]\n");
     outfile->Printf("        frozen_uocc     [");
     for (int h = 0; h < nirrep_; h++) {
-        outfile->Printf("%4i,",frzvpi_[h]);
+        outfile->Printf("%4i",frzvpi_[h]);
+        if ( h < nirrep_ - 1 ) {
+            outfile->Printf(",",frzcpi_[h]);
+        }
     }
     outfile->Printf(" ]\n");
     outfile->Printf("\n");
