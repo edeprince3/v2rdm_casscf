@@ -176,11 +176,16 @@ void  v2RDMSolver::common_init(){
         }
     }
 
+    // user could specify active space with ACTIVE array
+    if ( options_["ACTIVE"].has_changed() ) {
+        throw PsiException("The ACTIVE array is not yet enabled.",__FILE__,__LINE__);
+        if (options_["ACTIVE"].size() != nirrep_) {
+            throw PsiException("The ACTIVE array has the wrong dimensions_",__FILE__,__LINE__);
+        }
+    }
 
     // were there linear dependencies in the primary basis set?
     if ( nmo_ != nso_ ) {
-        // TODO: rewrite these adjustments to account for frozen vs restricted unoccupied orbitals
-        throw PsiException("until restricted vs frozen orbitals are finalized, this code won't work for nmo != nso",__FILE__,__LINE__);
 
         // which irreps lost orbitals?
         int * lost = (int*)malloc(nirrep_*sizeof(int));
@@ -192,8 +197,14 @@ void  v2RDMSolver::common_init(){
                 active_space_changed = true;
             }
 
+            // eliminate frozen virtual orbitals first
             if ( frzvpi_[h] > 0 && lost[h] > 0 ) {
                 frzvpi_[h] -= ( frzvpi_[h] < lost[h] ? frzvpi_[h] : lost[h] );
+                lost[h]    -= ( frzvpi_[h] < lost[h] ? frzvpi_[h] : lost[h] );
+            }
+            // if necessary, eliminate restricted virtual orbitals next
+            if ( rstvpi_[h] > 0 && lost[h] > 0 ) {
+                rstvpi_[h] -= ( rstvpi_[h] < lost[h] ? rstvpi_[h] : lost[h] );
             }
         }
         if ( active_space_changed ) {
@@ -201,25 +212,22 @@ void  v2RDMSolver::common_init(){
             outfile->Printf("    <<< WARNING!! >>>\n");
             outfile->Printf("\n");
             outfile->Printf("    Your basis set may have linear dependencies.\n");
-            outfile->Printf("    The number of frozen virtual orbitals per irrep were adjusted accordingly:\n");
+            outfile->Printf("    The number of restricted or frozen virtual orbitals per irrep may have changed.\n");
             outfile->Printf("\n");
             outfile->Printf("    No. orbitals removed per irrep: [");
             for (int h = 0; h < nirrep_; h++) 
                 outfile->Printf("%4i",lost[h]);
             outfile->Printf(" ]\n");
-            outfile->Printf("    No. frozen virtuals per irrep:  [");
-            for (int h = 0; h < nirrep_; h++) 
-                outfile->Printf("%4i",frzvpi_[h]);
-            outfile->Printf(" ]\n");
-            outfile->Printf("\n");
+            //outfile->Printf("    No. frozen virtuals per irrep:  [");
+            //for (int h = 0; h < nirrep_; h++) 
+            //    outfile->Printf("%4i",frzvpi_[h]);
+            //outfile->Printf(" ]\n");
+            //outfile->Printf("\n");
             outfile->Printf("    Check that your active space is still correct.\n");
             outfile->Printf("\n");
         }
-       
-        //if ( is_df_ ) { 
-        //    throw PsiException("v2rdm doesn't work when scf_type = df and linear dependencies in basis",__FILE__,__LINE__);
-        //}
     }
+
 
     S_  = SharedMatrix(reference_wavefunction_->S());
     Da_ = SharedMatrix(reference_wavefunction_->Da());
@@ -920,21 +928,62 @@ void  v2RDMSolver::common_init(){
     outfile->Printf( "        *******************************************************\n");
 
     outfile->Printf("\n");
-    outfile->Printf("  ==> Input parameters <==\n");
+    outfile->Printf("  ==> Convergence parameters <==\n");
     outfile->Printf("\n");
-    outfile->Printf("        Freeze core orbitals?                   %5s\n",nfrzc_ > 0 ? "yes" : "no");
-    outfile->Printf("        Number of frozen core orbitals:         %5i\n",nfrzc_);
-    outfile->Printf("        Number of restricted occupied orbitals: %5i\n",nrstc_);
-    outfile->Printf("        Number of active occupied orbitals:     %5i\n",ndoccact);
-    outfile->Printf("        Number of active virtual orbitals:      %5i\n",nvirt);
-    outfile->Printf("        Number of restricted virtual orbitals:  %5i\n",nrstv_);
-    outfile->Printf("        Number of frozen virtual orbitals:      %5i\n",nfrzv_);
     outfile->Printf("        r_convergence:                      %5.3le\n",r_convergence_);
     outfile->Printf("        e_convergence:                      %5.3le\n",e_convergence_);
     outfile->Printf("        cg_convergence:                     %5.3le\n",cg_convergence_);
     outfile->Printf("        maxiter:                             %8i\n",maxiter_);
     outfile->Printf("        cg_maxiter:                          %8i\n",cg_maxiter_);
     outfile->Printf("\n");
+
+    // print orbitals per irrep in each space
+    outfile->Printf("  ==> Active space details <==\n");
+    outfile->Printf("\n");
+    //outfile->Printf("        Freeze core orbitals?                   %5s\n",nfrzc_ > 0 ? "yes" : "no");
+    outfile->Printf("        Number of frozen core orbitals:         %5i\n",nfrzc_);
+    outfile->Printf("        Number of restricted occupied orbitals: %5i\n",nrstc_);
+    outfile->Printf("        Number of active occupied orbitals:     %5i\n",ndoccact);
+    outfile->Printf("        Number of active virtual orbitals:      %5i\n",nvirt);
+    outfile->Printf("        Number of restricted virtual orbitals:  %5i\n",nrstv_);
+    outfile->Printf("        Number of frozen virtual orbitals:      %5i\n",nfrzv_);
+    outfile->Printf("\n");
+
+    char **labels = reference_wavefunction_->molecule()->irrep_labels();
+    outfile->Printf("        Irrep:           ");
+    for (int h = 0; h < nirrep_; h++) {
+        outfile->Printf("%4s,",labels[h]);
+    }
+    outfile->Printf(" \n");
+    outfile->Printf(" \n");
+
+    outfile->Printf("        frozen_docc     [");
+    for (int h = 0; h < nirrep_; h++) {
+        outfile->Printf("%4i,",frzcpi_[h]);
+    }
+    outfile->Printf(" ]\n");
+    outfile->Printf("        restricted_docc [");
+    for (int h = 0; h < nirrep_; h++) {
+        outfile->Printf("%4i,",rstcpi_[h]);
+    }
+    outfile->Printf(" ]\n");
+    outfile->Printf("        active          [");
+    for (int h = 0; h < nirrep_; h++) {
+        outfile->Printf("%4i,",amopi_[h]);
+    }
+    outfile->Printf(" ]\n");
+    outfile->Printf("        restricted_uocc [");
+    for (int h = 0; h < nirrep_; h++) {
+        outfile->Printf("%4i,",rstvpi_[h]);
+    }
+    outfile->Printf(" ]\n");
+    outfile->Printf("        frozen_uocc     [");
+    for (int h = 0; h < nirrep_; h++) {
+        outfile->Printf("%4i,",frzvpi_[h]);
+    }
+    outfile->Printf(" ]\n");
+    outfile->Printf("\n");
+
     outfile->Printf("  ==> Orbital optimization parameters <==\n");
     outfile->Printf("\n");
 // gg
