@@ -81,17 +81,17 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     int * sym      = (int*)malloc(nmo_*sizeof(int));
     bool * skip    = (bool*)malloc(nmo_*sizeof(bool));
 
-    for (int i = 0; i < nmo_-nfrzv_; i++) {
+    for (int i = 0; i < nmo_; i++) {
         skip[i] = false;
     }
-    for (int i = 0; i < nmo_-nfrzv_; i++) {
+    for (int i = 0; i < nmo_; i++) {
         double min   = 1.e99;
         int count    = 0;
         int minj     = -999;
         int minh     = -999;
         int mincount = -999;
         for (int h = 0; h < nirrep_; h++) {
-            for (int j = 0; j < nmopi_[h] - frzvpi_[h]; j++) {
+            for (int j = 0; j < nmopi_[h]; j++) {
                 if ( skip[count+j] ) continue;
                 if ( epsilon_a_->pointer(h)[j] < min ) {
                     min      = epsilon_a_->pointer(h)[j];
@@ -100,7 +100,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
                     minh     = h;
                 }
             }
-            count += nmopi_[h] - frzvpi_[h];
+            count += nmopi_[h];
         }
         skip[mincount + minj]     = true;
         reorder[i]                = minj;
@@ -215,19 +215,21 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         // sort orbitals into pitzer order
         #pragma omp parallel for schedule (static)
         for (long int Q = 0; Q < rowdims[row]; Q++) {
-            for (int m = 0; m < nmo_-nfrzv_; m++) {
+            for (int m = 0; m < nmo_; m++) {
                 int hm = sym[m];
                 int offm = 0;
                 for (int h = 0; h < hm; h++) {
                     offm += nmopi_[h] - frzvpi_[h];
                 }
+                if ( reorder[m] >= nmopi_[hm] - frzvpi_[hm] ) continue;
                 int mm = reorder[m] + offm;
-                for (int n = 0; n < nmo_-nfrzv_; n++) {
+                for (int n = 0; n < nmo_; n++) {
                     int hn = sym[n];
                     int offn = 0;
                     for (int h = 0; h < hn; h++) {
                         offn += nmopi_[h] - frzvpi_[h];
                     }
+                    if ( reorder[n] >= nmopi_[hn] - frzvpi_[hn] ) continue;
                     int nn = reorder[n] + offn;
                     tmp1[Q*nn1fv+INDEX(mm,nn)] = tmp2[Q*nmo_*nmo_+m*nmo_+n];
                 }
