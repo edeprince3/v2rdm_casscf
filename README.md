@@ -42,14 +42,20 @@ INPUT OPTIONS
 * **MAXITER** (int):
 
     The maximum number of outer iterations.  Default 10000.
-    
+
 * **FROZEN_DOCC** (array):
-    
-    The number of frozen doubly-occupied orbitals per irrep.  Combined with **FROZEN_UOCC**, these arrays define the active space.
+
+    An array containing the number of frozen doubly-occupied orbitals per
+    irrep.  These orbitals are not included in the active space, nor are
+    they optimized during the v2RDM-CASSCF procedure.  This option trumps
+    Psi4's **NUM_FROZEN_DOCC** and **FREEZE_CORE** options.
 
 * **FROZEN_UOCC** (array):
-    
-    The number of frozen unoccupied orbitals per irrep. Combined with **FROZEN_DOCC**, these arrays define the active space.
+
+    An array containing the number of frozen unoccupied orbitals per
+    irrep.  These orbitals are not included in the active space, nor are
+    they optimized during the v2RDM-CASSCF procedure.  This option trumps
+    Psi4's **NUM_FROZEN_UOCC** option.
 
 * **MOLDEN_WRITE** (bool):
 
