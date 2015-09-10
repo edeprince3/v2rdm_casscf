@@ -57,6 +57,30 @@ INPUT OPTIONS
     they optimized during the v2RDM-CASSCF procedure.  This option trumps
     Psi4's **NUM_FROZEN_UOCC** option.
 
+* **RESTRICTED_DOCC** (array):
+
+    An array giving the number of restricted doubly-occupied orbitals per 
+    irrep.  These orbitals are not included in the active space, but they are
+    optimized by the v2RDM-CASSCF procedure.
+
+* **RESTRICTED_UOCC** (array):
+
+    An array giving the number of restricted unoccupied orbitals per 
+    irrep.  These orbitals are not included in the active space, but they are
+    optimized by the v2RDM-CASSCF procedure.
+
+* **ACTIVE** (array):
+
+    An array giving the number of active orbitals (occupied plus
+    unoccupied) per irrep.  This option provides a more intuitive way of
+    specifying the active space than the
+    **FROZEN_DOCC**/**RESTRICTED_DOCC**/**RESTRICTED_UOCC**/**FROZEN_UOCC**
+    keywords.  The simplest specification of the active space would
+    involve this keyword and at the **RESTRICTED_DOCC** keyword.  This
+    option trumps the **RESTRICTED_UOCC** option, which will be determined
+    from the **ACTIVE**, **RESTRICTED_DOCC**, **FROZEN_DOCC**, and
+    **FROZEN_UOCC** arrays.
+
 * **MOLDEN_WRITE** (bool):
 
     Do write a MOLDEN output file containing the natural orbitals?  If yes, the filename will end in .molden, and the prefix is determined by **WRITER_FILE_LABEL** (if set), or else by the name of the output file plus the name of the current molecule.  Default false.
