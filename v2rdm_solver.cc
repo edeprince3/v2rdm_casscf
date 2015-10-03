@@ -1513,6 +1513,9 @@ void v2RDMSolver::NaturalOrbitals() {
 
     // Print a molden file
     if ( options_.get_bool("MOLDEN_WRITE") ) {
+        if ( options_["RESTART_FROM_CHECKPOINT_FILE"].has_changed() ) {
+            throw PsiException("printing orbitals is currently disabled when restarting v2rdm jobs.  sorry!",__FILE__,__LINE__);
+        }
         //boost::shared_ptr<MoldenWriter> molden(new MoldenWriter((boost::shared_ptr<Wavefunction>)this));
         boost::shared_ptr<MoldenWriter> molden(new MoldenWriter(reference_wavefunction_));
         boost::shared_ptr<Vector> zero (new Vector("",nirrep_,nmopi_));
