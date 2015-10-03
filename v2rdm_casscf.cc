@@ -60,8 +60,9 @@ int read_options(std::string name, Options& options)
         /*- Do save progress in a checkpoint file? -*/
         options.add_bool("WRITE_CHECKPOINT_FILE",false);
         /*- Frequency of orbital optimization.  The checkpoint file is 
-        updated every CHECKPOINT_FREQUENCY iterations -*/
-        options.add_bool("CHECKPOINT_FREQUENCY",10);
+        updated every CHECKPOINT_FREQUENCY iterations.  The default frequency
+        will be ORBOPT_FREQUENCY. -*/
+        options.add_bool("CHECKPOINT_FREQUENCY",200);
         /*- File containing previous primal/dual solutions and integrals. -*/
         options.add_str("RESTART_FROM_CHECKPOINT_FILE","");
         /*- The type of 2-positivity computation -*/

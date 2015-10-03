@@ -1309,8 +1309,12 @@ double v2RDMSolver::compute_energy() {
     double energy_dual,egap;
     double denergy_primal = fabs(energy_primal);
 
-    int orbopt_frequency = options_.get_int("ORBOPT_FREQUENCY");
-    int orbopt_one_step  = options_.get_int("ORBOPT_ONE_STEP");
+    int checkpoint_frequency = options_.get_int("ORBOPT_FREQUENCY");
+    if ( options_["CHECKPOINT_FREQUENCY"].has_changed() ) {
+        checkpoint_frequency = options_.get_int("CHECKPOINT_FREQUENCY");
+    }
+    int orbopt_frequency     = options_.get_int("ORBOPT_FREQUENCY");
+    int orbopt_one_step      = options_.get_int("ORBOPT_ONE_STEP");
 
     int oiter=0;
     do {
