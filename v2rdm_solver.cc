@@ -1284,6 +1284,8 @@ double v2RDMSolver::compute_energy() {
 
     // checkpoint file
     if ( options_["RESTART_FROM_CHECKPOINT_FILE"].has_changed() ) {
+        outfile->Printf("\n");
+        outfile->Printf("    ==> Restarting from checkpoint file <==\n");
         ReadFromCheckpointFile();
     } else if ( options_.get_bool("WRITE_CHECKPOINT_FILE") ) {
         InitializeCheckpointFile();
