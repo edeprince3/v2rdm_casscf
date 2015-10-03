@@ -31,7 +31,8 @@
 #include"fortran.h"
 
 // TODO: move to psifiles.h
-#define PSIF_DCC_QMO 268
+#define PSIF_DCC_QMO          268
+#define PSIF_V2RDM_CHECKPOINT 269
 
 namespace boost {
   template<class T> class shared_ptr;
@@ -338,7 +339,16 @@ class v2RDMSolver: public Wavefunction{
 
     /// are we using 3-index integrals?
     bool is_df_;
-  
+
+    /// initialize a checkpoint file
+    void InitializeCheckpointFile();
+
+    /// write current solution and integrals to a checkpoint file
+    void WriteCheckpointFile();
+
+    /// read solution and integrals from a checkpoint file
+    void ReadFromCheckpointFile();
+
 };
 
 }}

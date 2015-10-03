@@ -140,6 +140,7 @@ void  v2RDMSolver::common_init(){
 
     if (options_["FROZEN_DOCC"].has_changed()) {
         throw PsiException("FROZEN_DOCC is currently disabled.",__FILE__,__LINE__);
+
         if (options_["FROZEN_DOCC"].size() != nirrep_) {
             throw PsiException("The FROZEN_DOCC array has the wrong dimensions_",__FILE__,__LINE__);
         }
@@ -1281,6 +1282,13 @@ double v2RDMSolver::compute_energy() {
     cg->set_max_iter(cg_maxiter_);
     cg->set_convergence(cg_convergence_);
 
+    // checkpoint file
+    if ( options_["RESTART_FROM_CHECKPOINT_FILE"].has_changed() ) {
+        ReadFromCheckpointFile();
+    } else if ( options_.get_bool("WRITE_CHECKPOINT_FILE") ) {
+        InitializeCheckpointFile();
+    }
+
     // evaluate guess energy (c.x):
     double energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
 
@@ -1382,6 +1390,10 @@ double v2RDMSolver::compute_energy() {
         if ( ep < r_convergence_ && ed < r_convergence_ && egap < e_convergence_ ) {
             RotateOrbitals();
             energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
+        }
+
+        if ( options_.get_bool("WRITE_CHECKPOINT_FILE") && oiter % options_.get_int("CHECKPOINT_FREQUENCY") == 0 && oiter > 0) {
+            WriteCheckpointFile();
         }
 
     }while( ep > r_convergence_ || ed > r_convergence_  || egap > e_convergence_ || !orbopt_converged_);
@@ -2702,6 +2714,12 @@ void v2RDMSolver::RotateOrbitals(){
     // 2.  oei_full_dim_, tei_full_dim_ should exclude frozen virtuals
     // 3.  does symmetry_energy_order need to be the right length?
 
+//gg -- added frzcpi_ to argument list
+    //OrbOpt(orbopt_transformation_matrix_,
+    //      oei_full_sym_,oei_full_dim_,tei_full_sym_,tei_full_dim_,
+    //      d1_plus_core_sym_,d1_plus_core_dim_,d2_plus_core_sym_,d2_plus_core_dim_,
+    //      symmetry_energy_order,frzcpi_,nrstc_,amo_,nrstv_,nirrep_,
+    //      orbopt_data_,orbopt_outfile_);
     OrbOpt(orbopt_transformation_matrix_,
           oei_full_sym_,oei_full_dim_,tei_full_sym_,tei_full_dim_,
           d1_plus_core_sym_,d1_plus_core_dim_,d2_plus_core_sym_,d2_plus_core_dim_,

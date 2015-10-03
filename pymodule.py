@@ -53,6 +53,16 @@ def run_v2rdm_casscf(name, **kwargs):
 
     # Your plugin's psi4 run sequence goes here
     scf_helper(name, **kwargs)
+
+    # if restarting from a checkpoint file, this file
+    # needs to be in scratch with the correct name
+    filename = psi4.get_option("V2RDM_CASSCF","RESTART_FROM_CHECKPOINT_FILE")
+
+    # todo PSIF_V2RDM_CHECKPOINT should be definied in psifiles.h
+    if ( filename != "" ):
+        molname = psi4.wavefunction().molecule().name()
+        p4util.copy_file_to_scratch(filename,'psi',molname,269,False)
+
     returnvalue = psi4.plugin('v2rdm_casscf.so')
 
     #psi4.set_variable('CURRENT ENERGY', returnvalue)
