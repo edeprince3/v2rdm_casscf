@@ -98,8 +98,12 @@ void v2RDMSolver::InitializeCheckpointFile() {
         (char*)orbopt_transformation_matrix_,(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
 
     // energy order to pitzer order mapping array
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_ORDER_TO_PITZER_ORDER",
+    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER",
         (char*)energy_to_pitzer_order,(nmo_-nfrzv_)*sizeof(int));
+
+    // energy order to pitzer order mapping array
+    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER_REALLY_FULL",
+        (char*)energy_to_pitzer_order_really_full,nmo_*sizeof(int));
 
     // orbital symmetries (energy order) 
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"SYMMETRY_ENERGY_ORDER",
@@ -187,8 +191,12 @@ void v2RDMSolver::ReadFromCheckpointFile() {
         (char*)orbopt_transformation_matrix_,(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
 
     // energy order to pitzer order mapping array
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_ORDER_TO_PITZER_ORDER",
+    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER",
         (char*)energy_to_pitzer_order,(nmo_-nfrzv_)*sizeof(int));
+
+    // energy order to pitzer order mapping array
+    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER_REALLY_FULL",
+        (char*)energy_to_pitzer_order_really_full,nmo_*sizeof(int));
 
     // orbital symmetries (energy order) 
     psio->read_entry(PSIF_V2RDM_CHECKPOINT,"SYMMETRY_ENERGY_ORDER",
