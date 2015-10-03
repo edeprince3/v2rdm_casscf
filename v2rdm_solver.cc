@@ -1309,10 +1309,8 @@ double v2RDMSolver::compute_energy() {
     double energy_dual,egap;
     double denergy_primal = fabs(energy_primal);
 
-// gg
     int orbopt_frequency = options_.get_int("ORBOPT_FREQUENCY");
     int orbopt_one_step  = options_.get_int("ORBOPT_ONE_STEP");
-// gg
 
     int oiter=0;
     do {
@@ -1511,12 +1509,12 @@ void v2RDMSolver::NaturalOrbitals() {
 
     // Print a molden file
     if ( options_.get_bool("MOLDEN_WRITE") ) {
-       //boost::shared_ptr<MoldenWriter> molden(new MoldenWriter((boost::shared_ptr<Wavefunction>)this));
-       boost::shared_ptr<MoldenWriter> molden(new MoldenWriter(reference_wavefunction_));
-       boost::shared_ptr<Vector> zero (new Vector("",nirrep_,nmopi_));
-       zero->zero();
-       std::string filename = get_writer_file_prefix() + ".molden";
-       molden->write(filename,Ca_,Cb_,zero, zero,eigvala,eigvalb);
+        //boost::shared_ptr<MoldenWriter> molden(new MoldenWriter((boost::shared_ptr<Wavefunction>)this));
+        boost::shared_ptr<MoldenWriter> molden(new MoldenWriter(reference_wavefunction_));
+        boost::shared_ptr<Vector> zero (new Vector("",nirrep_,nmopi_));
+        zero->zero();
+        std::string filename = get_writer_file_prefix() + ".molden";
+        molden->write(filename,Ca_,Cb_,zero, zero,eigvala,eigvalb);
     }
 }
 

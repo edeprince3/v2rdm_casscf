@@ -85,13 +85,17 @@ void v2RDMSolver::InitializeCheckpointFile() {
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 1",(char*)y->pointer(),nconstraints_*sizeof(double));
 
     // z
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 2",(char*)z->pointer(),nconstraints_*sizeof(double));
+    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 2",(char*)z->pointer(),dimx_*sizeof(double));
 
     // one-electron integrals
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"OEI",(char*)oei_full_sym_,oei_full_dim_*sizeof(double));
 
     // two-electron integrals (or DF/CD integrals)
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"TEI",(char*)tei_full_sym_,tei_full_dim_*sizeof(double));
+
+    // orbital optimization transformation matrix
+    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"TRANSFORMATION MATRIX",
+        (char*)orbopt_transformation_matrix_,(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
 
     psio->close(PSIF_V2RDM_CHECKPOINT,1);
 }
@@ -110,13 +114,17 @@ void v2RDMSolver::WriteCheckpointFile() {
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 1",(char*)y->pointer(),nconstraints_*sizeof(double));
 
     // z
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 2",(char*)z->pointer(),nconstraints_*sizeof(double));
+    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 2",(char*)z->pointer(),dimx_*sizeof(double));
 
     // one-electron integrals
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"OEI",(char*)oei_full_sym_,oei_full_dim_*sizeof(double));
 
     // two-electron integrals (or DF/CD integrals)
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"TEI",(char*)tei_full_sym_,tei_full_dim_*sizeof(double));
+
+    // orbital optimization transformation matrix
+    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"TRANSFORMATION MATRIX",
+        (char*)orbopt_transformation_matrix_,(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
 
     psio->close(PSIF_V2RDM_CHECKPOINT,1);
 }
@@ -158,13 +166,17 @@ void v2RDMSolver::ReadFromCheckpointFile() {
     psio->read_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 1",(char*)y->pointer(),nconstraints_*sizeof(double));
 
     // z
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 2",(char*)z->pointer(),nconstraints_*sizeof(double));
+    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 2",(char*)z->pointer(),dimx_*sizeof(double));
 
     // one-electron integrals
     psio->read_entry(PSIF_V2RDM_CHECKPOINT,"OEI",(char*)oei_full_sym_,oei_full_dim_*sizeof(double));
 
     // two-electron integrals (or DF/CD integrals)
     psio->read_entry(PSIF_V2RDM_CHECKPOINT,"TEI",(char*)tei_full_sym_,tei_full_dim_*sizeof(double));
+
+    // orbital optimization transformation matrix
+    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"TRANSFORMATION MATRIX",
+        (char*)orbopt_transformation_matrix_,(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
 
     psio->close(PSIF_V2RDM_CHECKPOINT,1);
 
