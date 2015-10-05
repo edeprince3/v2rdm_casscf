@@ -103,8 +103,8 @@ void v2RDMSolver::BuildBasis() {
     full_basis             = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
 
     // including frozen virtuals
-    int * symmetry_really_full               = (int*)malloc(nmo_*sizeof(int));
-    int * energy_to_pitzer_order_really_full = (int*)malloc(nmo_*sizeof(int));
+    symmetry_really_full               = (int*)malloc(nmo_*sizeof(int));
+    energy_to_pitzer_order_really_full = (int*)malloc(nmo_*sizeof(int));
 
     memset((void*)symmetry,'\0',nmo_*sizeof(int));
     memset((void*)symmetry_full,'\0',(nmo_-nfrzv_)*sizeof(int));
@@ -151,6 +151,10 @@ void v2RDMSolver::BuildBasis() {
     // end of the SCF routine if orbitals are truly
     // degenerate.  past eugene hasn't convinved himself
     // of whether or not this is actually a problem.
+
+    // hey, past eugene! it turns out you were on to something!
+    // when restarting jobs, if the SCF has degenerate orbitals,
+    // sometimes their order can change.  How annoying!
 
     // TODO: the orbital ordering should be according to 
     // energy within each type of orbital
@@ -553,6 +557,22 @@ void v2RDMSolver::BuildBasis() {
 
     }
 
+    // if restarting a job, need to read a few energy-order arrays from disk...
+    if ( options_["RESTART_FROM_CHECKPOINT_FILE"].has_changed() ) {
+        boost::shared_ptr<PSIO> psio (new PSIO() );
+        psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
+
+        // energy order to pitzer order mapping array
+        psio->read_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER",
+            (char*)energy_to_pitzer_order,(nmo_-nfrzv_)*sizeof(int));
+
+        // energy order to pitzer order mapping array
+        psio->read_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER_REALLY_FULL",
+            (char*)energy_to_pitzer_order_really_full,nmo_*sizeof(int)); 
+
+        psio->close(PSIF_V2RDM_CHECKPOINT,1);
+    }
+
     // new way:
     memset((void*)gems_full,'\0',nirrep_*sizeof(int));
     memset((void*)gems_plus_core,'\0',nirrep_*sizeof(int));
@@ -702,8 +722,6 @@ void v2RDMSolver::BuildBasis() {
     }
 
     free(gems_really_full);
-    free(symmetry_really_full);
-    free(energy_to_pitzer_order_really_full);
 }
 
 

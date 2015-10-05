@@ -57,6 +57,14 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
+        /*- Do save progress in a checkpoint file? -*/
+        options.add_bool("WRITE_CHECKPOINT_FILE",false);
+        /*- Frequency of orbital optimization.  The checkpoint file is 
+        updated every CHECKPOINT_FREQUENCY iterations.  The default frequency
+        will be ORBOPT_FREQUENCY. -*/
+        options.add_bool("CHECKPOINT_FREQUENCY",200);
+        /*- File containing previous primal/dual solutions and integrals. -*/
+        options.add_str("RESTART_FROM_CHECKPOINT_FILE","");
         /*- The type of 2-positivity computation -*/
         options.add_str("POSITIVITY", "DQG", "DQG D DQ DG DQGT1 DQGT2 DQGT1T2");
         /*- Do constrain D3 to D2 mapping? -*/
@@ -92,7 +100,7 @@ int read_options(std::string name, Options& options)
 
         /*- SUBSECTION ORBITAL OPTIMIZATION -*/
 
-        /* flag to optimize orbitals using a one-step type approach */
+        /*- flag to optimize orbitals using a one-step type approach -*/
         options.add_int("ORBOPT_ONE_STEP",1);
         /*- do rotate active/active orbital pairs? -*/
         options.add_bool("ORBOPT_ACTIVE_ACTIVE_ROTATIONS",false);
@@ -100,11 +108,12 @@ int read_options(std::string name, Options& options)
         options.add_double("ORBOPT_GRADIENT_CONVERGENCE",1.0e-4);
         /*- convergence in energy for rotations -*/
         options.add_double("ORBOPT_ENERGY_CONVERGENCE",1.0e-8);
-        /* flag for using exact expresions for diagonal Hessian element */
+        /*- flag for using exact expresions for diagonal Hessian element -*/
         options.add_int("ORBOPT_EXACT_DIAGONAL_HESSIAN",0);
-        /* number of DIIS vectors to keep in orbital optimization */ 
+        /*- number of DIIS vectors to keep in orbital optimization -*/ 
         options.add_int("ORBOPT_NUM_DIIS_VECTORS",0);
-        /* frequency of orbital optimization -- optimization occurs every orbopt_frequency iterations */
+        /*- frequency of orbital optimization.  optimization occurs every 
+        orbopt_frequency iterations -*/
         options.add_int("ORBOPT_FREQUENCY",200);
         /*- Do write a MOLDEN output file?  If so, the filename will end in
         .molden, and the prefix is determined by |globals__writer_file_label|

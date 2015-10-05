@@ -42,14 +42,44 @@ INPUT OPTIONS
 * **MAXITER** (int):
 
     The maximum number of outer iterations.  Default 10000.
-    
+
 * **FROZEN_DOCC** (array):
-    
-    The number of frozen doubly-occupied orbitals per irrep.  Combined with **FROZEN_UOCC**, these arrays define the active space.
+
+    An array containing the number of frozen doubly-occupied orbitals per
+    irrep.  These orbitals are not included in the active space, nor are
+    they optimized during the v2RDM-CASSCF procedure.  This option trumps
+    Psi4's **NUM_FROZEN_DOCC** and **FREEZE_CORE** options.
 
 * **FROZEN_UOCC** (array):
-    
-    The number of frozen unoccupied orbitals per irrep. Combined with **FROZEN_DOCC**, these arrays define the active space.
+
+    An array containing the number of frozen unoccupied orbitals per
+    irrep.  These orbitals are not included in the active space, nor are
+    they optimized during the v2RDM-CASSCF procedure.  This option trumps
+    Psi4's **NUM_FROZEN_UOCC** option.
+
+* **RESTRICTED_DOCC** (array):
+
+    An array giving the number of restricted doubly-occupied orbitals per 
+    irrep.  These orbitals are not included in the active space, but they are
+    optimized by the v2RDM-CASSCF procedure.
+
+* **RESTRICTED_UOCC** (array):
+
+    An array giving the number of restricted unoccupied orbitals per 
+    irrep.  These orbitals are not included in the active space, but they are
+    optimized by the v2RDM-CASSCF procedure.
+
+* **ACTIVE** (array):
+
+    An array giving the number of active orbitals (occupied plus
+    unoccupied) per irrep.  This option provides a more intuitive way of
+    specifying the active space than the
+    **FROZEN_DOCC**/**RESTRICTED_DOCC**/**RESTRICTED_UOCC**/**FROZEN_UOCC**
+    keywords.  The simplest specification of the active space would
+    involve this keyword and at the **RESTRICTED_DOCC** keyword.  This
+    option trumps the **RESTRICTED_UOCC** option, which will be determined
+    from the **ACTIVE**, **RESTRICTED_DOCC**, **FROZEN_DOCC**, and
+    **FROZEN_UOCC** arrays.
 
 * **MOLDEN_WRITE** (bool):
 
