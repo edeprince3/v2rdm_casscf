@@ -301,7 +301,7 @@ class v2RDMSolver: public Wavefunction{
     void FinalTransformationMatrix();
 
     // read teis from disk:
-    void ReadIntegrals(double * tei,int nmo);
+    void ReadIntegrals(double * tei,long int nmo);
 
     // multiplicity
     int multiplicity_;

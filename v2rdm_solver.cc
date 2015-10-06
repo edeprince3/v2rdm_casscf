@@ -1140,7 +1140,8 @@ void  v2RDMSolver::common_init(){
         for (int h = 0; h < nirrep_; h++) {
             tot += (long int)gems_full[h] * ( (long int)gems_full[h] + 1L ) / 2L;
         }
-        tot += nmo_*nmo_*nmo_*nmo_; // for four-index integrals stored stupidly 
+        // for four-index integrals stored stupidly 
+        tot += (long int)nmo_*(long int)nmo_*(long int)nmo_*(long int)nmo_; 
     }
     
     outfile->Printf("        Total number of variables:     %10i\n",dimx_);

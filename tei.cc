@@ -135,11 +135,11 @@ void v2RDMSolver::GetIntegrals() {
 
 void v2RDMSolver::GetTEIFromDisk() {
 
-    double * temptei = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
-    memset((void*)temptei,'\0',nmo_*nmo_*nmo_*nmo_*sizeof(double));
+    double * temptei = (double*)malloc((long int)nmo_*(long int)nmo_*(long int)nmo_*(long int)nmo_*sizeof(double));
+    memset((void*)temptei,'\0',(long int)nmo_*(long int)nmo_*(long int)nmo_*(long int)nmo_*sizeof(double));
 
     // read two-electron integrals from disk
-    ReadIntegrals(temptei,nmo_);
+    ReadIntegrals(temptei,(long int)nmo_);
   
     // load tei_full_sym_
     long int offset = 0;
