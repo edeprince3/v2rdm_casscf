@@ -229,6 +229,47 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
         offset += amopi_[h]*amopi_[h];
         poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
     }
+
+    // enforce symmetry
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int ij = 0; ij < gems_ab[h]; ij++) {
+            long int i = bas_ab_sym[h][ij][0];
+            long int j = bas_ab_sym[h][ij][1];
+            for (long int kl = 0; kl < gems_ab[h]; kl++) {
+                long int k = bas_ab_sym[h][kl][0];
+                long int l = bas_ab_sym[h][kl][1];
+                A_p[d2aboff[h] + ij*gems_ab[h]+kl] += u_p[offset+ij*gems_ab[h]+kl];
+                A_p[d2aboff[h] + kl*gems_ab[h]+ij] -= u_p[offset+ij*gems_ab[h]+kl];
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h];
+    }
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int ij = 0; ij < gems_aa[h]; ij++) {
+            long int i = bas_aa_sym[h][ij][0];
+            long int j = bas_aa_sym[h][ij][1];
+            for (long int kl = 0; kl < gems_aa[h]; kl++) {
+                long int k = bas_aa_sym[h][kl][0];
+                long int l = bas_aa_sym[h][kl][1];
+                A_p[d2aaoff[h] + ij*gems_aa[h]+kl] += u_p[offset+ij*gems_aa[h]+kl];
+                A_p[d2aaoff[h] + kl*gems_aa[h]+ij] -= u_p[offset+ij*gems_aa[h]+kl];
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h];
+    }
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int ij = 0; ij < gems_aa[h]; ij++) {
+            long int i = bas_aa_sym[h][ij][0];
+            long int j = bas_aa_sym[h][ij][1];
+            for (long int kl = 0; kl < gems_aa[h]; kl++) {
+                long int k = bas_aa_sym[h][kl][0];
+                long int l = bas_aa_sym[h][kl][1];
+                A_p[d2bboff[h] + ij*gems_aa[h]+kl] += u_p[offset+ij*gems_aa[h]+kl];
+                A_p[d2bboff[h] + kl*gems_aa[h]+ij] -= u_p[offset+ij*gems_aa[h]+kl];
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h];
+    }
 }
 
 // D2 portion of A.x (and D1/Q1)
@@ -412,6 +453,47 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
         }
         offset += amopi_[h]*amopi_[h];
         poff   += nmopi_[h] - rstcpi_[h] - frzcpi_[h] - rstvpi_[h] - frzvpi_[h];
+    }
+
+    // enforce symmetry
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int ij = 0; ij < gems_ab[h]; ij++) {
+            long int i = bas_ab_sym[h][ij][0];
+            long int j = bas_ab_sym[h][ij][1];
+            for (long int kl = 0; kl < gems_ab[h]; kl++) {
+                long int k = bas_ab_sym[h][kl][0];
+                long int l = bas_ab_sym[h][kl][1];
+                A_p[offset+ij*gems_ab[h]+kl] += u_p[d2aboff[h] + ij*gems_ab[h]+kl];
+                A_p[offset+ij*gems_ab[h]+kl] -= u_p[d2aboff[h] + kl*gems_ab[h]+ij];
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h];
+    }
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int ij = 0; ij < gems_aa[h]; ij++) {
+            long int i = bas_aa_sym[h][ij][0];
+            long int j = bas_aa_sym[h][ij][1];
+            for (long int kl = 0; kl < gems_aa[h]; kl++) {
+                long int k = bas_aa_sym[h][kl][0];
+                long int l = bas_aa_sym[h][kl][1];
+                A_p[offset+ij*gems_aa[h]+kl] += u_p[d2aaoff[h] + ij*gems_aa[h]+kl];
+                A_p[offset+ij*gems_aa[h]+kl] -= u_p[d2aaoff[h] + kl*gems_aa[h]+ij];
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h];
+    }
+    for (int h = 0; h < nirrep_; h++) {
+        for (long int ij = 0; ij < gems_aa[h]; ij++) {
+            long int i = bas_aa_sym[h][ij][0];
+            long int j = bas_aa_sym[h][ij][1];
+            for (long int kl = 0; kl < gems_aa[h]; kl++) {
+                long int k = bas_aa_sym[h][kl][0];
+                long int l = bas_aa_sym[h][kl][1];
+                A_p[offset+ij*gems_aa[h]+kl] += u_p[d2bboff[h] + ij*gems_aa[h]+kl];
+                A_p[offset+ij*gems_aa[h]+kl] -= u_p[d2bboff[h] + kl*gems_aa[h]+ij];
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h];
     }
 }
 

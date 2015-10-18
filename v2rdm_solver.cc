@@ -80,6 +80,42 @@ using namespace boost;
 using namespace psi;
 using namespace fnocc;
 
+
+extern "C" {
+    void dgeev(char& JOBVL,char& JOBVR,long int& N,double* A,long int& LDA,double* WR,double* WI,
+            double * VL,long int& LDVL,double* VR,long int& LDVR,double* WORK,long int& LWORK,long int& INFO);
+};
+inline void DGEEV(char& JOBVL,char& JOBVR,long int& N,double* A,long int& LDA,double* WR,double* WI,
+            double * VL,long int& LDVL,double* VR,long int& LDVR,double* WORK,long int& LWORK,long int& INFO){
+    dgeev(JOBVL, JOBVR, N, A, LDA, WR, WI, VL, LDVL, VR, LDVR, WORK, LWORK, INFO);
+}
+
+
+// diagonalize real, nonsymmetric matrix
+void NonsymmetricEigenvalue(long int N, double * A, double * VL, double * VR, double * WR, double *WI){
+
+    char JOBVL = 'V';
+    char JOBVR = 'V';
+    long int LDA  = N;
+    long int LDVL = N;
+    long int LDVR = N;
+    long int LWORK = 4*N;
+    double * WORK = (double*)malloc(LWORK*sizeof(double));
+    long int INFO;
+
+    DGEEV(JOBVL, JOBVR, N, A, LDA, WR, WI, VL, LDVL, VR, LDVR, WORK, LWORK, INFO);
+
+    // kill complex eigenvalues
+    for (int i = 0; i < N; i++) {
+        if ( fabs(WI[i]) > 1e-6 ) {
+            WR[i] = 0.0;
+            WI[i] = 0.0;
+        }
+    }
+
+    free(WORK);
+}
+
 static void evaluate_Ap(long int n, SharedVector Ax, SharedVector x, void * data) {
   
     // reinterpret void * as an instance of v2RDMSolver
@@ -673,6 +709,13 @@ void  v2RDMSolver::common_init(){
     nconstraints_ += 1;                   // Tr(D2ab)
     nconstraints_ += 1;                   // Tr(D2aa)
     nconstraints_ += 1;                   // Tr(D2bb)
+
+    for ( int h = 0; h < nirrep_; h++) {
+        nconstraints_ += gems_ab[h]*gems_ab[h]; // D2ab hermiticity
+        nconstraints_ += gems_aa[h]*gems_aa[h]; // D2aa hermiticity
+        nconstraints_ += gems_aa[h]*gems_aa[h]; // D2bb hermiticity
+    }
+
     for ( int h = 0; h < nirrep_; h++) {
         nconstraints_ += amopi_[h]*amopi_[h]; // D1a <-> Q1a
     }
@@ -1316,6 +1359,7 @@ double v2RDMSolver::compute_energy() {
     if ( options_["CHECKPOINT_FREQUENCY"].has_changed() ) {
         checkpoint_frequency = options_.get_int("CHECKPOINT_FREQUENCY");
     }
+    int mu_update_frequency  = options_.get_int("MU_UPDATE_FREQUENCY");
     int orbopt_frequency     = options_.get_int("ORBOPT_FREQUENCY");
     int orbopt_one_step      = options_.get_int("ORBOPT_ONE_STEP");
 
@@ -1348,7 +1392,8 @@ double v2RDMSolver::compute_energy() {
         start = omp_get_wtime();
         // build and diagonalize U according to step 2 in PRL
         // and update z and z
-        Update_xz();
+        //Update_xz();
+        Update_xz_nonsymmetric();
         end = omp_get_wtime();
         double diag_time = end - start;
 
@@ -1367,11 +1412,10 @@ double v2RDMSolver::compute_energy() {
 
         //RotateOrbitals();
         // don't update mu every iteration
-        if ( oiter % 200 == 0 && oiter > 0) {
+        if ( oiter % mu_update_frequency == 0 && oiter > 0) {
             mu = mu*ep/ed;
         }
         if ( orbopt_one_step == 1 && oiter % orbopt_frequency == 0 && oiter > 0) {
-
             RotateOrbitals();
         }
 
@@ -1812,6 +1856,32 @@ void v2RDMSolver::BuildConstraints(){
         }
         offset += amopi_[h]*amopi_[h];
     }
+    // hermiticity
+    for (int h = 0; h < nirrep_; h++) {
+        for(int i = 0; i < gems_ab[h]; i++){
+            for(int j = 0; j < gems_ab[h]; j++){
+                b_p[offset + i*gems_ab[h]] = 0.0;
+            }
+        }
+        offset += gems_ab[h]*gems_ab[h]; 
+    }
+    for (int h = 0; h < nirrep_; h++) {
+        for(int i = 0; i < gems_aa[h]; i++){
+            for(int j = 0; j < gems_aa[h]; j++){
+                b_p[offset + i*gems_aa[h]] = 0.0;
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h]; 
+    }
+    for (int h = 0; h < nirrep_; h++) {
+        for(int i = 0; i < gems_aa[h]; i++){
+            for(int j = 0; j < gems_aa[h]; j++){
+                b_p[offset + i*gems_aa[h]] = 0.0;
+            }
+        }
+        offset += gems_aa[h]*gems_aa[h]; 
+    }
+
 
     if ( constrain_q2_ ) {
         if ( !spin_adapt_q2_ ) {
@@ -2285,6 +2355,7 @@ void v2RDMSolver::cg_Ax(long int N,SharedVector A,SharedVector ux){
 
 }//end cg_Ax
 
+// update x and z
 void v2RDMSolver::Update_xz() {
 
     // evaluate M(mu*x + ATy - c)
@@ -2309,7 +2380,6 @@ void v2RDMSolver::Update_xz() {
         double ** mat_p = mat->pointer();
         double * A_p   = ATy->pointer();
 
-        //C_DCOPY(dimensions_[i]*dimensions_[i],&A_p[myoffset],1,&mat_p[0][0],1);
         for (int p = 0; p < dimensions_[i]; p++) {
             for (int q = p; q < dimensions_[i]; q++) {
                 double dum = 0.5 * ( A_p[myoffset + p * dimensions_[i] + q] +
@@ -2318,6 +2388,7 @@ void v2RDMSolver::Update_xz() {
                  
             }
         }
+
         mat->diagonalize(eigvec,eigval);
 
         // separate U+ and U-
@@ -2356,7 +2427,97 @@ void v2RDMSolver::Update_xz() {
 
             x_p[myoffset+q*dimensions_[i]+p] = sumx;
             z_p[myoffset+q*dimensions_[i]+p] = sumz;
+
         }
+    }
+}
+
+// update x and z.  This version does not symmetrize the matrix M(mu*x+ATy-c) 
+// before diagonalization.  
+void v2RDMSolver::Update_xz_nonsymmetric() {
+
+    // evaluate M(mu*x + ATy - c)
+    bpsdp_ATu(ATy,y);
+    ATy->subtract(c);
+    x->scale(mu);
+    ATy->add(x);
+
+    // loop over each block of x/z
+    for (int i = 0; i < dimensions_.size(); i++) {
+        if ( dimensions_[i] == 0 ) continue;
+        int myoffset = 0;
+        for (int j = 0; j < i; j++) {
+            myoffset += dimensions_[j] * dimensions_[j];
+        }
+
+        boost::shared_ptr<Vector> Up     (new Vector(dimensions_[i]));
+        boost::shared_ptr<Vector> Um     (new Vector(dimensions_[i]));
+        double * A_p   = ATy->pointer();
+
+        double * myA = (double*)malloc(dimensions_[i]*dimensions_[i]*sizeof(double));
+        double * VL  = (double*)malloc(dimensions_[i]*dimensions_[i]*sizeof(double));
+        double * VR  = (double*)malloc(dimensions_[i]*dimensions_[i]*sizeof(double));
+        double * WR  = (double*)malloc(dimensions_[i]*sizeof(double));
+        double * WI  = (double*)malloc(dimensions_[i]*sizeof(double));
+        C_DCOPY(dimensions_[i]*dimensions_[i],&A_p[myoffset],1,myA,1);
+        NonsymmetricEigenvalue(dimensions_[i],myA,VL,VR,WR,WI);
+
+        // separate U+ and U-
+        double * u_p    = Up->pointer();
+        double * u_m    = Um->pointer();
+        double * eval_p = WR;//eigval->pointer();
+        for (int p = 0; p < dimensions_[i]; p++) {
+            if ( eval_p[p] < 0.0 ) {
+                u_m[p] = -eval_p[p];
+                u_p[p] = 0.0;
+            }else {
+                u_m[p] = 0.0;
+                u_p[p] = eval_p[p]/mu;
+            }
+        }
+
+        // transform U+ and U- back to nondiagonal basis
+        //double ** evec_p = eigvec->pointer();
+        double * x_p = x->pointer();
+        double * z_p = z->pointer();
+        #pragma omp parallel for schedule (dynamic)
+        for (int pq = 0; pq < dimensions_[i] * dimensions_[i]; pq++) {
+
+            int q = pq % dimensions_[i];
+            int p = (pq-q) / dimensions_[i];
+            //if ( p > q ) continue;
+
+            double sumx = 0.0;
+            double sumz = 0.0;
+            for (int j = 0; j < dimensions_[i]; j++) {
+                sumx += u_p[j] * VL[j*dimensions_[i]+p] * VR[j*dimensions_[i]+q];
+                sumz += u_m[j] * VL[j*dimensions_[i]+p] * VR[j*dimensions_[i]+q];
+            }
+            x_p[myoffset+p*dimensions_[i]+q] = sumx;
+            z_p[myoffset+p*dimensions_[i]+q] = sumz;
+
+        }
+        // symmetrize
+        //for (int p = 0; p < dimensions_[i]; p++) {
+        //    for (int q = p; q < dimensions_[i]; q++) {
+        //        double dumx = x_p[myoffset+p*dimensions_[i]+q];
+        //        double dumz = z_p[myoffset+p*dimensions_[i]+q];
+
+        //        dumx += x_p[myoffset+q*dimensions_[i]+p];
+        //        dumz += z_p[myoffset+q*dimensions_[i]+p];
+
+        //        x_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumx;
+        //        z_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumz;
+
+        //        x_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumx;
+        //        z_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumz;
+        //    }
+        //}
+
+        free(VL);
+        free(VR);
+        free(WR);
+        free(WI);
     }
 }
 
