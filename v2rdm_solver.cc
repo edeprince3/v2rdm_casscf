@@ -1392,8 +1392,11 @@ double v2RDMSolver::compute_energy() {
         start = omp_get_wtime();
         // build and diagonalize U according to step 2 in PRL
         // and update z and z
-        //Update_xz();
-        Update_xz_nonsymmetric();
+        if ( ed > 1e-2 && ep > 1e-2 ) {
+            Update_xz();
+        }else {
+            Update_xz_nonsymmetric();
+        }
         end = omp_get_wtime();
         double diag_time = end - start;
 
