@@ -1392,11 +1392,11 @@ double v2RDMSolver::compute_energy() {
         start = omp_get_wtime();
         // build and diagonalize U according to step 2 in PRL
         // and update z and z
-        if ( ed > 1e-2 && ep > 1e-2 ) {
+        //if ( ed > r_convergence_*10 && ep > r_convergence_*10 ) {
             Update_xz();
-        }else {
-            Update_xz_nonsymmetric();
-        }
+        //}else {
+        //    Update_xz_nonsymmetric();
+        //}
         end = omp_get_wtime();
         double diag_time = end - start;
 
@@ -2501,21 +2501,21 @@ void v2RDMSolver::Update_xz_nonsymmetric() {
 
         }
         // symmetrize
-        //for (int p = 0; p < dimensions_[i]; p++) {
-        //    for (int q = p; q < dimensions_[i]; q++) {
-        //        double dumx = x_p[myoffset+p*dimensions_[i]+q];
-        //        double dumz = z_p[myoffset+p*dimensions_[i]+q];
+        for (int p = 0; p < dimensions_[i]; p++) {
+            for (int q = p; q < dimensions_[i]; q++) {
+                double dumx = x_p[myoffset+p*dimensions_[i]+q];
+                double dumz = z_p[myoffset+p*dimensions_[i]+q];
 
-        //        dumx += x_p[myoffset+q*dimensions_[i]+p];
-        //        dumz += z_p[myoffset+q*dimensions_[i]+p];
+                dumx += x_p[myoffset+q*dimensions_[i]+p];
+                dumz += z_p[myoffset+q*dimensions_[i]+p];
 
-        //        x_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumx;
-        //        z_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumz;
+                x_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumx;
+                z_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumz;
 
-        //        x_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumx;
-        //        z_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumz;
-        //    }
-        //}
+                x_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumx;
+                z_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumz;
+            }
+        }
 
         free(VL);
         free(VR);
@@ -2867,7 +2867,7 @@ void v2RDMSolver::RotateOrbitals(){
         throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
     }
 */
-
+/*
     UnpackDensityPlusCore();
 
     outfile->Printf("\n");
@@ -2903,9 +2903,10 @@ void v2RDMSolver::RotateOrbitals(){
     outfile->Printf("            Final gradient norm: %11.6le\n",orbopt_data_[10]);
     outfile->Printf("\n");
 
-    if ( fabs(orbopt_data_[11]) < orbopt_data_[4] ) {
+*/
+    //if ( fabs(orbopt_data_[11]) < orbopt_data_[4] ) {
         orbopt_converged_ = true;
-    }
+    //}
 
     RepackIntegrals();
 }
