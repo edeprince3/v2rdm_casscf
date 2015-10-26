@@ -65,6 +65,9 @@ int read_options(std::string name, Options& options)
         options.add_bool("CHECKPOINT_FREQUENCY",200);
         /*- File containing previous primal/dual solutions and integrals. -*/
         options.add_str("RESTART_FROM_CHECKPOINT_FILE","");
+        /*- Frequency with which the pentalty-parameter, mu, is updated. mu is
+        updated every MU_UPDATE_FREQUENCY iterations.   -*/
+        options.add_int("MU_UPDATE_FREQUENCY",500);
         /*- The type of 2-positivity computation -*/
         options.add_str("POSITIVITY", "DQG", "DQG D DQ DG DQGT1 DQGT2 DQGT1T2");
         /*- Do constrain D3 to D2 mapping? -*/

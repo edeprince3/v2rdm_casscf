@@ -296,12 +296,14 @@ class v2RDMSolver: public Wavefunction{
     SharedVector z;      // second dual solution
     
     void Update_xz();
+    void Update_xz_nonsymmetric();
+
     void NaturalOrbitals();
     void MullikenPopulations();
     void FinalTransformationMatrix();
 
     // read teis from disk:
-    void ReadIntegrals(double * tei,int nmo);
+    void ReadIntegrals(double * tei,long int nmo);
 
     // multiplicity
     int multiplicity_;

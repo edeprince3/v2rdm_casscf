@@ -34,7 +34,7 @@ using namespace psi;
 
 namespace psi{namespace v2rdm_casscf{
 
-void ReadAllIntegrals(iwlbuf *Buf,double*tei,int nmo) {
+void ReadAllIntegrals(iwlbuf *Buf,double*tei,long int nmo) {
 
   ULI lastbuf;
   Label *lblptr;
@@ -109,7 +109,7 @@ void ReadAllIntegrals(iwlbuf *Buf,double*tei,int nmo) {
 }
 
 
-void v2RDMSolver::ReadIntegrals(double * tei,int nmo){
+void v2RDMSolver::ReadIntegrals(double * tei,long int nmo){
   struct iwlbuf Buf;
   iwl_buf_init(&Buf,PSIF_MO_TEI,0.0,1,1);
   ReadAllIntegrals(&Buf,tei,nmo);
