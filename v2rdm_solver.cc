@@ -1392,11 +1392,11 @@ double v2RDMSolver::compute_energy() {
         start = omp_get_wtime();
         // build and diagonalize U according to step 2 in PRL
         // and update z and z
-        if ( ed > 1e-2 && ep > 1e-2 ) {
+        //if ( ed > r_convergence_*10 && ep > r_convergence_*10 ) {
             Update_xz();
-        }else {
-            Update_xz_nonsymmetric();
-        }
+        //}else {
+            //Update_xz_nonsymmetric();
+        //}
         end = omp_get_wtime();
         double diag_time = end - start;
 
@@ -2462,7 +2462,14 @@ void v2RDMSolver::Update_xz_nonsymmetric() {
         double * VR  = (double*)malloc(dimensions_[i]*dimensions_[i]*sizeof(double));
         double * WR  = (double*)malloc(dimensions_[i]*sizeof(double));
         double * WI  = (double*)malloc(dimensions_[i]*sizeof(double));
+
         C_DCOPY(dimensions_[i]*dimensions_[i],&A_p[myoffset],1,myA,1);
+
+        memset((void*)VL,'\0',dimensions_[i]*dimensions_[i]*sizeof(double));
+        memset((void*)VR,'\0',dimensions_[i]*dimensions_[i]*sizeof(double));
+        memset((void*)WR,'\0',dimensions_[i]*sizeof(double));
+        memset((void*)WI,'\0',dimensions_[i]*sizeof(double));
+
         NonsymmetricEigenvalue(dimensions_[i],myA,VL,VR,WR,WI);
 
         // separate U+ and U-
@@ -2868,7 +2875,6 @@ void v2RDMSolver::RotateOrbitals(){
         throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
     }
 */
-
     UnpackDensityPlusCore();
 
     outfile->Printf("\n");
