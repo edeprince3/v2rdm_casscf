@@ -2673,7 +2673,6 @@ void v2RDMSolver::UnpackDensityPlusCore() {
     // core active; core active
     for (int hi = 0; hi < nirrep_; hi++) {
         for (int i = 0; i < rstcpi_[hi] + frzcpi_[hi]; i++) {
-
             int ifull      = i + pitzer_offset_full[hi];
             int iifull     = ibas_full_sym[0][ifull][ifull];
 
@@ -2681,11 +2680,13 @@ void v2RDMSolver::UnpackDensityPlusCore() {
             for (int hj = 0; hj < nirrep_; hj++) {
                 for (int j = 0; j < amopi_[hj]; j++) {
 
-                    int jfull      = full_basis[j];
+                    //int jfull      = full_basis[j];
+                    int jfull      = full_basis[j+pitzer_offset[hj]];
 
                     for (int l = j; l < amopi_[hj]; l++) {
 
-                        int lfull      = full_basis[l];
+                        //int lfull      = full_basis[l];
+                        int lfull      = full_basis[l+pitzer_offset[hj]];
 
                         int jlfull = ibas_full_sym[0][jfull][lfull];
 
