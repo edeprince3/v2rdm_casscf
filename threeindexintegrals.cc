@@ -128,7 +128,6 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     double * tmp1 = (double*)malloc(rowdims[0]*nso_*nso_*sizeof(double));
     double * tmp2 = (double*)malloc(rowdims[0]*nso_*nso_*sizeof(double));
 
-    long int nn1so = nso_*(nso_+1)/2;
     long int nn1mo = nmo_*(nmo_+1)/2;
     long int nn1fv = (nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2;
 
@@ -151,7 +150,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->open(PSIF_DFSCF_BJ,PSIO_OPEN_OLD);
     psio->open(PSIF_DCC_QSO,PSIO_OPEN_OLD);
 
-    memset((void*)tmp1,'\0',nso_*nso_*nQ_*sizeof(double));
+    memset((void*)tmp1,'\0',nso_*nso_*rowdims[0]*sizeof(double));
     for (long int row = 0; row < nrows; row++) {
 
         // read
