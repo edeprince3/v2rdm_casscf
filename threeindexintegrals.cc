@@ -151,7 +151,8 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->open(PSIF_DFSCF_BJ,PSIO_OPEN_OLD);
     psio->open(PSIF_DCC_QSO,PSIO_OPEN_OLD);
 
-    memset((void*)tmp1,'\0',nso_*nso_*nQ_*sizeof(double));
+    //memset((void*)tmp1,'\0',nso_*nso_*nQ_*sizeof(double));
+    memset((void*)tmp1,'\0',nso_*nso_*rowdims[0]*sizeof(double));
     for (long int row = 0; row < nrows; row++) {
 
         // read
