@@ -77,21 +77,21 @@ void v2RDMSolver::ThreeIndexIntegrals() {
 
     // orbitals will end up in energy order.  
     // we will want them in pitzer.  for sorting: 
-    int * reorder  = (int*)malloc(nmo_*sizeof(int));
-    int * sym      = (int*)malloc(nmo_*sizeof(int));
+    long int * reorder  = (long int*)malloc(nmo_*sizeof(long int));
+    long int * sym      = (long int*)malloc(nmo_*sizeof(long int));
     bool * skip    = (bool*)malloc(nmo_*sizeof(bool));
 
-    for (int i = 0; i < nmo_; i++) {
+    for (long int i = 0; i < nmo_; i++) {
         skip[i] = false;
     }
-    for (int i = 0; i < nmo_; i++) {
+    for (long int i = 0; i < nmo_; i++) {
         double min   = 1.e99;
-        int count    = 0;
-        int minj     = -999;
-        int minh     = -999;
-        int mincount = -999;
+        long int count    = 0;
+        long int minj     = -999;
+        long int minh     = -999;
+        long int mincount = -999;
         for (int h = 0; h < nirrep_; h++) {
-            for (int j = 0; j < nmopi_[h]; j++) {
+            for (long int j = 0; j < nmopi_[h]; j++) {
                 if ( skip[count+j] ) continue;
                 if ( epsilon_a_->pointer(h)[j] < min ) {
                     min      = epsilon_a_->pointer(h)[j];
@@ -128,7 +128,6 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     double * tmp1 = (double*)malloc(rowdims[0]*nso_*nso_*sizeof(double));
     double * tmp2 = (double*)malloc(rowdims[0]*nso_*nso_*sizeof(double));
 
-    long int nn1so = nso_*(nso_+1)/2;
     long int nn1mo = nmo_*(nmo_+1)/2;
     long int nn1fv = (nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2;
 
@@ -138,7 +137,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->open(PSIF_DCC_QMO,PSIO_OPEN_NEW);
     psio_address addr  = PSIO_ZERO;
     psio_address addr2 = PSIO_ZERO;
-    for (int row = 0; row < nrows; row++) {
+    for (long int row = 0; row < nrows; row++) {
         psio->write(PSIF_DCC_QSO, "(Q|mn) Integrals", (char*) tmp1, sizeof(double) * rowdims[row] * nso_ * nso_,addr,&addr);
         psio->write(PSIF_DCC_QMO, "(Q|mn) Integrals", (char*) tmp1, sizeof(double) * rowdims[row] * nn1mo,addr2,&addr2);
     }
@@ -151,8 +150,8 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->open(PSIF_DFSCF_BJ,PSIO_OPEN_OLD);
     psio->open(PSIF_DCC_QSO,PSIO_OPEN_OLD);
 
-    memset((void*)tmp1,'\0',nso_*nso_*nQ_*sizeof(double));
-    for (int row = 0; row < nrows; row++) {
+    memset((void*)tmp1,'\0',nso_*nso_*rowdims[0]*sizeof(double));
+    for (long int row = 0; row < nrows; row++) {
 
         // read
         psio->read(PSIF_DFSCF_BJ, "(Q|mn) Integrals", (char*) tmp2, sizeof(double) * ntri * rowdims[row],addr,&addr);
@@ -181,7 +180,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     // transform first index:
     addr  = PSIO_ZERO;
     addr2 = PSIO_ZERO;
-    for (int row = 0; row < nrows; row++) {
+    for (long int row = 0; row < nrows; row++) {
         // read
         psio->read(PSIF_DCC_QSO, "(Q|mn) Integrals", (char*) tmp1, sizeof(double) * nso_*nso_ * rowdims[row],addr,&addr);
 
@@ -205,7 +204,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     addr  = PSIO_ZERO;
     addr2 = PSIO_ZERO;
     psio->open(PSIF_DCC_QMO,PSIO_OPEN_OLD);
-    for (int row = 0; row < nrows; row++) {
+    for (long int row = 0; row < nrows; row++) {
         // read
         psio->read(PSIF_DCC_QSO, "(Q|mn) Integrals", (char*) tmp1, sizeof(double) * nso_*nmo_ * rowdims[row],addr,&addr);
 
@@ -215,22 +214,22 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         // sort orbitals into pitzer order
         #pragma omp parallel for schedule (static)
         for (long int Q = 0; Q < rowdims[row]; Q++) {
-            for (int m = 0; m < nmo_; m++) {
+            for (long int m = 0; m < nmo_; m++) {
                 int hm = sym[m];
-                int offm = 0;
+                long int offm = 0;
                 for (int h = 0; h < hm; h++) {
                     offm += nmopi_[h] - frzvpi_[h];
                 }
                 if ( reorder[m] >= nmopi_[hm] - frzvpi_[hm] ) continue;
-                int mm = reorder[m] + offm;
-                for (int n = 0; n < nmo_; n++) {
+                long int mm = reorder[m] + offm;
+                for (long int n = 0; n < nmo_; n++) {
                     int hn = sym[n];
-                    int offn = 0;
+                    long int offn = 0;
                     for (int h = 0; h < hn; h++) {
                         offn += nmopi_[h] - frzvpi_[h];
                     }
                     if ( reorder[n] >= nmopi_[hn] - frzvpi_[hn] ) continue;
-                    int nn = reorder[n] + offn;
+                    long int nn = reorder[n] + offn;
                     tmp1[Q*nn1fv+INDEX(mm,nn)] = tmp2[Q*nmo_*nmo_+m*nmo_+n];
                 }
             }
@@ -270,7 +269,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
 
     lastrowsize = nQ_ - (nrows - 1L) * rowsize;
     long int * rowdims2 = new long int [nrows];
-    for (int i = 0; i < nrows-1; i++) rowdims2[i] = rowsize;
+    for (long int i = 0; i < nrows-1; i++) rowdims2[i] = rowsize;
     rowdims2[nrows-1] = lastrowsize;
 
     double * tmp3 = (double*)malloc(rowdims2[0] * nn1fv*sizeof(double));
@@ -279,7 +278,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->open(PSIF_DCC_QMO,PSIO_OPEN_OLD);
 
     long int totalQ = 0;
-    for (int row = 0; row < nrows; row++) {
+    for (long int row = 0; row < nrows; row++) {
         psio->read(PSIF_DCC_QMO,"(Q|mn) Integrals",(char*)tmp3,sizeof(double)*rowdims2[row] * nn1fv,addr,&addr);
         for (long int Q = 0; Q < rowdims2[row]; Q++) {
             for (long int mn = 0; mn < nn1fv; mn++) {
