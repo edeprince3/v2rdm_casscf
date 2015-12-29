@@ -142,6 +142,17 @@ class v2RDMSolver: public Wavefunction{
     /// grab one-electron integrals (T+V) in MO basis
     boost::shared_ptr<Matrix> GetOEI();
 
+    /// DIIS stuff
+    void DIIS(double*c,long int nvec,long int n,int replace_diis_iter);
+    void DIIS_WriteOldVector(long int iter,int diis_iter,int replace_diis_iter);
+    void DIIS_WriteErrorVector(int diis_iter,int replace_diis_iter,int iter);
+    void DIIS_Extrapolate(int diis_iter,int&replace_diis_iter);
+    long int maxdiis_;
+    double * diisvec_;
+    double * junk1;
+    double * junk2;
+    long int diis_oiter_;
+
     /// offsets
     int * d1aoff;  
     int * d1boff;  
@@ -294,6 +305,10 @@ class v2RDMSolver: public Wavefunction{
     SharedVector b;      // constraint vector
     SharedVector x;      // primal solution
     SharedVector z;      // second dual solution
+    SharedVector rx;       // square root of x (for diis)
+    SharedVector rz;       // square root of z (for diis)
+    SharedVector rx_error; // error vector for x (for diis)
+    SharedVector rz_error; // error vector for z (for diis)
     
     void Update_xz();
     void Update_xz_nonsymmetric();

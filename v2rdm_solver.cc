@@ -969,6 +969,10 @@ void  v2RDMSolver::common_init(){
     r_convergence_  = options_.get_double("R_CONVERGENCE");
     e_convergence_  = options_.get_double("E_CONVERGENCE");
     maxiter_        = options_.get_int("MAXITER");
+    maxdiis_        = options_.get_int("DIIS_MAX_VECS");
+
+    diisvec_   = (double*)malloc(sizeof(double)*(maxdiis_+1));
+    memset((void*)diisvec_,'\0',(maxdiis_+1)*sizeof(double));
 
     // conjugate gradient solver thresholds:
     cg_convergence_ = options_.get_double("CG_CONVERGENCE");
@@ -1251,6 +1255,15 @@ void  v2RDMSolver::common_init(){
     z      = SharedVector(new Vector("dual solution 2",dimx_));
     b      = SharedVector(new Vector("constraints",nconstraints_));
 
+    // DIIS stuff
+    //rx       = SharedVector(new Vector("diis x",dimx_));
+    //rz       = SharedVector(new Vector("diis z",dimx_));
+    //rx_error = SharedVector(new Vector("diis error x",dimx_));
+    //rz_error = SharedVector(new Vector("diis error z",dimx_));
+    //junk1    = (double*)malloc(2 * dimx_*sizeof(double));
+    //junk2    = (double*)malloc(2 * dimx_*sizeof(double));
+
+
     // input/output array for orbopt sweeps
 
     int nthread = 1;
@@ -1364,6 +1377,11 @@ double v2RDMSolver::compute_energy() {
     int orbopt_one_step      = options_.get_int("ORBOPT_ONE_STEP");
 
     int oiter=0;
+
+    diis_oiter_           = 0;
+    int diis_iter         = 0;
+    int replace_diis_iter = 1;
+
     do {
 
         double start = omp_get_wtime();
@@ -1397,6 +1415,29 @@ double v2RDMSolver::compute_energy() {
         //}else {
             //Update_xz_nonsymmetric();
         //}
+
+        // DIIS 
+        //if ( oiter % mu_update_frequency > -1 ) {
+
+        //    // add vector to list for diis
+        //    DIIS_WriteOldVector(diis_oiter_,diis_iter,replace_diis_iter);
+  
+        //    // diis error vector and convergence check
+        //    DIIS_WriteErrorVector(diis_iter,replace_diis_iter,diis_oiter_);
+  
+        //    // diis extrapolation
+        //    if (diis_iter > 1){
+        //       if (diis_iter<maxdiis_) DIIS(diisvec_,diis_iter,2*dimx_,replace_diis_iter);
+        //       else                    DIIS(diisvec_,maxdiis_,2*dimx_,replace_diis_iter);
+        //       DIIS_Extrapolate(diis_iter,replace_diis_iter);
+        //    }
+        //    diis_oiter_++;
+
+        //    if (diis_iter <= maxdiis_) diis_iter++;
+        //    else if (replace_diis_iter < maxdiis_) replace_diis_iter++;
+        //    else    replace_diis_iter = 1;
+        //}
+
         end = omp_get_wtime();
         double diag_time = end - start;
 
@@ -1417,9 +1458,20 @@ double v2RDMSolver::compute_energy() {
         // don't update mu every iteration
         if ( oiter % mu_update_frequency == 0 && oiter > 0) {
             mu = mu*ep/ed;
+
+            // reset DIIS
+            diis_oiter_       = 0;
+            diis_iter         = 0;
+            replace_diis_iter = 1;
+
         }
         if ( orbopt_one_step == 1 && oiter % orbopt_frequency == 0 && oiter > 0) {
             RotateOrbitals();
+
+            // reset DIIS
+            diis_oiter_       = 0;
+            diis_iter         = 0;
+            replace_diis_iter = 1;
         }
 
         // compute current primal and dual energies
@@ -2412,6 +2464,16 @@ void v2RDMSolver::Update_xz() {
         double ** evec_p = eigvec->pointer();
         double * x_p = x->pointer();
         double * z_p = z->pointer();
+
+        // DIIS stuff
+        //double * rx_p = rx->pointer();
+        //double * rz_p = rz->pointer();
+        //double * rx_error_p = rx_error->pointer();
+        //double * rz_error_p = rz_error->pointer();
+
+        //C_DCOPY(dimensions_[i] * dimensions_[i], rx_p + myoffset, 1, rx_error_p + myoffset, 1);
+        //C_DCOPY(dimensions_[i] * dimensions_[i], rz_p + myoffset, 1, rz_error_p + myoffset, 1);
+
         #pragma omp parallel for schedule (dynamic)
         for (int pq = 0; pq < dimensions_[i] * dimensions_[i]; pq++) {
 
@@ -2421,9 +2483,16 @@ void v2RDMSolver::Update_xz() {
 
             double sumx = 0.0;
             double sumz = 0.0;
+            double sumx2 = 0.0;
+            double sumz2 = 0.0;
             for (int j = 0; j < dimensions_[i]; j++) {
+
                 sumx += u_p[j] * evec_p[p][j] * evec_p[q][j];
                 sumz += u_m[j] * evec_p[p][j] * evec_p[q][j];
+
+                //sumx2 += sqrt(u_p[j]) * evec_p[p][j] * evec_p[q][j];
+                //sumz2 += sqrt(u_m[j]) * evec_p[p][j] * evec_p[q][j];
+
             }
             x_p[myoffset+p*dimensions_[i]+q] = sumx;
             z_p[myoffset+p*dimensions_[i]+q] = sumz;
@@ -2431,7 +2500,19 @@ void v2RDMSolver::Update_xz() {
             x_p[myoffset+q*dimensions_[i]+p] = sumx;
             z_p[myoffset+q*dimensions_[i]+p] = sumz;
 
+            //rx_p[myoffset + p*dimensions_[i]+q] = sumx2;
+            //rz_p[myoffset + p*dimensions_[i]+q] = sumz2;
+
+            //rx_p[myoffset + q*dimensions_[i]+p] = sumx2;
+            //rz_p[myoffset + q*dimensions_[i]+p] = sumz2;
+
         }
+        //C_DAXPY(dimensions_[i] * dimensions_[i], -1.0, rx_p + myoffset, 1, rx_error_p + myoffset, 1);
+        //C_DAXPY(dimensions_[i] * dimensions_[i], -1.0, rz_p + myoffset, 1, rz_error_p + myoffset, 1);
+
+        //C_DSCAL(dimensions_[i] * dimensions_[i], -1.0, rx_error_p + myoffset, 1);
+        //C_DSCAL(dimensions_[i] * dimensions_[i], -1.0, rz_error_p + myoffset, 1);
+
     }
 }
 
@@ -2673,7 +2754,6 @@ void v2RDMSolver::UnpackDensityPlusCore() {
     // core active; core active
     for (int hi = 0; hi < nirrep_; hi++) {
         for (int i = 0; i < rstcpi_[hi] + frzcpi_[hi]; i++) {
-
             int ifull      = i + pitzer_offset_full[hi];
             int iifull     = ibas_full_sym[0][ifull][ifull];
 
@@ -2681,11 +2761,13 @@ void v2RDMSolver::UnpackDensityPlusCore() {
             for (int hj = 0; hj < nirrep_; hj++) {
                 for (int j = 0; j < amopi_[hj]; j++) {
 
-                    int jfull      = full_basis[j];
+                    //int jfull      = full_basis[j];
+                    int jfull      = full_basis[j+pitzer_offset[hj]];
 
                     for (int l = j; l < amopi_[hj]; l++) {
 
-                        int lfull      = full_basis[l];
+                        //int lfull      = full_basis[l];
+                        int lfull      = full_basis[l+pitzer_offset[hj]];
 
                         int jlfull = ibas_full_sym[0][jfull][lfull];
 
