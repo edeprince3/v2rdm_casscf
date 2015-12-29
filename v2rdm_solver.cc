@@ -1150,15 +1150,15 @@ void  v2RDMSolver::common_init(){
     outfile->Printf("\n");
 
     // we have 4 arrays the size of x and 4 the size of y
-    // in addition, we need to store whatever the 2x largest block is
-    // for the diagonalization step
+    // in addition, we need to store 3 times whatever the largest 
+    // block of x is for the diagonalization step
     // integrals:
     //     K2a, K2b
     // casscf:
     //     4-index integrals (no permutational symmetry)
     //     3-index integrals 
 
-    double tot = 4.0*dimx_ + 4.0*nconstraints_ + 2.0*maxgem*maxgem;
+    double tot = 4.0*dimx_ + 4.0*nconstraints_ + 3.0*maxgem*maxgem;
     tot += nd2; // for K2a, K2b
 
     // for casscf, need d2 and 3- or 4-index integrals
@@ -2427,13 +2427,15 @@ void v2RDMSolver::Update_xz() {
             myoffset += dimensions_[j] * dimensions_[j];
         }
 
-        boost::shared_ptr<Matrix> mat    (new Matrix(dimensions_[i],dimensions_[i]));
-        boost::shared_ptr<Matrix> eigvec (new Matrix(dimensions_[i],dimensions_[i]));
-        boost::shared_ptr<Vector> eigval (new Vector(dimensions_[i]));
-        boost::shared_ptr<Vector> Up     (new Vector(dimensions_[i]));
-        boost::shared_ptr<Vector> Um     (new Vector(dimensions_[i]));
+        boost::shared_ptr<Matrix> mat     (new Matrix(dimensions_[i],dimensions_[i]));
+        boost::shared_ptr<Matrix> eigvec  (new Matrix(dimensions_[i],dimensions_[i]));
+        boost::shared_ptr<Matrix> eigvec2 (new Matrix(dimensions_[i],dimensions_[i]));
+        boost::shared_ptr<Vector> eigval  (new Vector(dimensions_[i]));
+        boost::shared_ptr<Vector> Up      (new Vector(dimensions_[i]));
+        boost::shared_ptr<Vector> Um      (new Vector(dimensions_[i]));
+
         double ** mat_p = mat->pointer();
-        double * A_p   = ATy->pointer();
+        double * A_p    = ATy->pointer();
 
         for (int p = 0; p < dimensions_[i]; p++) {
             for (int q = p; q < dimensions_[i]; q++) {
@@ -2451,67 +2453,46 @@ void v2RDMSolver::Update_xz() {
         double * u_m    = Um->pointer();
         double * eval_p = eigval->pointer();
         for (int p = 0; p < dimensions_[i]; p++) {
-            if ( eval_p[p] < 0.0 ) {
-                u_m[p] = -eval_p[p];
-                u_p[p] = 0.0;
-            }else {
+            if ( eval_p[p] > 0.0 ) {
                 u_m[p] = 0.0;
                 u_p[p] = eval_p[p]/mu;
+            }else {
+                u_m[p] = -eval_p[p];
+                u_p[p] = 0.0;
             }
         }
 
         // transform U+ and U- back to nondiagonal basis
-        double ** evec_p = eigvec->pointer();
-        double * x_p = x->pointer();
-        double * z_p = z->pointer();
+        double ** evec_p  = eigvec->pointer();
+        double ** evec2_p = eigvec2->pointer();
+        double * x_p      = x->pointer();
+        double * z_p      = z->pointer();
 
-        // DIIS stuff
-        //double * rx_p = rx->pointer();
-        //double * rz_p = rz->pointer();
-        //double * rx_error_p = rx_error->pointer();
-        //double * rz_error_p = rz_error->pointer();
-
-        //C_DCOPY(dimensions_[i] * dimensions_[i], rx_p + myoffset, 1, rx_error_p + myoffset, 1);
-        //C_DCOPY(dimensions_[i] * dimensions_[i], rz_p + myoffset, 1, rz_error_p + myoffset, 1);
-
-        #pragma omp parallel for schedule (dynamic)
-        for (int pq = 0; pq < dimensions_[i] * dimensions_[i]; pq++) {
-
-            int q = pq % dimensions_[i];
-            int p = (pq-q) / dimensions_[i];
-            if ( p > q ) continue;
-
-            double sumx = 0.0;
-            double sumz = 0.0;
-            double sumx2 = 0.0;
-            double sumz2 = 0.0;
-            for (int j = 0; j < dimensions_[i]; j++) {
-
-                sumx += u_p[j] * evec_p[p][j] * evec_p[q][j];
-                sumz += u_m[j] * evec_p[p][j] * evec_p[q][j];
-
-                //sumx2 += sqrt(u_p[j]) * evec_p[p][j] * evec_p[q][j];
-                //sumz2 += sqrt(u_m[j]) * evec_p[p][j] * evec_p[q][j];
-
+        // (+) part
+        long int mydim = 0;
+        for (long int j = 0; j < dimensions_[i]; j++) {
+            if ( eval_p[j] > 0.0 ) {
+                for (long int q = 0; q < dimensions_[i]; q++) {
+                    mat_p[q][mydim]   = evec_p[q][j] * eval_p[j]/mu;
+                    evec2_p[q][mydim] = evec_p[q][j];
+                }
+                mydim++;
             }
-            x_p[myoffset+p*dimensions_[i]+q] = sumx;
-            z_p[myoffset+p*dimensions_[i]+q] = sumz;
-
-            x_p[myoffset+q*dimensions_[i]+p] = sumx;
-            z_p[myoffset+q*dimensions_[i]+p] = sumz;
-
-            //rx_p[myoffset + p*dimensions_[i]+q] = sumx2;
-            //rz_p[myoffset + p*dimensions_[i]+q] = sumz2;
-
-            //rx_p[myoffset + q*dimensions_[i]+p] = sumx2;
-            //rz_p[myoffset + q*dimensions_[i]+p] = sumz2;
-
         }
-        //C_DAXPY(dimensions_[i] * dimensions_[i], -1.0, rx_p + myoffset, 1, rx_error_p + myoffset, 1);
-        //C_DAXPY(dimensions_[i] * dimensions_[i], -1.0, rz_p + myoffset, 1, rz_error_p + myoffset, 1);
+        F_DGEMM('t','n',dimensions_[i],dimensions_[i],mydim,1.0,&mat_p[0][0],dimensions_[i],&evec2_p[0][0],dimensions_[i],0.0,x_p+myoffset,dimensions_[i]);
 
-        //C_DSCAL(dimensions_[i] * dimensions_[i], -1.0, rx_error_p + myoffset, 1);
-        //C_DSCAL(dimensions_[i] * dimensions_[i], -1.0, rz_error_p + myoffset, 1);
+        // (-) part
+        mydim = 0;
+        for (long int j = 0; j < dimensions_[i]; j++) {
+            if ( eval_p[j] < 0.0 ) {
+                for (long int q = 0; q < dimensions_[i]; q++) {
+                    mat_p[q][mydim]   = -evec_p[q][j] * eval_p[j];
+                    evec2_p[q][mydim] =  evec_p[q][j];
+                }
+                mydim++;
+            }
+        }
+        F_DGEMM('t','n',dimensions_[i],dimensions_[i],mydim,1.0,&mat_p[0][0],dimensions_[i],&evec2_p[0][0],dimensions_[i],0.0,z_p+myoffset,dimensions_[i]);
 
     }
 }

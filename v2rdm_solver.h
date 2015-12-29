@@ -368,6 +368,15 @@ class v2RDMSolver: public Wavefunction{
     /// read solution and integrals from a checkpoint file
     void ReadFromCheckpointFile();
 
+    /// wall time for microiterations
+    double iiter_time_;
+
+    /// wall time for macroiterations
+    double oiter_time_;
+
+    /// wall time for orbital optimization
+    double orbopt_time_;
+
 };
 
 }}

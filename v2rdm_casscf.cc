@@ -88,8 +88,13 @@ int read_options(std::string name, Options& options)
         options.add_int("MAXITER", 10000);
         /*- maximum number of conjugate gradient iterations -*/
         options.add_int("CG_MAXITER", 10000);
+        /*- maximum number of diis vectors -*/
+        options.add_int("DIIS_MAX_VECS", 8);
+        /*- Frequency of DIIS extrapolation steps -*/
+        options.add_int("DIIS_UPDATE_FREQUENCY",50);
 
-        /*- SUBSECTION SCF -*/
+        /*- Do time macroiterations and the orbital optimization step? -*/
+        options.add_bool("V2RDM_TIMINGS",false);
 
         /*- Auxiliary basis set for SCF density fitting computations.
         :ref:`Defaults <apdx:basisFamily>` to a JKFIT basis. -*/
