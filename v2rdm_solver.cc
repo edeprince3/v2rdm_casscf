@@ -2431,8 +2431,6 @@ void v2RDMSolver::Update_xz() {
         boost::shared_ptr<Matrix> eigvec  (new Matrix(dimensions_[i],dimensions_[i]));
         boost::shared_ptr<Matrix> eigvec2 (new Matrix(dimensions_[i],dimensions_[i]));
         boost::shared_ptr<Vector> eigval  (new Vector(dimensions_[i]));
-        boost::shared_ptr<Vector> Up      (new Vector(dimensions_[i]));
-        boost::shared_ptr<Vector> Um      (new Vector(dimensions_[i]));
 
         double ** mat_p = mat->pointer();
         double * A_p    = ATy->pointer();
@@ -2448,23 +2446,12 @@ void v2RDMSolver::Update_xz() {
 
         mat->diagonalize(eigvec,eigval);
 
-        // separate U+ and U-
-        double * u_p    = Up->pointer();
-        double * u_m    = Um->pointer();
-        double * eval_p = eigval->pointer();
-        for (int p = 0; p < dimensions_[i]; p++) {
-            if ( eval_p[p] > 0.0 ) {
-                u_m[p] = 0.0;
-                u_p[p] = eval_p[p]/mu;
-            }else {
-                u_m[p] = -eval_p[p];
-                u_p[p] = 0.0;
-            }
-        }
+        // separate U+ and U-, transform back to nondiagonal basis
 
-        // transform U+ and U- back to nondiagonal basis
+        double * eval_p   = eigval->pointer();
         double ** evec_p  = eigvec->pointer();
         double ** evec2_p = eigvec2->pointer();
+
         double * x_p      = x->pointer();
         double * z_p      = z->pointer();
 
