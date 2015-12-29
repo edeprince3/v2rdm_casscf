@@ -93,9 +93,6 @@ int read_options(std::string name, Options& options)
         /*- Frequency of DIIS extrapolation steps -*/
         options.add_int("DIIS_UPDATE_FREQUENCY",50);
 
-        /*- Do time macroiterations and the orbital optimization step? -*/
-        options.add_bool("V2RDM_TIMINGS",false);
-
         /*- Auxiliary basis set for SCF density fitting computations.
         :ref:`Defaults <apdx:basisFamily>` to a JKFIT basis. -*/
         options.add_str("DF_BASIS_SCF", "");

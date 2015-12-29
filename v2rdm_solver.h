@@ -377,6 +377,15 @@ class v2RDMSolver: public Wavefunction{
     /// wall time for orbital optimization
     double orbopt_time_;
 
+    /// total number of microiterations
+    long int iiter_total_;
+
+    /// total number of macroiterations
+    long int oiter_total_;
+
+    /// total number of orbital optimization
+    long int orbopt_iter_total_;
+
 };
 
 }}

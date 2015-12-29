@@ -1305,6 +1305,15 @@ void  v2RDMSolver::common_init(){
         fclose(fp);
     }
 
+    // initialize timers and iteration counters
+    iiter_total_       = 0;
+    oiter_total_       = 0;
+    orbopt_iter_total_ = 0;
+
+    iiter_time_        = 0.0;
+    oiter_time_        = 0.0;
+    orbopt_time_       = 0.0;
+
 }
 
 int v2RDMSolver::SymmetryPair(int i,int j) {
@@ -1316,6 +1325,8 @@ int v2RDMSolver::TotalSym(int i,int j,int k, int l) {
 
 // compute the energy!
 double v2RDMSolver::compute_energy() {
+
+    double start_total_time = omp_get_wtime();
 
     // hartree-fock guess
     Guess();
@@ -1405,41 +1416,19 @@ double v2RDMSolver::compute_energy() {
         int iiter = cg->total_iterations();
 
         double end = omp_get_wtime();
-        double cg_time = end - start;
+
+        iiter_time_  += end - start;
+        iiter_total_ += iiter;
 
         start = omp_get_wtime();
-        // build and diagonalize U according to step 2 in PRL
-        // and update z and z
-        //if ( ed > r_convergence_*10 && ep > r_convergence_*10 ) {
-            Update_xz();
-        //}else {
-            //Update_xz_nonsymmetric();
-        //}
 
-        // DIIS 
-        //if ( oiter % mu_update_frequency > -1 ) {
-
-        //    // add vector to list for diis
-        //    DIIS_WriteOldVector(diis_oiter_,diis_iter,replace_diis_iter);
-  
-        //    // diis error vector and convergence check
-        //    DIIS_WriteErrorVector(diis_iter,replace_diis_iter,diis_oiter_);
-  
-        //    // diis extrapolation
-        //    if (diis_iter > 1){
-        //       if (diis_iter<maxdiis_) DIIS(diisvec_,diis_iter,2*dimx_,replace_diis_iter);
-        //       else                    DIIS(diisvec_,maxdiis_,2*dimx_,replace_diis_iter);
-        //       DIIS_Extrapolate(diis_iter,replace_diis_iter);
-        //    }
-        //    diis_oiter_++;
-
-        //    if (diis_iter <= maxdiis_) diis_iter++;
-        //    else if (replace_diis_iter < maxdiis_) replace_diis_iter++;
-        //    else    replace_diis_iter = 1;
-        //}
+        // update primal and dual solutions
+        Update_xz();
 
         end = omp_get_wtime();
-        double diag_time = end - start;
+
+        oiter_time_ += end - start;
+        oiter_total_++;
 
         // update mu (step 3)
 
@@ -1466,7 +1455,13 @@ double v2RDMSolver::compute_energy() {
 
         }
         if ( orbopt_one_step == 1 && oiter % orbopt_frequency == 0 && oiter > 0) {
+
+            start = omp_get_wtime();
             RotateOrbitals();
+            end = omp_get_wtime();
+
+            orbopt_time_      += end - start;
+            orbopt_iter_total_++;
 
             // reset DIIS
             diis_oiter_       = 0;
@@ -1492,7 +1487,14 @@ double v2RDMSolver::compute_energy() {
         energy_primal = current_energy;
 
         if ( ep < r_convergence_ && ed < r_convergence_ && egap < e_convergence_ ) {
+
+            start = omp_get_wtime();
             RotateOrbitals();
+            end = omp_get_wtime();
+
+            orbopt_time_      += end - start;
+            orbopt_iter_total_++;
+
             energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
         }
 
@@ -1535,6 +1537,23 @@ double v2RDMSolver::compute_energy() {
     FinalTransformationMatrix();
     MullikenPopulations();
     NaturalOrbitals();
+
+    double end_total_time = omp_get_wtime();
+
+    outfile->Printf("\n");
+    outfile->Printf("  ==> Iteration count <==\n");
+    outfile->Printf("\n");
+    outfile->Printf("      Microiterations:            %12li\n",iiter_total_);
+    outfile->Printf("      Macroiterations:            %12li\n",oiter_total_);
+    outfile->Printf("      Orbital optimization steps: %12li\n",orbopt_iter_total_);
+    outfile->Printf("\n");
+    outfile->Printf("  ==> Wall time <==\n");
+    outfile->Printf("\n");
+    outfile->Printf("      Microiterations:            %12.2lf s\n",iiter_time_);
+    outfile->Printf("      Macroiterations:            %12.2lf s\n",oiter_time_);
+    outfile->Printf("      Orbital optimization:       %12.2lf s\n",orbopt_time_);
+    outfile->Printf("      Total:                      %12.2lf s\n",end_total_time - start_total_time);
+    outfile->Printf("\n");
 
     return energy_primal + enuc_ + efzc_;
 }
