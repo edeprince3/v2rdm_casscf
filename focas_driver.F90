@@ -150,7 +150,8 @@ module focas_driver
       call orbital_gradient(int1,int2,den1,den2)
 
       ! precondition gradient with the diagonal Hessian
-      call diagonal_inverse_hessian_preconditioner(orbital_gradient_,fock_i_,fock_a_,q_,z_,int2,den1,den2)
+      call diagonal_inverse_hessian_preconditioner(orbital_gradient_,&
+          & q_,z_,int2,den1,den2)
 
       ! update kappa_
       step_size = 1.0_wp

@@ -6,10 +6,10 @@ module focas_hessian
 
   contains
 
-    subroutine diagonal_inverse_hessian_preconditioner(grad,f_i,f_a,q,z,int2,den1,den2)
+    subroutine diagonal_inverse_hessian_preconditioner(grad,q,z,int2,den1,den2)
       implicit none
       real(wp), intent(inout) :: grad(:)
-      real(wp), intent(in) :: f_i(:),f_a(:),int2(:),den1(:),den2(:)
+      real(wp), intent(in) :: int2(:),den1(:),den2(:)
       real(wp), intent(in) :: q(:,:),z(:,:)
       integer :: error
 
@@ -19,19 +19,19 @@ module focas_hessian
 
       ! active-doubly occupied pairs
 
-      if ( rot_pair_%n_ad > 0 ) error=diagonal_hessian_ad(grad,f_i,f_a,q,z,int2,den1,den2)
+      if ( rot_pair_%n_ad > 0 ) error=diagonal_hessian_ad(grad,fock_i_%occ,fock_a_%occ,q,z,int2,den1,den2)
 
       ! active-active pairs
 
-      if ( rot_pair_%n_aa > 0 ) error=diagonal_hessian_aa(grad,f_i,q,z,int2,den1,den2)
+      if ( rot_pair_%n_aa > 0 ) error=diagonal_hessian_aa(grad,fock_i_%occ,q,z,int2,den1,den2)
 
       ! external-doubly occupied pairs
 
-      if ( rot_pair_%n_ed > 0 ) error=diagonal_hessian_ed(grad,f_i,f_a,int2)
+      if ( rot_pair_%n_ed > 0 ) error=diagonal_hessian_ed(grad,fock_i_%occ,fock_i_%ext,fock_a_%occ,fock_a_%ext,int2)
 
       ! external-active pairs
 
-      if ( rot_pair_%n_ea > 0 ) error=diagonal_hessian_ea(grad,f_i,f_a,q,z,int2,den1,den2)
+      if ( rot_pair_%n_ea > 0 ) error=diagonal_hessian_ea(grad,fock_i_%ext,fock_a_%ext,q,z,int2,den1,den2)
 
       return
     end subroutine diagonal_inverse_hessian_preconditioner
@@ -43,9 +43,10 @@ module focas_hessian
       ! H(ti|ti) = 2 * [ 2 * { ( f_i(t,t) + f_a(t,t) ) - ( f_i(i,i) + f_a(i,i) ) }  + d(t,t) * ( f_i(i,i) + f_a(i,i) ) - q(t,t) -z(t) ]
       ! where z(t,t) = sum_{u} [ d(t,u) * f_i(t,u) ] ] && a \in ext & t,u \in act
       real(wp), intent(inout) :: grad(:) 
-      real(wp), intent(in) :: f_i(:),f_a(:),q(:,:),z(:,:),den1(:),den2(:),int2(:)
+      real(wp), intent(in) :: q(:,:),z(:,:),den1(:),den2(:),int2(:)
+      type(matrix_block), intent(in) :: f_i(:),f_a(:)
 
-      integer :: grad_ind,t,i,tt_int,ii_int,tt_den,t_sym
+      integer :: grad_ind,t,i,tt_den,t_sym,t_i,i_i
       real(wp) :: h_val
 
       ! loop over all active - doubly-occupied pairs
@@ -59,21 +60,23 @@ module focas_hessian
           do t = first_index_(t_sym,2) , last_index_(t_sym,2)
 
             ! look up integral/density indeces
-            ii_int  = ints_%gemind(i,i)
-            tt_int  = ints_%gemind(t,t)
             tt_den  = dens_%gemind(t,t)
+
+            i_i     = trans_%class_to_irrep_map(i)
+            t_i     = trans_%class_to_irrep_map(t)
 
             ! update gradient index
             grad_ind = grad_ind + 1
  
             ! compute Hessian value
-            h_val    = 2.0_wp * (                                                                 &
-                       2.0_wp * ( ( f_i(tt_int) + f_a(tt_int) ) - ( f_i(ii_int) + f_a(ii_int) ) ) &
-                     + den1(tt_den) * f_i(ii_int) - q(t-ndoc_tot_,t) - z(t-ndoc_tot_,t) )
+            h_val    = 2.0_wp * (                                                                   &
+                       2.0_wp * ( ( f_i(t_sym)%val(t_i,t_i) + f_a(t_sym)%val(t_i,t_i) )             &
+                                - ( f_i(t_sym)%val(i_i,i_i) + f_a(t_sym)%val(i_i,i_i) ) )           &
+                     + den1(tt_den) * f_i(t_sym)%val(i_i,i_i) - q(t-ndoc_tot_,t) - z(t-ndoc_tot_,t) )
 
             if ( use_exact_hessian_diagonal_ == 0 ) then
 
-              h_val = h_val + 2.0_wp * den1(tt_den) * f_a(ii_int)
+              h_val = h_val + 2.0_wp * den1(tt_den) * f_a(t_sym)%val(i_i,i_i)
 
             else
 
@@ -88,6 +91,8 @@ module focas_hessian
               endif
 
             endif
+
+!            write(*,'(a,5x,i5,10x,es25.16)')'ad',grad_ind,h_val
 
             if ( h_val < 0.0_wp ) then
                h_val = - h_val
@@ -125,7 +130,6 @@ module focas_hessian
       integer              :: u,v,u_sym,tu_sym,int_ind,den_ind,den_offset,int_offset
       real(wp)             :: te_terms_ad,dfac,val,int_val
       
-
       val = 0.0_wp
  
       tt_den = dens_%gemind(t,t)
@@ -346,9 +350,11 @@ module focas_hessian
       !                  - ( q(u,u) + q(t,t) + z(t,t) +z(u,u) ) )
       ! some 2-e contributions are neglected
       real(wp),intent(inout) :: grad(:)
-      real(wp), intent(in) :: f_i(:),den1(:),int2(:),den2(:)
+      real(wp), intent(in) :: den1(:),int2(:),den2(:)
       real(wp), intent(in) :: z(:,:),q(:,:)
+      type(matrix_block), intent(in) :: f_i(:)
       integer :: t_sym,t,u,grad_ind
+      integer :: t_i,u_i
       integer :: tt_den,uu_den,ut_den
       integer :: tt_int,uu_int,ut_int
       real(wp) :: h_val
@@ -368,18 +374,18 @@ module focas_hessian
             ! compute Hessian value
 
             ! Fock matrix addressing
-            tt_int = ints_%gemind(t,t)
-            uu_int = ints_%gemind(u,u)
-            ut_int = ints_%gemind(u,t)
+            u_i    = trans_%class_to_irrep_map(u)
+            t_i    = trans_%class_to_irrep_map(t)
 
             ! Density addressing
             tt_den = dens_%gemind(t,t)
             uu_den = dens_%gemind(u,u)
             ut_den = dens_%gemind(u,t)
 
-            h_val    = 2.0_wp * ( den1(tt_den) * f_i(uu_int) + den1(uu_den) * f_i(tt_int) &
-                               & - (  2.0_wp * den1(ut_den) * f_i(ut_int)                 &
-                               &    + q(t-ndoc_tot_,t) + q(u-ndoc_tot_,u)                 &
+            h_val    = 2.0_wp * ( den1(tt_den) * f_i(t_sym)%val(u_i,u_i) +            &
+                               &  den1(uu_den) * f_i(t_sym)%val(t_i,t_i)              &
+                               & - (  2.0_wp * den1(ut_den) * f_i(t_sym)%val(t_i,u_i) &
+                               &    + q(t-ndoc_tot_,t) + q(u-ndoc_tot_,u)             &
                                &    + z(t-ndoc_tot_,t) + z(u-ndoc_tot_,u) ) )
 
             if ( use_exact_hessian_diagonal_ == 1 ) then
@@ -395,6 +401,8 @@ module focas_hessian
               endif
 
             end if
+
+!            write(*,'(a,5x,i5,10x,es25.16)')'aa',grad_ind,h_val
 
             if ( h_val < 0.0_wp ) then 
                h_val = - h_val
@@ -726,16 +734,18 @@ module focas_hessian
 
     end function te_terms_aa
 
-    integer function diagonal_hessian_ed(grad,f_i,f_a,int2)
+    integer function diagonal_hessian_ed(grad,f_i,f_i_ext,f_a,f_a_ext,int2)
       implicit none
       ! subroutine to compute the diagonal Hessian matrix element H(ia|ia)according to Eq. 4.7a of
       ! Chaban, Schmidt, Gordon, Theor. Chem. Acc., 97, 88-95 (1997) 
       ! H(ai|ai) = 4 * (f_i(a,a) + f_a(a,a) ) - 4 * ( f_i(i,i) + f_a(i,i)) 
       ! a \in ext & i \in act
-      real(wp), intent(inout) :: grad(:)
-      real(wp), intent(in) :: f_i(:),f_a(:),int2(:)
+      real(wp), intent(inout)        :: grad(:)
+      real(wp), intent(in)           :: int2(:)
+      type(vector_block), intent(in) :: f_i_ext(:),f_a_ext(:)
+      type(matrix_block), intent(in) :: f_i(:),f_a(:)
 
-      integer :: a,i,grad_ind,aa,ii,a_sym
+      integer :: a,i,grad_ind,a_sym,i_i,a_i
       real(wp) :: h_val
 
       ! loop over all external - doubly-occupied pairs
@@ -754,13 +764,13 @@ module focas_hessian
 
             ! inactive/active fock matrix indeces
 
-            aa      = ints_%gemind(a,a)
-            ii      = ints_%gemind(i,i)
+            i_i     = trans_%class_to_irrep_map(i)
+            a_i     = trans_%class_to_irrep_map(a)-ndocpi_(a_sym)-nactpi_(a_sym)
 
             ! calculate diagonal Hessian element
 
-            h_val    = 4.0 * ( f_i(aa) + f_a(aa) - f_i(ii) - f_a(ii) )
-
+            h_val    = 4.0 * ( f_i_ext(a_sym)%val(a_i) + f_a_ext(a_sym)%val(a_i) - &
+                             & f_i(a_sym)%val(i_i,i_i) - f_a(a_sym)%val(i_i,i_i) )
 
             if ( use_exact_hessian_diagonal_ == 1 ) then
 
@@ -775,6 +785,8 @@ module focas_hessian
               endif
 
             endif
+
+!            write(*,'(a,5x,i5,10x,es25.16)')'ed',grad_ind,h_val
 
             if ( h_val < 0.0_wp ) then
                h_val = - h_val
@@ -865,16 +877,17 @@ module focas_hessian
 
     end function te_terms_ed_df
 
-    integer function diagonal_hessian_ea(grad,f_i,f_a,q,z,int2,den1,den2)
+    integer function diagonal_hessian_ea(grad,f_i_ext,f_a_ext,q,z,int2,den1,den2)
       implicit none
       ! subroutine to compute the diagonal Hessian matrix element H(ai|ai) according to Eq. 4.7b of
       ! Chaban, Schmidt, Gordon, Theor. Chem. Acc., 97, 88-95 (1997) 
       ! H(at|at) = 2 * [  d(t,t) * ( f_i(a,a) + f_a(a,a) ) - q(t,t) - z(t,t) ] 
       ! where z(t,t) = sum_{u} [ d(t,u) * f_i(t,u) ]  &&  a \in ext & t,u \in act 
       real(wp), intent(inout) :: grad(:)
-      real(wp), intent(in) :: f_i(:),f_a(:),z(:,:),q(:,:),int2(:),den1(:),den2(:)
+      real(wp), intent(in) :: z(:,:),q(:,:),int2(:),den1(:),den2(:)
+      type(vector_block), intent(in) :: f_i_ext(:),f_a_ext(:)
 
-      integer :: a,t,grad_ind,tt_den,aa_int,a_sym
+      integer :: a,t,grad_ind,tt_den,a_sym,a_i
       real(wp) :: h_val
 
       ! loop over all external - doubly-occupied pairs
@@ -890,7 +903,8 @@ module focas_hessian
             ! integral/density indeces
   
             tt_den  = dens_%gemind(t,t)
-            aa_int  = ints_%gemind(a,a)
+
+            a_i     = trans_%class_to_irrep_map(a)-ndocpi_(a_sym)-nactpi_(a_sym)
 
             ! update diagonal Hessian index
   
@@ -898,17 +912,17 @@ module focas_hessian
 
             ! calculate diagonal Hessian element
 
-            h_val    = 2.0_wp * ( den1(tt_den) * f_i(aa_int) - q(t-ndoc_tot_,t) - z(t-ndoc_tot_,t) )
+            h_val    = 2.0_wp * ( den1(tt_den) * f_i_ext(a_sym)%val(a_i) - q(t-ndoc_tot_,t) - z(t-ndoc_tot_,t) )
 
             if ( use_exact_hessian_diagonal_ == 0 ) then
 
-              h_val = h_val + 2.0_wp * den1(tt_den) * f_a(aa_int)
+              h_val = h_val + 2.0_wp * den1(tt_den) * f_a_ext(a_sym)%val(a_i)
 
             else
 
               if ( df_vars_%use_df_teints == 1 ) then
 
-                h_val = h_val + 2.0_wp * den1(tt_den) * f_a(aa_int) ! te_terms_ea_df(t,a,a_sym,int2,den2)
+                h_val = h_val + 2.0_wp * den1(tt_den) * f_a_ext(a_sym)%val(a_i) 
 
               else
 
@@ -917,6 +931,9 @@ module focas_hessian
               endif
 
             endif
+
+!            write(*,'(a,5x,i5,10x,6(es15.6,1x))')'ea',grad_ind,h_val,f_i_ext(a_sym)%val(a_i),&
+!            & f_a_ext(a_sym)%val(a_i),q(t-ndoc_tot_,t),z(t-ndoc_tot_,t),den1(tt_den)
 
             if ( h_val < 0.0_wp ) then
                h_val = - h_val

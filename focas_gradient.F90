@@ -131,7 +131,7 @@ module focas_gradient
     integer :: grad_ind
     integer :: a_sym,t_sym
     integer :: i,t,u,a
-    integer :: ia,it
+    integer :: ia,it,i_i,a_i,t_i
     real(wp) :: ddot
 
     orbital_gradient_ = 0.0_wp
@@ -150,9 +150,15 @@ module focas_gradient
   
           grad_ind = grad_ind + 1
 
-          ia = ints_%gemind(i,a)
+          i_i      = trans_%class_to_irrep_map(i)
+          a_i      = trans_%class_to_irrep_map(a)
 
-          orbital_gradient_(grad_ind) = 4.0_wp*(fock_i_(ia)+fock_a_(ia))
+          ia       = ints_%gemind(i,a)
+
+          orbital_gradient_(grad_ind) = 4.0_wp*( fock_i_%occ(a_sym)%val(a_i,i_i) &
+                                       &       + fock_a_%occ(a_sym)%val(a_i,i_i) )
+
+!          write(*,'(a,5x,2(i4,1x),10x,es25.16)')'ed',a,i,orbital_gradient_(grad_ind)
 
         end do
 
@@ -174,9 +180,16 @@ module focas_gradient
 
           grad_ind = grad_ind + 1
 
-          it = ints_%gemind(i,t)
+          i_i      = trans_%class_to_irrep_map(i)
+          t_i      = trans_%class_to_irrep_map(t)
 
-          orbital_gradient_(grad_ind) = 4.0_wp*(fock_i_(it)+fock_a_(it)) - 2.0_wp * ( q_(t - ndoc_tot_,i) + z_(t - ndoc_tot_,i))
+          it       = ints_%gemind(i,t)
+
+          orbital_gradient_(grad_ind) = 4.0_wp*( fock_i_%occ(t_sym)%val(t_i,i_i)    & 
+                                      &  +       fock_a_%occ(t_sym)%val(t_i,i_i) )  &
+                                      & - 2.0_wp * ( q_(t - ndoc_tot_,i) + z_(t - ndoc_tot_,i))
+
+!          write(*,'(a,5x,2(i4,1x),10x,es25.16)')'ad',t,i,orbital_gradient_(grad_ind)
 
         end do
 
@@ -199,6 +212,8 @@ module focas_gradient
           grad_ind = grad_ind + 1
 
           orbital_gradient_(grad_ind) = 2.0_wp * ( q_(t - ndoc_tot_,a) + z_(t - ndoc_tot_,a))
+
+!          write(*,'(a,5x,2(i4,1x),10x,es25.16)')'ea',a,t,orbital_gradient_(grad_ind)
 
         end do
     
@@ -225,6 +240,8 @@ module focas_gradient
             orbital_gradient_(grad_ind) = 2.0_wp * ( q_(u - ndoc_tot_,t) + &
                  & z_(u - ndoc_tot_,t) - q_(t - ndoc_tot_,u) - z_(t - ndoc_tot_,u))
 
+!          write(*,'(a,5x,2(i4,1x),10x,es25.16)')'aa',t,u,orbital_gradient_(grad_ind)
+
           end do
  
         end do
@@ -244,7 +261,7 @@ module focas_gradient
     ! function to compute contraction of the density with the inactive Fock matrix according to
     ! z(m,t) = sum_u { den1(tu) * f_i(mu) } t,u \in A m \in D,A,E
     real(wp), intent(in) :: den1(:)
-    integer :: t,u,tu_den,mu_int,t_sym,m,m_class
+    integer :: t,u,tu_den,mu_int,t_sym,m,m_class,m_i,u_i
     real(wp) :: val
 
     ! initialize output
@@ -258,35 +275,108 @@ module focas_gradient
       ! loop over u indeces
 
       do t = first_index_(t_sym,2) , last_index_(t_sym,2)
-
-        ! loop over classes for m
-
-        do m_class = 1 , 3
-
-          ! loop over m indeces
  
-          do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
+        ! m_class < u_class ==> m < u
 
-            ! initialize contraction value
+        m_class = 1 
 
-            val = 0.0_wp
+        ! loop over m indeces
 
-            do u = first_index_(t_sym,2) , last_index_(t_sym,2)
+        do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
 
-              ! integral/density addressing
+          m_i = trans_%class_to_irrep_map(m)
 
-              tu_den = dens_%gemind(t,u)
-              mu_int = ints_%gemind(m,u)
+          ! initialize contraction value
 
-              val = val + den1(tu_den) * fock_i_(mu_int)
+          val = 0.0_wp
 
-            end do ! end u loop
+          do u = first_index_(t_sym,2) , last_index_(t_sym,2)
 
-            z_( t - ndoc_tot_ , m ) = val 
+            ! integral/density addressing
 
-          end do ! end m loop
+            tu_den = dens_%gemind(t,u)
+            u_i    = trans_%class_to_irrep_map(u)
 
-        end do ! end m_class loop
+            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(u_i,m_i)
+
+          end do ! end u loop
+
+          z_( t - ndoc_tot_ , m ) = val
+
+        end do ! end m loop
+
+        ! m_class = u_class ==> u <= m
+
+        m_class = 2
+
+        ! loop over m indeces
+
+        do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
+
+          m_i = trans_%class_to_irrep_map(m)
+
+          ! initialize contraction value
+
+          val = 0.0_wp
+
+          do u = first_index_(t_sym,2) , m - 1
+
+            ! integral/density addressing
+
+            tu_den = dens_%gemind(t,u)
+            u_i    = trans_%class_to_irrep_map(u)
+
+            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,u_i)
+
+          end do ! end u loop
+          
+          tu_den = dens_%gemind(t,t)
+          
+          val    = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,m_i)
+
+          do u = m + 1 , last_index_(t_sym,2)
+
+            ! integral/density addressing
+
+            tu_den = dens_%gemind(t,u)
+            u_i    = trans_%class_to_irrep_map(u)
+
+            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(u_i,m_i)
+
+          end do ! end u loop
+
+          z_( t - ndoc_tot_ , m ) = val
+
+        end do ! end m loop
+
+        ! m_class > u_class ==> u < m
+
+        m_class = 3
+
+        ! loop over m indeces
+
+        do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
+
+          m_i = trans_%class_to_irrep_map(m)
+
+          ! initialize contraction value
+
+          val = 0.0_wp
+
+          do u = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+            ! integral/density addressing
+
+            tu_den = dens_%gemind(t,u)
+            u_i    = trans_%class_to_irrep_map(u)
+
+            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,u_i)
+
+          end do ! end u loop
+
+          z_( t - ndoc_tot_ , m ) = val
+
+        end do ! end m loop
 
       end do ! end t loop
 
@@ -620,7 +710,7 @@ module focas_gradient
     ! v and w belong to the active orbital class
     real(wp), intent(in) :: den1(:),int2(:)
     integer :: m_class,n_class,m_sym,m,n,v,w,w_sym,mdf,ndf,wdf,vdf
-    integer :: den_ind,mn_fock
+    integer :: den_ind,n_first,m_i,n_i
     integer(ip) :: mn,vw,mw,vn,wn,ww,nQ 
     real(wp) :: val,ival,dval,ddot
     real(wp) :: v_mn(df_vars_%nQ),v_mw(df_vars_%nQ)
@@ -628,7 +718,12 @@ module focas_gradient
     nQ = int(df_vars_%nQ,kind=ip)
 
     ! initialize
-    fock_a_ = 0.0_wp
+    do m_sym = 1 , nirrep_
+
+      if ( allocated( fock_a_%occ(m_sym)%val ) ) fock_a_%occ(m_sym)%val = 0.0_wp
+      if ( allocated( fock_a_%ext(m_sym)%val ) ) fock_a_%ext(m_sym)%val = 0.0_wp
+
+    end do
 
     ! loop over orbital classes for m
 
@@ -647,14 +742,20 @@ module focas_gradient
 
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
 
+          n_first = first_index_(m_sym,m_class)
+
+          ! only compute diagonal elements for external-external block
+
+          if ( m_class == 3 ) n_first = m
+
 #ifdef OMP
 !$omp parallel shared(ints_,nQ,dens_,m_class,m_sym,m,mdf,first_index_,  &
-!$omp last_index_,df_vars_,den1,int2) num_threads(nthread_use_)
+!$omp last_index_,df_vars_,den1,int2,n_first,fock_a_,trans_) num_threads(nthread_use_)
 !$omp do private(n,ndf,mn,val,v_mn,v_mw,w_sym,w,wdf,v,den_ind,dval,vdf, &
-!$omp vw,ival,ww,mw,wn,vn,mn_fock)
+!$omp vw,ival,ww,mw,wn,vn,n_i,m_i)
 #endif
 
-          do n = first_index_(m_sym,m_class) , m
+          do n = n_first , m
 
             ! orbital index in df order
             ndf = df_vars_%class_to_df_map(n)
@@ -734,8 +835,19 @@ module focas_gradient
             end do ! end w_sym loop
 
             ! save Fock matrix element
-            mn_fock          = ints_%gemind(m,n)
-            fock_a_(mn_fock) = val
+
+            if ( m_class == 3 ) then
+
+              m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
+              fock_a_%ext(m_sym)%val(m_i) = val
+
+            else
+
+              m_i = trans_%class_to_irrep_map(m)
+              n_i = trans_%class_to_irrep_map(n)
+              fock_a_%occ(m_sym)%val(m_i,n_i) = val
+
+            endif
 
           end do ! end n loop
 
@@ -752,9 +864,9 @@ module focas_gradient
 
 #ifdef OMP
 !$omp parallel shared(n_class,nQ,ints_,dens_,m_class,m_sym,m,mdf,first_index_, &
-!$omp last_index_,df_vars_,den1,int2) num_threads(nthread_use_)
+!$omp last_index_,df_vars_,den1,int2,fock_a_,trans_) num_threads(nthread_use_)
 !$omp do private(n,ndf,mn,val,v_mn,v_mw,w_sym,w,wdf,v,den_ind,dval,vdf,vw,ival,&
-!$omp mw,wn,mn_fock)
+!$omp mw,wn,n_i,m_i)
 #endif
 
             do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
@@ -837,8 +949,11 @@ module focas_gradient
               end do ! end w_sym loop
 
               ! save Fock matrix element
-              mn_fock          = ints_%gemind(m,n)
-              fock_a_(mn_fock) = val
+
+              m_i = trans_%class_to_irrep_map(m)
+              n_i = trans_%class_to_irrep_map(n)
+
+              fock_a_%occ(m_sym)%val(m_i,n_i) = val
 
             end do ! end n loop
 
@@ -867,12 +982,17 @@ module focas_gradient
     ! v and w belong to the active orbital class
     real(wp), intent(in) :: den1(:),int2(:)
     integer :: m_class,n_class,m_sym,m,n,v,w,w_sym,mw_sym
-    integer :: mn,vw,mw,vn,den_ind
+    integer :: mn,vw,mw,vn,den_ind,n_first,m_i,n_i
     integer :: int_ind,sym_offset
     real(wp) :: val,ival,dval
 
     ! initialize
-    fock_a_ = 0.0_wp
+    do m_sym = 1 , nirrep_
+
+      if ( allocated( fock_a_%occ(m_sym)%val ) ) fock_a_%occ(m_sym)%val = 0.0_wp
+      if ( allocated( fock_a_%ext(m_sym)%val ) ) fock_a_%ext(m_sym)%val = 0.0_wp
+
+    end do
 
     ! loop over orbital classes for m
 
@@ -888,7 +1008,11 @@ module focas_gradient
 
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
 
-          do n = first_index_(m_sym,m_class) , m
+          n_first = first_index_(m_sym,m_class)
+        
+          if ( m_class == 3 ) n_first = m
+
+          do n = n_first , m
 
             ! mn-geminal index
             mn  = ints_%gemind(m,n)
@@ -935,7 +1059,19 @@ module focas_gradient
             end do ! end w_sym loop
 
             ! save Fock matrix element
-            fock_a_(mn) = val
+
+            if ( m_class == 3 ) then
+
+              m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
+              fock_a_%ext(m_sym)%val(m_i) = val
+
+            else
+
+              m_i = trans_%class_to_irrep_map(m)
+              n_i = trans_%class_to_irrep_map(n)
+              fock_a_%occ(m_sym)%val(m_i,n_i) = val
+
+            endif
 
           end do ! end n loop
 
@@ -992,7 +1128,11 @@ module focas_gradient
               end do ! end w_sym loop
 
               ! save Fock matrix element
-              fock_a_(mn) = val
+
+              m_i = trans_%class_to_irrep_map(m)
+              n_i = trans_%class_to_irrep_map(n)
+
+              fock_a_%occ(m_sym)%val(m_i,n_i) = val
 
             end do ! end n loop
 
@@ -1016,7 +1156,7 @@ module focas_gradient
     implicit none
     real(wp), intent(in) :: int1(:),int2(:)
     integer :: m_class,n_class,m_sym,m,n,i,i_sym,mdf,ndf,idf
-    integer :: mn_fock,mn_int1
+    integer :: mn_int1,n_first,m_i,n_i
     integer(ip) :: mn,ii,mi,in,nQ
     real(wp) :: val,int_val,ddot
     real(wp) :: v_mn(df_vars_%nQ)
@@ -1024,7 +1164,12 @@ module focas_gradient
     nQ = int(df_vars_%nQ,kind=ip) 
 
     ! initialize
-    fock_i_ = 0.0_wp
+    do m_sym = 1 , nirrep_
+
+      if ( allocated( fock_i_%occ(m_sym)%val ) ) fock_i_%occ(m_sym)%val = 0.0_wp
+      if ( allocated( fock_i_%ext(m_sym)%val ) ) fock_i_%ext(m_sym)%val = 0.0_wp
+
+    end do
 
     ! loop over orbital classes for m
 
@@ -1043,14 +1188,20 @@ module focas_gradient
 
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
 
+          n_first = first_index_(m_sym,m_class)
+
+          ! only compute diagonal elements for external-external block
+
+          if ( m_class == 3 ) n_first = m
+
 #ifdef OMP
 !$omp parallel shared(m,mdf,first_index_,last_index_,fock_i_,int2,int1,  &
-!$omp ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
-!$omp do private(n,v_mn,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock, &
-!$omp n_class)
+!$omp ints_,df_vars_,m_class,m_sym,n_first,trans_) num_threads(nthread_use_)
+!$omp do private(n,v_mn,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in, &
+!$omp n_class,m_i,n_i)
 #endif
 
-          do n = first_index_(m_sym,m_class) , m
+          do n = n_first , m
 
             ! mn-geminal index
             mn_int1 = ints_%gemind(m,n)
@@ -1102,8 +1253,18 @@ module focas_gradient
 
             ! save Fock matrix element
 
-            mn_fock          = ints_%gemind(m,n)
-            fock_i_(mn_fock) = val
+            if ( m_class == 3 ) then
+
+              m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
+              fock_i_%ext(m_sym)%val(m_i) = val
+
+            else
+
+              m_i = trans_%class_to_irrep_map(m)
+              n_i = trans_%class_to_irrep_map(n)
+              fock_i_%occ(m_sym)%val(m_i,n_i) = val
+
+            endif
 
           end do ! end n loop
 
@@ -1120,8 +1281,8 @@ module focas_gradient
 
 #ifdef OMP
 !$omp parallel shared(n_class,m,mdf,first_index_,last_index_,fock_i_,int2,int1, &
-!$omp ints_,df_vars_,m_class,m_sym) num_threads(nthread_use_)
-!$omp do private(n,v_mn,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,mn_fock)
+!$omp ints_,df_vars_,m_class,m_sym,trans_) num_threads(nthread_use_)
+!$omp do private(n,v_mn,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,m_i,n_i)
 #endif
             do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
 
@@ -1171,8 +1332,11 @@ module focas_gradient
               end do ! end i_sym loop
 
               ! save Fock matrix element
-              mn_fock          = ints_%gemind(m,n)
-              fock_i_(mn_fock) = val
+
+              m_i              = trans_%class_to_irrep_map(m)
+              n_i              = trans_%class_to_irrep_map(n)
+
+              fock_i_%occ(m_sym)%val(m_i,n_i) = val
 
             end do ! end n_loop
 
@@ -1201,12 +1365,17 @@ module focas_gradient
     implicit none
     real(wp), intent(in) :: int1(:),int2(:)
     integer :: m_class,n_class,m_sym,m,n,i,i_sym,mi_sym
-    integer :: mn,ii,mi,in
+    integer :: mn,ii,mi,in,m_i,n_i,n_first
     integer :: int_ind,sym_offset
     real(wp) :: val
 
     ! initialize
-    fock_i_ = 0.0_wp
+    do m_sym = 1 , nirrep_
+
+      if ( allocated( fock_i_%occ(m_sym)%val ) )     fock_i_%occ(m_sym)%val = 0.0_wp
+      if ( allocated( fock_i_%ext(m_sym)%val ) ) fock_i_%ext(m_sym)%val = 0.0_wp
+
+    end do
 
     ! loop over orbital classes for m
 
@@ -1220,7 +1389,14 @@ module focas_gradient
 
         do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
 
+
           ! loop over n indeces ( m_class == n_class && m >= n && m_sym == n_sym )
+
+          n_first = first_index_(m_sym,m_class)
+
+          ! only compute diagonal elements for external-external block
+
+          if ( m_class == 3 ) n_first = m
 
           do n = first_index_(m_sym,m_class) , m
 
@@ -1255,7 +1431,19 @@ module focas_gradient
             end do ! end i_sym loop
 
             ! save Fock matrix element
-            fock_i_(mn) = val
+
+            if ( m_class == 3 ) then
+
+              m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
+              fock_i_%ext(m_sym)%val(m_i) = val
+
+            else
+
+              m_i              = trans_%class_to_irrep_map(m)
+              n_i              = trans_%class_to_irrep_map(n)
+              fock_i_%occ(m_sym)%val(m_i,n_i) = val
+
+            endif
 
           end do ! end n loop
 
@@ -1297,7 +1485,11 @@ module focas_gradient
               end do ! end i_sym loop
 
               ! save Fock matrix element
-              fock_i_(mn) = val
+
+              m_i              = trans_%class_to_irrep_map(m)
+              n_i              = trans_%class_to_irrep_map(n)
+
+              fock_i_%occ(m_sym)%val(m_i,n_i) = val
 
             end do ! end n_loop
 
@@ -1353,20 +1545,108 @@ module focas_gradient
  
   subroutine allocate_temporary_fock_matrices()
     implicit none
+    integer :: i_sym,ntot,nocc
     ! the total number of nonzero LT elements in the active/inactive Fock matrix 
     ! is equal to the number of geminals in the totally symmetric irrep
-    allocate(fock_i_(ints_%ngempi(1)))
-    allocate(fock_a_(ints_%ngempi(1)))
+
+    ! allocate Fock matrices for the external block, only the diagonal elements are needed)
+
+    allocate(fock_i_%occ(nirrep_),fock_i_%ext(nirrep_))
+
+    do i_sym = 1 , nirrep_
+
+      nocc = nactpi_(i_sym)+ndocpi_(i_sym)
+      ntot = nocc + nextpi_(i_sym)
+
+      allocate(fock_i_%occ(i_sym)%val(ntot,nocc)) 
+
+      allocate(fock_i_%ext(i_sym)%val(nextpi_(i_sym)))
+
+    end do
+
+    allocate(fock_a_%occ(nirrep_),fock_a_%ext(nirrep_))
+
+    do i_sym = 1 , nirrep_
+
+      nocc = nactpi_(i_sym)+ndocpi_(i_sym)
+      ntot = nocc + nextpi_(i_sym)
+
+      allocate(fock_a_%occ(i_sym)%val(ntot,nocc))
+
+      allocate(fock_a_%ext(i_sym)%val(nextpi_(i_sym)))
+
+    end do
+
     ! the row index here will be between 1-nact, while the column index is arbitrary
+
     allocate(q_(nact_tot_,nmo_tot_))
+
     allocate(z_(nact_tot_,nmo_tot_))
+
     return
   end subroutine allocate_temporary_fock_matrices
 
   subroutine deallocate_temporary_fock_matrices()
     implicit none
-    if (allocated(fock_i_))   deallocate(fock_i_)
-    if (allocated(fock_a_))   deallocate(fock_a_)
+
+    integer :: i_sym
+
+    if ( allocated(fock_i_%occ) ) then
+
+      do i_sym = 1 , nirrep_
+
+        if ( .not. allocated(fock_i_%occ(i_sym)%val) ) cycle
+
+        deallocate(fock_i_%occ(i_sym)%val)
+
+      end do
+
+      deallocate(fock_i_%occ)
+
+    endif
+
+    if ( allocated(fock_i_%ext) ) then
+
+      do i_sym = 1 , nirrep_
+
+        if ( .not. allocated(fock_i_%ext(i_sym)%val) ) cycle
+
+        deallocate(fock_i_%ext(i_sym)%val)
+
+      end do
+
+      deallocate(fock_i_%ext)
+
+    end if
+
+    if ( allocated(fock_a_%occ) ) then
+
+      do i_sym = 1 , nirrep_
+
+        if ( .not. allocated(fock_a_%occ(i_sym)%val) ) cycle
+
+        deallocate(fock_a_%occ(i_sym)%val)
+
+      end do
+
+      deallocate(fock_a_%occ)
+
+    endif
+
+    if ( allocated(fock_a_%ext) ) then
+
+      do i_sym = 1 , nirrep_
+
+        if ( .not. allocated(fock_a_%ext(i_sym)%val) ) cycle
+
+        deallocate(fock_a_%ext(i_sym)%val)
+
+      end do
+
+      deallocate(fock_a_%ext)
+
+    end if
+
     if (allocated(q_))        deallocate(q_)
     if (allocated(z_))        deallocate(z_)
     return
