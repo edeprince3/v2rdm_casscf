@@ -9,6 +9,7 @@ module focas_gradient
     implicit none
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
     real(wp) :: t0,t1
+!    real(wp), allocatable :: tq(:,:)
 
     ! calculate inactive Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
@@ -28,7 +29,21 @@ module focas_gradient
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_q(den2,int2)
     else
-      call compute_q_df(den2,int2)
+!      t0=timer()
+!      call compute_q_df_old(den2,int2)
+!      t1=timer()
+!      write(*,*)'old way',t1-t0
+!      allocate(tq(size(q_,dim=1),size(q_,dim=2)))
+!      tq=q_
+!      call allocate_qint()
+!      t0=timer()
+      call compute_q_df(den2,int2) 
+!      t1=timer()
+!      write(*,*)'new way',t1-t0
+!      call deallocate_qint()
+!      !call check_q(tq,q_)
+!      write(*,*)maxval(abs(q_ - tq))
+!      stop
     endif
 
     ! calculate auxiliary z matrix
@@ -42,6 +57,22 @@ module focas_gradient
 
     return
   end subroutine orbital_gradient
+
+  subroutine check_q(q1,q2)
+   real(wp), intent(in) :: q1(:,:),q2(:,:)
+   integer :: p_sym,p,u_class,u
+
+   do p_sym =1,nirrep_
+     do p=1,nactpi_(p_sym)
+       do u_class=1,3
+         do u=first_index_(p_Sym,u_class),last_index_(p_Sym,u_class)
+           write(*,'(i1,5x,2(i3,1x),10x,2(f10.6,1x),5x,es12.4)')u_class,p,u,q1(p,u),q2(p,u),q1(p,u)-q2(p,u)
+         end do
+       end do
+     end do
+   end do
+
+  end subroutine 
 
   subroutine print_orbital_gradient()
     implicit none
@@ -387,6 +418,212 @@ module focas_gradient
   end subroutine compute_z
 
   subroutine compute_q_df(den2,int2)
+
+    implicit none
+
+    real(wp), intent(in) :: den2(:),int2(:)
+
+    integer :: tu_sym,t_sym,u_sym,v_sym,w_sym,p_sym
+    integer :: p_class
+    integer :: t,u,v,w,p,tu_den,vw_den,tuvw
+    integer :: vdf,wdf,pdf,udf,den_off,den_ind
+    integer(ip) :: vw_df,pu_df
+    integer :: nQ
+  
+    real(wp) :: val,ddot
+ 
+    nQ = df_vars_%nQ
+
+    ! initialize
+ 
+    q_ = 0.0_wp
+ 
+    do tu_sym = 1 , nirrep_
+
+      if ( dens_%ngempi(tu_sym) == 0 ) cycle
+
+      qint_%tuQ(tu_sym)%val = 0.0_wp
+
+    end do
+
+    ! assemble intermediates
+
+    tu_sym = 1
+
+    do t_sym = 1 , nirrep_
+
+      do t = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+#ifdef OMP
+!$omp parallel shared(t_sym,t,tu_sym,first_index_,last_index_, &
+!$omp int2,den2,df_vars_,dens_,qint_) num_threads(nthread_use_)
+!$omp do private(v,vdf,w,wdf,vw_df,vw_den,den_ind,u,tu_den,v_sym)
+#endif
+
+        do u = first_index_(t_sym,2) , t
+
+          tu_den = dens_%gemind(t,u)
+
+          do v_sym = 1 , nirrep_
+
+            do v = first_index_(v_sym,2) , last_index_(v_sym,2)
+
+              vdf = df_vars_%class_to_df_map(v)
+
+              do w = first_index_(v_sym,2) , v - 1
+
+                wdf = df_vars_%class_to_df_map(w)
+
+                vw_df =  df_pq_index(vdf,wdf)
+
+                vw_den = dens_%gemind(v,w)
+
+                den_ind = pq_index(tu_den,vw_den) 
+
+                ! update array
+
+                call daxpy(nQ,2.0_wp*den2(den_ind),int2(vw_df+1:vw_df+nQ),1,qint_%tuQ(tu_sym)%val(:,tu_den),1)
+
+              end do ! end w loop
+
+              vw_df =  df_pq_index(vdf,vdf)
+
+              vw_den = dens_%gemind(v,v)
+
+              den_ind = pq_index(tu_den,vw_den)
+
+              ! update array
+
+              call daxpy(nQ,den2(den_ind),int2(vw_df+1:vw_df+nQ),1,qint_%tuQ(tu_sym)%val(:,tu_den),1) 
+
+            end do ! end v loop
+
+          end do ! end v_sym loop
+
+        end do ! end u loop
+
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
+
+      end do ! end t loop
+
+    end do ! end t_sym loop
+
+    do tu_sym = 2 , nirrep_
+ 
+      den_off = dens_%offset(tu_sym)
+ 
+      do t_sym = 1 , nirrep_
+
+        u_sym=group_mult_tab_(tu_sym,t_sym)
+         
+        if ( u_sym > t_sym ) cycle
+
+        do t = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+#ifdef OMP
+!$omp parallel shared(t_sym,u_sym,tu_sym,t,den_off,      &
+!$omp first_index_,last_index_,int2,den2,df_vars_,dens_, &
+!$omp qint_) num_threads(nthread_use_)
+!$omp do private(v,vdf,w,wdf,vw_df,vw_den,den_ind,tu_den,u,v_sym,w_sym)
+#endif
+
+          do u = first_index_(u_sym,2) , last_index_(u_sym,2)
+
+            tu_den  = dens_%gemind(t,u)
+
+            do v_sym = 1 , nirrep_
+
+              w_sym = group_mult_tab_(tu_sym,v_sym)
+
+              if ( w_sym > v_sym ) cycle
+
+              do v = first_index_(v_sym,2) , last_index_(v_sym,2)
+
+                vdf = df_vars_%class_to_df_map(v)
+
+                do w = first_index_(w_sym,2) , last_index_(w_sym,2)
+
+                  wdf = df_vars_%class_to_df_map(w)
+
+                  vw_df =  df_pq_index(vdf,wdf)
+
+                  vw_den = dens_%gemind(v,w)
+
+                  den_ind = pq_index(tu_den,vw_den) + den_off
+
+                  ! update array
+
+                  call daxpy(nQ,2.0_wp*den2(den_ind),int2(vw_df+1:vw_df+nQ),1,qint_%tuQ(tu_sym)%val(:,tu_den),1)
+
+                end do ! end w loop
+
+              end do ! end v loop
+
+            end do ! end v_sym loop
+
+          end do ! end u_loop
+
+#ifdef OMP
+!$omp end do nowait
+!$omp end parallel
+#endif
+
+        end do ! end t_loop
+
+      end do ! end t_sym loop
+  
+    end do ! end tu_sym loop
+
+    ! compute Q-elements
+
+    do p_sym = 1 , nirrep_
+
+      do p_class = 1 , 3
+
+        do p = first_index_(p_sym,p_class) , last_index_(p_sym,p_class)
+
+          pdf = df_vars_%class_to_df_map(p)
+
+          do t = first_index_(p_sym,2) , last_index_(p_sym,2)
+
+            val = 0.0_wp
+
+            do tu_sym = 1 , nirrep_
+
+              u_sym = group_mult_tab_(tu_sym,p_sym)
+
+              do u = first_index_(u_sym,2) , last_index_(u_sym,2)
+
+                tu_den = dens_%gemind(t,u)
+
+                udf = df_vars_%class_to_df_map(u)
+
+                pu_df = df_pq_index(pdf,udf)
+
+                val   = val + ddot(nQ,int2(pu_df+1:pu_df+nQ),1,qint_%tuQ(tu_sym)%val(:,tu_den),1)
+
+              end do ! end u loop
+
+            end do ! end tu_sym loop
+
+            q_(t - ndoc_tot_ , p ) = val
+
+          end do ! end t loop
+
+        end do ! end p loop
+
+      end do ! and p_class loop
+
+    end do ! end p_sym_loop
+
+    return
+  
+  end subroutine compute_q_df
+
+  subroutine compute_q_df_old(den2,int2)
     implicit none
     ! this subroutine computes the "auxiliary Q" matrix according to Eq. 12.5.14 in Helgaker on page 622
     ! Q(v,m) = \SUM[w,x,y \in A] { d2(vw|xy) * g(mw|xy) }
@@ -597,7 +834,7 @@ module focas_gradient
 
     return
 
-  end subroutine compute_q_df
+  end subroutine compute_q_df_old
 
   subroutine compute_q(den2,int2)
     implicit none
@@ -1651,5 +1888,42 @@ module focas_gradient
     if (allocated(z_))        deallocate(z_)
     return
   end subroutine deallocate_temporary_fock_matrices
+
+  subroutine allocate_qint()
+    implicit none
+
+    integer :: i_sym
+
+    allocate(qint_%tuQ(nirrep_))
+
+    do i_sym = 1 , nirrep_
+
+      allocate(qint_%tuQ(i_sym)%val(df_vars_%nQ,dens_%ngempi(i_sym)))
+
+    end do
+
+    return
+  end subroutine allocate_qint
+
+  subroutine deallocate_qint()
+    implicit none
+
+    integer :: i_sym
+
+    if ( allocated(qint_%tuQ) ) then
+
+      do i_sym = 1 , nirrep_
+
+        if ( .not. allocated(qint_%tuQ(i_sym)%val) ) cycle
+
+        deallocate(qint_%tuQ(i_sym)%val)
+
+      end do
+
+      deallocate(qint_%tuQ)
+
+    end if
+
+  end subroutine deallocate_qint
 
 end module focas_gradient

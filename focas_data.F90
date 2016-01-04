@@ -32,7 +32,7 @@ module focas_data
   type sym_info
     integer, allocatable     :: ngempi(:)                          ! number of geminals per irrep
     integer, allocatable     :: nnzpi(:)                           ! number of nnz matrix elements
-    integer, allocatable     :: offset(: )                         ! offset for first matrix element in this irrep
+    integer, allocatable     :: offset(:)                          ! offset for first matrix element in this irrep
     integer, allocatable     :: gemind(:,:)                        ! symmetry-reduced index of a geminal 
   end type sym_info
 
@@ -92,6 +92,10 @@ module focas_data
     type(vector_block), allocatable :: ext(:)
   end type fock_info
 
+  type qint_info
+    type(matrix_block), allocatable :: tuQ(:) 
+  end type qint_info
+
   ! *** allocatable derived types
 
   type(sym_info)   :: dens_                                        ! density symmetry data
@@ -100,6 +104,7 @@ module focas_data
   type(diis_info)  :: diis_
   type(fock_info)  :: fock_i_ 
   type(fock_info)  :: fock_a_
+  type(qint_info)  :: qint_
  
   ! indexing derived types
   
