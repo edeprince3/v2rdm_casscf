@@ -72,6 +72,8 @@ module focas_data
     integer :: nQ                                                  !  number of auxiliary function for density-fitted integrals
     integer :: use_df_teints                                       ! flag to use density-fitted 2-e integrals
     integer, allocatable :: class_to_df_map(:)                     ! mapping array to map orbital indeces from class order to df order
+    integer, allocatable :: occgemind(:,:)                         ! symmetry reduced geminal indeces for occupied oritals
+    integer, allocatable :: noccgempi(:)                           ! number of symmetry reduced geminals per irrep
   end type df_info
 
   type diis_info

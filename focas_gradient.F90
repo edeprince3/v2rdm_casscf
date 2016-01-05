@@ -9,41 +9,40 @@ module focas_gradient
     implicit none
     real(wp), intent(in) :: int1(:),int2(:),den1(:),den2(:)
     real(wp) :: t0,t1
-!    real(wp), allocatable :: tq(:,:)
+    type(fock_info) :: fock
+    integer :: i
+    real(wp), allocatable :: tq(:,:)
+   
 
     ! calculate inactive Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_i(int1,int2)
     else
+      !t0=timer()
       call compute_f_i_df(int1,int2)
+      !t1=timer()
+      !write(*,*)'Fi',t1-t0
     endif
 
     ! calculate active Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_a(den1,int2)
     else
-      call compute_f_a_df(den1,int2)
+      !t0=timer()
+      call compute_f_a_df_coulomb(den1,int2)
+      call compute_f_a_df_exchange(den1,int2)
+      !t1=timer()
+      !write(*,*)'Fa',t1-t0
     endif
 
     ! calculate auxiliary q matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_q(den2,int2)
     else
-!      t0=timer()
-!      call compute_q_df_old(den2,int2)
-!      t1=timer()
-!      write(*,*)'old way',t1-t0
-!      allocate(tq(size(q_,dim=1),size(q_,dim=2)))
-!      tq=q_
-!      call allocate_qint()
-!      t0=timer()
-      call compute_q_df(den2,int2) 
-!      t1=timer()
-!      write(*,*)'new way',t1-t0
-!      call deallocate_qint()
-!      !call check_q(tq,q_)
-!      write(*,*)maxval(abs(q_ - tq))
-!      stop
+      !t0=timer()
+      call compute_q_df(den2,int2)
+      !t1=timer()
+      !write(*,*)'Q',t1-t0
     endif
 
     ! calculate auxiliary z matrix
@@ -426,9 +425,8 @@ module focas_gradient
     integer :: tu_sym,t_sym,u_sym,v_sym,w_sym,p_sym
     integer :: p_class
     integer :: t,u,v,w,p,tu_den,vw_den,tuvw
-    integer :: vdf,wdf,pdf,udf,den_off,den_ind
-    integer(ip) :: vw_df,pu_df
-    integer :: nQ
+    integer :: vdf,wdf,pdf,udf,den_off,den_ind,tu_int
+    integer(ip) :: vw_df,pu_df,nQ
   
     real(wp) :: val,ddot
  
@@ -479,7 +477,6 @@ module focas_gradient
                 vw_den = dens_%gemind(v,w)
 
                 den_ind = pq_index(tu_den,vw_den) 
-
                 ! update array
 
                 call daxpy(nQ,2.0_wp*den2(den_ind),int2(vw_df+1:vw_df+nQ),1,qint_%tuQ(tu_sym)%val(:,tu_den),1)
@@ -933,12 +930,127 @@ module focas_gradient
       end do ! end w_sym loop
 
     end do ! end m_sym loop
- 
 
     return
   end subroutine compute_q
 
-  subroutine compute_f_a_df(den1,int2)
+  subroutine compute_f_a_df_coulomb(den1,int2)
+
+    implicit none
+
+    real(wp), intent(in) :: den1(:), int2(:)
+
+    integer :: p_class,q_class,q_class_max
+    integer :: tu_den,qt_int
+    integer :: t_sym,u_sym,p_sym,tu_sym,q_sym,qt_sym
+    integer :: t,u,p,q,q_max,q_min
+    integer :: p_i,q_i
+    integer(ip) :: tu_df,pq_df,qu_df,pt_df,nQ
+    integer :: tdf,udf,pdf,qdf
+
+    real(wp) :: val,ddot
+
+    nQ = df_vars_%nQ
+
+    ! initialize
+    do p_sym = 1 , nirrep_
+
+      if ( allocated( fock_a_%occ(p_sym)%val ) ) fock_a_%occ(p_sym)%val = 0.0_wp
+      if ( allocated( fock_a_%ext(p_sym)%val ) ) fock_a_%ext(p_sym)%val = 0.0_wp
+
+    end do
+
+    ! *** Coulomb terms ***
+    
+    ! initialize
+    qint_%tuQ(1)%val(:,1) = 0.0_wp 
+
+    ! gather intermediate
+ 
+    do t_sym = 1 , nirrep_
+
+      do t = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+        tdf = df_vars_%class_to_df_map(t)
+
+        do u = first_index_(t_sym,2) , t - 1
+
+          udf = df_vars_%class_to_df_map(u)
+
+          tu_den = dens_%gemind(t,u)
+
+          tu_df  = df_pq_index(tdf,udf) 
+
+          call daxpy(nQ,2.0_wp*den1(tu_den),int2(tu_df+1:tu_df+nQ),1,qint_%tuQ(1)%val(:,1),1)        
+
+        end do ! end u loop
+
+        tu_den = dens_%gemind(t,t)
+
+        tu_df = df_pq_index(tdf,tdf)
+
+        call daxpy(nQ,den1(tu_den),int2(tu_df+1:tu_df+nQ),1,qint_%tuQ(1)%val(:,1),1)
+
+      end do ! end t loop
+
+    end do ! end t_sym loop
+
+    ! calculate fock matrix element
+
+    do p_class = 1 , 3
+
+      do q_class = 1 , 3
+
+        if ( q_class > p_class ) cycle
+
+        do p_sym = 1 , nirrep_
+
+          do p = first_index_(p_sym,p_class) , last_index_(p_sym,p_class)
+ 
+            pdf = df_vars_%class_to_df_map(p)
+
+            q_max = last_index_(p_sym,q_class)
+
+            q_min = first_index_(p_sym,q_class)
+
+            if ( p_class == q_class ) q_max = p
+   
+            if ( q_class == 3 ) q_min = p
+
+            do q = q_min , q_max
+
+              qdf = df_vars_%class_to_df_map(q)
+
+              pq_df = df_pq_index(pdf,qdf)
+
+              val = ddot(nQ,int2(pq_df+1:pq_df+nQ),1,qint_%tuQ(1)%val(:,1),1)
+
+              if ( ( p_class == 3 ) .and. ( q_class == 3 ) ) then
+
+                p_i = trans_%class_to_irrep_map(p)-ndocpi_(p_sym)-nactpi_(p_sym)
+                fock_a_%ext(p_sym)%val(p_i) = val
+
+              else
+
+                p_i = trans_%class_to_irrep_map(p)
+                q_i = trans_%class_to_irrep_map(q)
+                fock_a_%occ(p_sym)%val(p_i,q_i) = val
+
+              endif
+              
+            end do ! end q loop
+
+          end do ! end p loop
+          
+        end do ! end p_sym loop     
+
+      end do ! end q_class loop
+
+    end do ! end p_class loop
+
+  end subroutine compute_f_a_df_coulomb
+
+  subroutine compute_f_a_df_exchange(den1,int2)
     implicit none
     ! this subroutine computes the "active fock matrix" according to Eq. 12.5.13 in Helgaker on page 622
     ! F_a(m|n) = h(m|n) + SUM[v,w \in A] { g(mn|vw) - 0.5 g(mw|vn) }
@@ -953,14 +1065,6 @@ module focas_gradient
     real(wp) :: v_mn(df_vars_%nQ),v_mw(df_vars_%nQ)
 
     nQ = int(df_vars_%nQ,kind=ip)
-
-    ! initialize
-    do m_sym = 1 , nirrep_
-
-      if ( allocated( fock_a_%occ(m_sym)%val ) ) fock_a_%occ(m_sym)%val = 0.0_wp
-      if ( allocated( fock_a_%ext(m_sym)%val ) ) fock_a_%ext(m_sym)%val = 0.0_wp
-
-    end do
 
     ! loop over orbital classes for m
 
@@ -1033,18 +1137,11 @@ module focas_gradient
                   ! orbital index in df order
                   vdf     = df_vars_%class_to_df_map(v)
 
-                  ! 2-e coulomb contribution 2 g(mn|vw)
-                  vw      = df_pq_index(wdf,vdf) 
-
-                  ival    = 2.0_wp * ddot(df_vars_%nQ,v_mn,1,int2(vw+1:vw+nQ),1)
-
                   ! 2-e exchange contribution - g(mw|vn)
                   vn      = df_pq_index(vdf,ndf) 
 
-                  ival    = ival - ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
-
                   ! contract with integral/density matrix elements
-                  val     = val + dval * ival
+                  val     = val + dval * ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
 
                 end do ! end v loop
 
@@ -1054,18 +1151,11 @@ module focas_gradient
                 den_ind = dens_%gemind(w,w)
                 dval    = den1(den_ind)
 
-                ! 2-e coulomb contribution 2 g(mn|ww)
-                ww      = df_pq_index(wdf,wdf)
-
-                ival    = ddot(df_vars_%nQ,v_mn,1,int2(ww+1:ww+nQ),1)
-
                 ! 2-e exchange contribution - g(mw|wn)
                 wn      = df_pq_index(wdf,ndf) 
 
-                ival    = ival - 0.5_wp * ddot(df_vars_%nQ,v_mw,1,int2(wn+1:wn+nQ),1)
-
                 ! contract with integral/density matrix elements
-                val     = val + dval * ival
+                val     = val + 0.5_wp * dval * ddot(df_vars_%nQ,v_mw,1,int2(wn+1:wn+nQ),1)
 
               end do ! end w loop
 
@@ -1076,13 +1166,13 @@ module focas_gradient
             if ( m_class == 3 ) then
 
               m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
-              fock_a_%ext(m_sym)%val(m_i) = val
+              fock_a_%ext(m_sym)%val(m_i) = fock_a_%ext(m_sym)%val(m_i) - val
 
             else
 
               m_i = trans_%class_to_irrep_map(m)
               n_i = trans_%class_to_irrep_map(n)
-              fock_a_%occ(m_sym)%val(m_i,n_i) = val
+              fock_a_%occ(m_sym)%val(m_i,n_i) = fock_a_%occ(m_sym)%val(m_i,n_i) - val
 
             endif
 
@@ -1147,18 +1237,11 @@ module focas_gradient
                     ! orbital index in df order
                     vdf     = df_vars_%class_to_df_map(v)
 
-                    ! 2-e coulomb contribution 2 g(mn|vw)
-                    vw      = df_pq_index(wdf,vdf) 
-
-                    ival    = 2.0_wp * ddot(df_vars_%nQ,v_mn,1,int2(vw+1:vw+nQ),1)
-
                     ! 2-e exchange contribution - g(mw|vn)
                     vn      = df_pq_index(vdf,ndf) 
 
-                    ival    = ival - ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
-
                     ! contract with integral/density matrix elements
-                    val     = val + dval * ival
+                    val     = val + dval * ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
 
                   end do ! end v loop
 
@@ -1168,18 +1251,11 @@ module focas_gradient
                   den_ind = dens_%gemind(w,w)
                   dval    = den1(den_ind)
 
-                  ! 2-e coulomb contribution 2 g(mn|ww)
-                  ww      = df_pq_index(wdf,wdf) 
-
-                  ival    = ddot(df_vars_%nQ,v_mn,1,int2(ww+1:ww+nQ),1)
-
                   ! 2-e exchange contribution - g(mw|wn)
                   wn      = df_pq_index(wdf,ndf) 
 
-                  ival    = ival - 0.5_wp * ddot(df_vars_%nQ,v_mw,1,int2(wn+1:wn+nQ),1)
-
                   ! contract with integral/density matrix elements
-                  val     = val + dval * ival
+                  val     = val + 0.5_wp * dval * ddot(df_vars_%nQ,v_mw,1,int2(wn+1:wn+nQ),1)
 
                 end do ! end w loop
 
@@ -1190,7 +1266,7 @@ module focas_gradient
               m_i = trans_%class_to_irrep_map(m)
               n_i = trans_%class_to_irrep_map(n)
 
-              fock_a_%occ(m_sym)%val(m_i,n_i) = val
+              fock_a_%occ(m_sym)%val(m_i,n_i) = fock_a_%occ(m_sym)%val(m_i,n_i) - val
 
             end do ! end n loop
 
@@ -1208,7 +1284,7 @@ module focas_gradient
     end do ! end m_class loop
 
     return
-  end subroutine compute_f_a_df
+  end subroutine compute_f_a_df_exchange
 
   subroutine compute_f_a(den1,int2)
     implicit none
@@ -1898,7 +1974,7 @@ module focas_gradient
 
     do i_sym = 1 , nirrep_
 
-      allocate(qint_%tuQ(i_sym)%val(df_vars_%nQ,dens_%ngempi(i_sym)))
+      allocate(qint_%tuQ(i_sym)%val(df_vars_%nQ,df_vars_%noccgempi(i_sym)))
 
     end do
 
