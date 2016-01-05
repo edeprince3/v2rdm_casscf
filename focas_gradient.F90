@@ -18,31 +18,23 @@ module focas_gradient
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_i(int1,int2)
     else
-      !t0=timer()
-      call compute_f_i_df(int1,int2)
-      !t1=timer()
-      !write(*,*)'Fi',t1-t0
+      call compute_f_i_df_coulomb(int1,int2)
+      call compute_f_i_df_exchange(int1,int2)
     endif
 
     ! calculate active Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_f_a(den1,int2)
     else
-      !t0=timer()
       call compute_f_a_df_coulomb(den1,int2)
       call compute_f_a_df_exchange(den1,int2)
-      !t1=timer()
-      !write(*,*)'Fa',t1-t0
     endif
 
     ! calculate auxiliary q matrix
     if ( df_vars_%use_df_teints == 0 ) then
       call compute_q(den2,int2)
     else
-      !t0=timer()
       call compute_q_df(den2,int2)
-      !t1=timer()
-      !write(*,*)'Q',t1-t0
     endif
 
     ! calculate auxiliary z matrix
@@ -1060,9 +1052,9 @@ module focas_gradient
     real(wp), intent(in) :: den1(:),int2(:)
     integer :: m_class,n_class,m_sym,m,n,v,w,w_sym,mdf,ndf,wdf,vdf
     integer :: den_ind,n_first,m_i,n_i
-    integer(ip) :: mn,vw,mw,vn,wn,ww,nQ 
-    real(wp) :: val,ival,dval,ddot
-    real(wp) :: v_mn(df_vars_%nQ),v_mw(df_vars_%nQ)
+    integer(ip) :: mw,vn,wn,ww,nQ 
+    real(wp) :: val,dval,ddot
+    real(wp) :: v_mw(df_vars_%nQ)
 
     nQ = int(df_vars_%nQ,kind=ip)
 
@@ -1092,19 +1084,14 @@ module focas_gradient
 #ifdef OMP
 !$omp parallel shared(ints_,nQ,dens_,m_class,m_sym,m,mdf,first_index_,  &
 !$omp last_index_,df_vars_,den1,int2,n_first,fock_a_,trans_) num_threads(nthread_use_)
-!$omp do private(n,ndf,mn,val,v_mn,v_mw,w_sym,w,wdf,v,den_ind,dval,vdf, &
-!$omp vw,ival,ww,mw,wn,vn,n_i,m_i)
+!$omp do private(n,ndf,val,v_mw,w_sym,w,wdf,v,den_ind,dval,vdf, &
+!$omp ww,mw,wn,vn,n_i,m_i)
 #endif
 
           do n = n_first , m
 
             ! orbital index in df order
             ndf = df_vars_%class_to_df_map(n)
-
-            ! mn-geminal index in df order
-            mn  = df_pq_index(mdf,ndf) 
-
-            call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,v_mn,1)
 
             ! initialize Fock matrix element
             val = 0.0_wp
@@ -1192,7 +1179,7 @@ module focas_gradient
 #ifdef OMP
 !$omp parallel shared(n_class,nQ,ints_,dens_,m_class,m_sym,m,mdf,first_index_, &
 !$omp last_index_,df_vars_,den1,int2,fock_a_,trans_) num_threads(nthread_use_)
-!$omp do private(n,ndf,mn,val,v_mn,v_mw,w_sym,w,wdf,v,den_ind,dval,vdf,vw,ival,&
+!$omp do private(n,ndf,val,v_mw,w_sym,w,wdf,v,den_ind,dval,vdf,&
 !$omp mw,wn,n_i,m_i)
 #endif
 
@@ -1200,11 +1187,6 @@ module focas_gradient
 
               ! orbital index in df order
               ndf = df_vars_%class_to_df_map(n)
-
-              ! mn-geminal index in df order
-              mn  = df_pq_index(mdf,ndf) 
-
-              call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,v_mn,1)
 
               ! initialize Fock matrix element
               val = 0.0_wp
@@ -1460,7 +1442,109 @@ module focas_gradient
     return
   end subroutine compute_f_a
 
-  subroutine compute_f_i_df(int1,int2)
+  subroutine compute_f_i_df_coulomb(int1,int2)
+
+    implicit none
+
+    real(wp), intent(in) :: int1(:),int2(:)
+
+    integer :: i_sym,p_sym
+    integer :: i,p,q,p_i,q_i,q_min,q_max
+    integer :: pq_int
+    integer :: p_class,q_class
+    integer :: idf,pdf,qdf
+    integer(ip) :: ii_df,pq_df,nQ
+    real(wp) :: val,ddot
+
+    nQ = int(df_vars_%nQ,kind=ip)
+
+    ! initialize
+    do p_sym = 1 , nirrep_
+
+      if ( allocated( fock_i_%occ(p_sym)%val ) ) fock_i_%occ(p_sym)%val = 0.0_wp
+      if ( allocated( fock_i_%ext(p_sym)%val ) ) fock_i_%ext(p_sym)%val = 0.0_wp
+
+    end do
+
+    qint_%tuQ(1)%val(:,1) = 0.0_wp
+
+    ! calculate intermediate
+
+    do i_sym = 1 , nirrep_
+
+      do i = first_index_(i_sym,1) , last_index_(i_sym,1)
+
+        idf   = df_vars_%class_to_df_map(i)
+
+        ii_df = df_pq_index(idf,idf)
+
+        call daxpy(nQ,2.0_wp,int2(ii_df+1:ii_df+nQ),1,qint_%tuQ(1)%val(:,1),1)
+
+      end do ! end i loop
+
+    end do ! end i_sym loop
+
+    ! calculate Fock matrix element
+
+    do p_class = 1 , 3
+
+      do q_class = 1 , 3
+
+        if ( q_class > p_class ) cycle
+
+        do p_sym = 1 , nirrep_
+
+          do p = first_index_(p_sym,p_class) , last_index_(p_sym,p_class)
+
+            pdf = df_vars_%class_to_df_map(p)
+
+            q_max = last_index_(p_sym,q_class)
+
+            q_min = first_index_(p_sym,q_class)
+
+            if ( p_class == q_class ) q_max = p
+
+            if ( q_class == 3 ) q_min = p
+
+            do q = q_min , q_max
+
+              qdf    = df_vars_%class_to_df_map(q)
+
+              pq_df  = df_pq_index(pdf,qdf)
+
+              pq_int = ints_%gemind(p,q) 
+
+              val = int1(pq_int) + & 
+                  & ddot(nQ,int2(pq_df+1:pq_df+nQ),1,qint_%tuQ(1)%val(:,1),1)
+
+              if ( ( p_class == 3 ) .and. ( q_class == 3 ) ) then
+
+                p_i = trans_%class_to_irrep_map(p)-ndocpi_(p_sym)-nactpi_(p_sym)
+                fock_i_%ext(p_sym)%val(p_i) = val
+
+              else
+
+                p_i = trans_%class_to_irrep_map(p)
+                q_i = trans_%class_to_irrep_map(q)
+                fock_i_%occ(p_sym)%val(p_i,q_i) = val
+
+              endif
+
+            end do ! end q loop
+
+          end do ! end p loop
+
+        end do ! end p_sym loop     
+
+      end do ! end q_class loop
+
+    end do ! end p_class loop
+
+    return
+
+  end subroutine compute_f_i_df_coulomb
+
+  subroutine compute_f_i_df_exchange(int1,int2)
     ! this subroutine computes the "inactive fock matrix" according to Eq. 12.5.12 in Helgaker on page 622
     ! F_i(m|n) = h(m|n) + SUM[i \in D] { 2 g(mn|ii) - g(mi|in) }
     ! using 3-index 2-e integrals
@@ -1469,20 +1553,11 @@ module focas_gradient
     implicit none
     real(wp), intent(in) :: int1(:),int2(:)
     integer :: m_class,n_class,m_sym,m,n,i,i_sym,mdf,ndf,idf
-    integer :: mn_int1,n_first,m_i,n_i
-    integer(ip) :: mn,ii,mi,in,nQ
+    integer :: n_first,m_i,n_i
+    integer(ip) :: mi,in,nQ
     real(wp) :: val,int_val,ddot
-    real(wp) :: v_mn(df_vars_%nQ)
 
     nQ = int(df_vars_%nQ,kind=ip) 
-
-    ! initialize
-    do m_sym = 1 , nirrep_
-
-      if ( allocated( fock_i_%occ(m_sym)%val ) ) fock_i_%occ(m_sym)%val = 0.0_wp
-      if ( allocated( fock_i_%ext(m_sym)%val ) ) fock_i_%ext(m_sym)%val = 0.0_wp
-
-    end do
 
     ! loop over orbital classes for m
 
@@ -1510,25 +1585,15 @@ module focas_gradient
 #ifdef OMP
 !$omp parallel shared(m,mdf,first_index_,last_index_,fock_i_,int2,int1,  &
 !$omp ints_,df_vars_,m_class,m_sym,n_first,trans_) num_threads(nthread_use_)
-!$omp do private(n,v_mn,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in, &
-!$omp n_class,m_i,n_i)
+!$omp do private(n,val,ndf,idf,mi,in,m_i,n_i,i,i_sym)
 #endif
 
           do n = n_first , m
 
-            ! mn-geminal index
-            mn_int1 = ints_%gemind(m,n)
-
-            ! 1-e contribution h(m|n)
-            val     = int1(mn_int1)
-
             ! orbital index in df order
             ndf = df_vars_%class_to_df_map(n)
 
-            ! mn-geminal index in df order
-            mn      = df_pq_index(mdf,ndf) 
-
-            call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,v_mn,1)
+            val = 0.0_wp
 
             ! loop over irreps for i
 
@@ -1541,24 +1606,13 @@ module focas_gradient
                 ! orbital index in df order
                 idf        = df_vars_%class_to_df_map(i) 
 
-                ! ii-geminal index in df order
-                ii         = df_pq_index(idf,idf)
-
-                ! 2-e coulomb contribution 2 g(mn|ii)
-
-                int_val    = ddot(df_vars_%nQ,v_mn,1,int2(ii+1:ii+nQ),1)     
-
-                val        = val + 2.0_wp * int_val
-
                 ! geminal indeces in df order
                 mi         = df_pq_index(mdf,idf) 
                 in         = df_pq_index(idf,ndf)
 
                 ! 2-e exchange contribution - g(mi|in)
 
-                int_val    = ddot(df_vars_%nQ,int2(mi+1:mi+nQ),1,int2(in+1:in+nQ),1)
-
-                val        = val - int_val
+                val        = val -  ddot(df_vars_%nQ,int2(mi+1:mi+nQ),1,int2(in+1:in+nQ),1)
 
               end do ! end i loop
 
@@ -1569,13 +1623,13 @@ module focas_gradient
             if ( m_class == 3 ) then
 
               m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
-              fock_i_%ext(m_sym)%val(m_i) = val
+              fock_i_%ext(m_sym)%val(m_i) = fock_i_%ext(m_sym)%val(m_i) + val
 
             else
 
               m_i = trans_%class_to_irrep_map(m)
               n_i = trans_%class_to_irrep_map(n)
-              fock_i_%occ(m_sym)%val(m_i,n_i) = val
+              fock_i_%occ(m_sym)%val(m_i,n_i) = fock_i_%occ(m_sym)%val(m_i,n_i) + val
 
             endif
 
@@ -1595,21 +1649,14 @@ module focas_gradient
 #ifdef OMP
 !$omp parallel shared(n_class,m,mdf,first_index_,last_index_,fock_i_,int2,int1, &
 !$omp ints_,df_vars_,m_class,m_sym,trans_) num_threads(nthread_use_)
-!$omp do private(n,v_mn,mn_int1,val,ndf,mn,idf,ii,int_val,mi,in,m_i,n_i)
+!$omp do private(n,val,ndf,idf,mi,in,m_i,n_i,i_sym,i)
 #endif
             do n = first_index_(m_sym,n_class) , last_index_(m_sym,n_class)
-
-              mn_int1 = ints_%gemind(m,n)
-              ! 1-e contribution h(m|n)
-              val     = int1(mn_int1)
 
               ! orbital index in df order
               ndf     = df_vars_%class_to_df_map(n)
 
-              ! mn geminal index in df order
-              mn      = df_pq_index(mdf,ndf)
-
-              call dcopy(df_vars_%nQ,int2(mn+1:mn+nQ),1,v_mn,1)
+              val = 0.0_wp
 
               ! loop over irreps for i
 
@@ -1622,23 +1669,13 @@ module focas_gradient
                   ! orbital index in df order
                   idf        = df_vars_%class_to_df_map(i)
 
-                  ! ii-geminal index in df order
-                  ii         = df_pq_index(idf,idf) 
-
-                  ! 2-e coulomb contribution 2 g(mn|ii)
-
-                  int_val    = ddot(df_vars_%nQ,v_mn,1,int2(ii+1:ii+nQ),1)
-
-                  val        = val + 2.0_wp * int_val
-
                   ! geminal indeces in df order
                   mi         = df_pq_index(mdf,idf) 
                   in         = df_pq_index(idf,ndf) 
  
                   ! 2-e exchange contribution - g(mi|in)
-                  int_val    = ddot(df_vars_%nQ,int2(mi+1:mi+nQ),1,int2(in+1:in+nQ),1)
 
-                  val        = val - int_val
+                  val        = val - ddot(df_vars_%nQ,int2(mi+1:mi+nQ),1,int2(in+1:in+nQ),1)
 
                 end do ! end i loop
 
@@ -1649,7 +1686,7 @@ module focas_gradient
               m_i              = trans_%class_to_irrep_map(m)
               n_i              = trans_%class_to_irrep_map(n)
 
-              fock_i_%occ(m_sym)%val(m_i,n_i) = val
+              fock_i_%occ(m_sym)%val(m_i,n_i) = fock_i_%occ(m_sym)%val(m_i,n_i) + val
 
             end do ! end n_loop
 
@@ -1668,7 +1705,7 @@ module focas_gradient
 
     return
 
-  end subroutine compute_f_i_df
+  end subroutine compute_f_i_df_exchange
 
   subroutine compute_f_i(int1,int2)
     ! this subroutine computes the "inactive fock matrix" according to Eq. 12.5.12 in Helgaker on page 622
