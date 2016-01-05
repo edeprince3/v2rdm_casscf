@@ -1,0 +1,10 @@
+*.pyc
+*.o
+*.d
+*.so
+psi*clean
+
+tests/v2rdm*/timer.dat
+tests/v2rdm*/output.dat
+tests/v2rdm*/psi*clean
+
