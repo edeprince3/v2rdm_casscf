@@ -178,7 +178,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 A_p[offset + ijk*trip_aab[h]+lmn] += u_p[d1boff[h2] + nn*amopi_[h2]+kk]; // + D1(n,k) djm dil
             }
         }
-        F_DAXPY(trip_aab[h] * trip_aab[h], -1.0, &u_p[t2aaboff[h]],1,&A_p[offset],1);
+        C_DAXPY(trip_aab[h] * trip_aab[h], -1.0, &u_p[t2aaboff[h]],1,&A_p[offset],1);
 
 
         /*#pragma omp parallel for schedule (static)
@@ -363,7 +363,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
                 A_p[offset + ijk*trip_aab[h]+lmn] += u_p[d1aoff[h2] + nn*amopi_[h2]+kk]; // + D1(n,k) djm dil
             }
         }
-        F_DAXPY(trip_aab[h] * trip_aab[h], -1.0, &u_p[t2bbaoff[h]],1,&A_p[offset],1);
+        C_DAXPY(trip_aab[h] * trip_aab[h], -1.0, &u_p[t2bbaoff[h]],1,&A_p[offset],1);
 
         /*#pragma omp parallel for schedule (static)
         for (int ijk = 0; ijk < trip_aab[h]; ijk++) {
@@ -867,7 +867,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
 
             }
         }*/
-        F_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2aaaoff[h]],1,&A_p[offset],1);
+        C_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2aaaoff[h]],1,&A_p[offset],1);
 
         offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
         //offset += trip_aab[h]*trip_aab[h];
@@ -1246,7 +1246,7 @@ void v2RDMSolver::T2_constraints_Au(SharedVector A,SharedVector u){
 
             }
         }
-        F_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2bbboff[h]],1,&A_p[offset],1);
+        C_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2bbboff[h]],1,&A_p[offset],1);
 
         offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
         //offset += trip_aab[h]*trip_aab[h];
@@ -1628,7 +1628,7 @@ void v2RDMSolver::T2_constraints_Au_slow(SharedVector A,SharedVector u){
 
             }
         }
-        //F_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2aaaoff[h]],1,&A_p[offset],1);
+        //C_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2aaaoff[h]],1,&A_p[offset],1);
         offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
         //offset += trip_aab[h]*trip_aab[h];
     }
@@ -1859,7 +1859,7 @@ void v2RDMSolver::T2_constraints_Au_slow(SharedVector A,SharedVector u){
 
             }
         }
-        //F_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2bbboff[h]],1,&A_p[offset],1);
+        //C_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2bbboff[h]],1,&A_p[offset],1);
         offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
         //offset += trip_aab[h]*trip_aab[h];
     }
@@ -2239,7 +2239,7 @@ void v2RDMSolver::T2_constraints_guess(SharedVector u){
 
             }
         }
-        //F_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2aaaoff[h]],1,&A_p[offset],1);
+        //C_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2aaaoff[h]],1,&A_p[offset],1);
         offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
         //offset += trip_aab[h]*trip_aab[h];
     }
@@ -2470,7 +2470,7 @@ void v2RDMSolver::T2_constraints_guess(SharedVector u){
 
             }
         }
-        //F_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2bbboff[h]],1,&A_p[offset],1);
+        //C_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[t2bbboff[h]],1,&A_p[offset],1);
         offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
         //offset += trip_aab[h]*trip_aab[h];
     }
@@ -2594,7 +2594,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 A_p[d1boff[h2] + nn*amopi_[h2]+kk] += u_p[offset + ijk*trip_aab[h]+lmn]; // + D1(n,k) djm dil
             }
         }
-        F_DAXPY(trip_aab[h] * trip_aab[h], -1.0, &u_p[offset],1,&A_p[t2aaboff[h]],1);
+        C_DAXPY(trip_aab[h] * trip_aab[h], -1.0, &u_p[offset],1,&A_p[t2aaboff[h]],1);
 
 
         /*for (int ijk = 0; ijk < trip_aab[h]; ijk++) {
@@ -2772,7 +2772,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 A_p[d1aoff[h2] + nn*amopi_[h2]+kk] += u_p[offset + ijk*trip_aab[h]+lmn]; // + D1(n,k) djm dil
             }
         }
-        F_DAXPY(trip_aab[h] * trip_aab[h], -1.0, &u_p[offset],1,&A_p[t2bbaoff[h]],1);
+        C_DAXPY(trip_aab[h] * trip_aab[h], -1.0, &u_p[offset],1,&A_p[t2bbaoff[h]],1);
 
         /*for (int ijk = 0; ijk < trip_aab[h]; ijk++) {
 
@@ -3169,7 +3169,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
         }
-        F_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[offset],1,&A_p[t2aaaoff[h]],1);
+        C_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[offset],1,&A_p[t2aaaoff[h]],1);
         offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
         //offset += trip_aab[h]*trip_aab[h];
     }
@@ -3395,7 +3395,7 @@ void v2RDMSolver::T2_constraints_ATu(SharedVector A,SharedVector u){
                 }
             }
         }
-        F_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[offset],1,&A_p[t2bbboff[h]],1);
+        C_DAXPY((trip_aba[h] + trip_aab[h]) * (trip_aba[h] + trip_aab[h]), -1.0, &u_p[offset],1,&A_p[t2bbboff[h]],1);
         offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
         //offset += trip_aab[h]*trip_aab[h];
     }

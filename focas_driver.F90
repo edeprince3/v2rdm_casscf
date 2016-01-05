@@ -105,6 +105,9 @@ module focas_driver
     if ( df_vars_%use_df_teints == 1 ) error = df_map_setup(nnz_int2)
     if ( error /= 0 ) stop
 
+    ! allocate intermediate matrices for DF integrals
+    if ( df_vars_%use_df_teints == 1 ) call allocate_qint()
+
     ! print information
     if ( log_print_ == 1 ) call print_info()    
 
@@ -150,7 +153,8 @@ module focas_driver
       call orbital_gradient(int1,int2,den1,den2)
 
       ! precondition gradient with the diagonal Hessian
-      call diagonal_inverse_hessian_preconditioner(orbital_gradient_,fock_i_,fock_a_,q_,z_,int2,den1,den2)
+      call diagonal_inverse_hessian_preconditioner(orbital_gradient_,&
+          & q_,z_,int2,den1,den2)
 
       ! update kappa_
       step_size = 1.0_wp
@@ -233,6 +237,7 @@ module focas_driver
   subroutine deallocate_final()
     implicit none
     call deallocate_temporary_fock_matrices()
+    if ( df_vars_%use_df_teints == 1 )       call deallocate_qint()
     if (allocated(orbital_gradient_))        deallocate(orbital_gradient_)
     if (allocated(kappa_))                   deallocate(kappa_)
     if (allocated(rot_pair_%pair_offset))    deallocate(rot_pair_%pair_offset)

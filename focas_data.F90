@@ -20,8 +20,6 @@ module focas_data
 
   ! *** allocatable real arrays
 
-  real(wp), allocatable :: fock_i_(:)                              ! inactive Fock matrix (symmetric, LT nmo*(nmo+1)/2 storage)
-  real(wp), allocatable :: fock_a_(:)                              ! active Fock matrix (symmetric, LT nmo*(nmo+1)/2 storage)
   real(wp), allocatable :: q_(:,:)                                 ! auxiliary matrix (asymmetric, nact*nmo storage) 
   real(wp), allocatable :: z_(:,:)                                 ! auxiliary matrix that contains cotractions of the fock_i with den1 ( nact*nmo storage)
 !  real(wp), allocatable :: fock_gen_(:,:)                          ! generalized Fock matrix (nmo*nmo storage)
@@ -34,7 +32,7 @@ module focas_data
   type sym_info
     integer, allocatable     :: ngempi(:)                          ! number of geminals per irrep
     integer, allocatable     :: nnzpi(:)                           ! number of nnz matrix elements
-    integer, allocatable     :: offset(: )                         ! offset for first matrix element in this irrep
+    integer, allocatable     :: offset(:)                          ! offset for first matrix element in this irrep
     integer, allocatable     :: gemind(:,:)                        ! symmetry-reduced index of a geminal 
   end type sym_info
 
@@ -89,13 +87,25 @@ module focas_data
     real(wp), allocatable :: P(:,:)
   end type diis_info
 
+  type fock_info
+    type(matrix_block), allocatable :: occ(:)
+    type(vector_block), allocatable :: ext(:)
+  end type fock_info
+
+  type qint_info
+    type(matrix_block), allocatable :: tuQ(:) 
+  end type qint_info
+
   ! *** allocatable derived types
 
   type(sym_info)   :: dens_                                        ! density symmetry data
   type(sym_info)   :: ints_                                        ! integral symmetry data
   type(trans_info) :: trans_
   type(diis_info)  :: diis_
-
+  type(fock_info)  :: fock_i_ 
+  type(fock_info)  :: fock_a_
+  type(qint_info)  :: qint_
+ 
   ! indexing derived types
   
   type(rot_info)   :: rot_pair_                                    ! info for rotation pair indexing
