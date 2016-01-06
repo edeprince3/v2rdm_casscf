@@ -1454,7 +1454,12 @@ double v2RDMSolver::compute_energy() {
             replace_diis_iter = 1;
 
         }
-        if ( orbopt_one_step == 1 && oiter % orbopt_frequency == 0 && oiter > 0) {
+
+        // compute current primal and dual energies
+        double current_energy = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
+        energy_dual   = C_DDOT(nconstraints_,b->pointer(),1,y->pointer(),1);
+
+        if ( orbopt_one_step == 1 && oiter % orbopt_frequency == 0 && oiter > 0 && current_energy+enuc_+efzc_ < escf_ ) {
 
             start = omp_get_wtime();
             RotateOrbitals();
@@ -1467,14 +1472,15 @@ double v2RDMSolver::compute_energy() {
             diis_oiter_       = 0;
             diis_iter         = 0;
             replace_diis_iter = 1;
+
+            // compute current primal and dual energies
+            current_energy = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
+            energy_dual   = C_DDOT(nconstraints_,b->pointer(),1,y->pointer(),1);
         }
 
-        // compute current primal and dual energies
 
         //energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
-        double current_energy = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
 
-        energy_dual   = C_DDOT(nconstraints_,b->pointer(),1,y->pointer(),1);
 
         outfile->Printf("      %5i %5i %11.6lf %11.6lf %11.6lf %7.3lf %10.5lf %10.5lf\n",
                     oiter,iiter,current_energy+enuc_+efzc_,energy_dual+efzc_+enuc_,fabs(current_energy-energy_dual),mu,ep,ed);
