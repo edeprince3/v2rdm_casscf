@@ -242,6 +242,8 @@ module focas_driver
     if (allocated(kappa_))                   deallocate(kappa_)
     if (allocated(rot_pair_%pair_offset))    deallocate(rot_pair_%pair_offset)
     if (allocated(df_vars_%class_to_df_map)) deallocate(df_vars_%class_to_df_map)
+!    if (allocated(df_vars_%occgemind))       deallocate(df_vars_%occgemind)
+    if (allocated(df_vars_%noccgempi))       deallocate(df_vars_%noccgempi)
     call deallocate_transformation_matrices()
     call deallocate_hessian_data()
     return
@@ -266,7 +268,7 @@ module focas_driver
     implicit none
     integer(ip), intent(in) :: nnz_int2
     integer(ip) :: num
-    integer :: npair,i_sym,i_class,ic,idf
+    integer :: npair,i_sym,i_class,ic,idf,j_sym,j_class,i,j,ij_sym,j_max
 
     df_map_setup = 1
 
@@ -311,6 +313,43 @@ module focas_driver
 
     end if
 
+    allocate(df_vars_%noccgempi(nirrep_))
+    df_vars_%noccgempi=dens_%ngempi
+
+!    allocate(df_vars_%occgemind(ntot_,ntot_))
+!
+!    df_vars_%noccgempi = 0
+!    df_vars_%occgemind = 0
+!
+!    do i_sym = 1 , nirrep_
+!
+!      do i = first_index_(i_sym,2) , last_index_(i_sym,2)
+!
+!        do j_class = 1 , 2
+!
+!          do j_sym = 1 ,  nirrep_
+!
+!            ij_sym = group_mult_tab_(i_sym,j_sym)
+!
+!            do j = first_index_(j_sym,j_class) , last_index_(j_sym,j_class)
+!
+!              if ( j > i ) cycle
+!     
+!              df_vars_%noccgempi(ij_sym) = df_vars_%noccgempi(ij_sym) + 1
+!
+!              df_vars_%occgemind(i,j) = df_vars_%noccgempi(ij_sym)
+!              df_vars_%occgemind(j,i) = df_vars_%occgemind(i,j)
+!
+!            end do
+!
+!          end do
+!
+!        end do
+!
+!      end do
+!
+!    end do   
+!
     df_map_setup = 0
 
     return
