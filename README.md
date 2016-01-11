@@ -1,13 +1,11 @@
 # v2rdm_casscf
 A variational 2-RDM-driven CASSCF plugin to Psi4
 
-OVERVIEW
----
+##OVERVIEW
 
 This plugin to Psi4[1] performs variational two-electron reduced-density-matrix (2-RDM)-driven complete active space self consistent field (CASSCF) computations.  In principle, because  variational 2-RDM (v-2RDM) methods scale only polynomially with system size, v-2RDM-driven CASSCF computations can be performed using active spaces that are larger than can be used within conventional configuration-interaction-driven CASSCF methods.  For more information regarding the performance of the method, see Refs. 2-3.
 
-INSTALLATION
----
+##INSTALLATION
 
 To run the psi4 plugin v2rdm_casscf:
 
@@ -25,8 +23,11 @@ To run the psi4 plugin v2rdm_casscf:
 
   > ./setup
 
-INPUT OPTIONS
+##INPUT OPTIONS
+
+N-representability conditions
 ---
+
 * **POSITIVITY** (string):
 
     The positivity conditions enforced in the computation.  Allowed values
@@ -106,7 +107,7 @@ INPUT OPTIONS
 
     File containing previous primal/dual solutions and integrals.
 
-* **DF_BASIS_SCF"** (string):
+* **DF_BASIS_SCF** (string):
 
     Auxiliary basis set for SCF density fitting computations.  Defaults
     to a JKFIT basis.
@@ -127,14 +128,12 @@ INPUT OPTIONS
 
     Base filename for text files written by PSI, such as the MOLDEN output file, the Hessian file, the internal coordinate file, etc. Use the add_str_i function to make this string case sensitive.
 
-KNOWN ISSUES
----
+##KNOWN ISSUES
 
 * For large jobs, when running with multiple threads, sometimes a thread will hang and the job will stall.
 * For large jobs, add "ulimit -s unlimited" to .bashrc to avoid segfault when calling the fortran orbital optimization routines.
 
-REFERENCES
----
+##REFERENCES
 
 [1] J. M. Turney, A. C. Simmonett, R. M. Parrish, E. G. Hohenstein, F. A. Evangelista, J. T. Fermann, B. J.  Mintz, L. A. Burns, J. J. Wilke, M. L. Abrams, N. J. Russ, M. L. Leininger, C. L. Janssen, E. T. Seidl, W. D. Allen, H. F. Schaefer, R. A. King, E. F. Valeev, C. D. Sherrill, and T. D. Crawford, *WIREs: Comp. Molec. Sci.* **2**, 556 (2012). "Psi4: an open-source ab initio electronic structure program"
 
