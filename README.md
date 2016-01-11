@@ -29,7 +29,18 @@ INPUT OPTIONS
 ---
 * **POSITIVITY** (string):
 
-    The positivity conditions enforced in the computation.  Allowed values include DQG, DQ, DG, D, DQGT1, DQGT2, and DQGT1T2.  The default value is DQG.
+    The positivity conditions enforced in the computation.  Allowed values
+    include DQG, DQ, DG, D, DQGT1, DQGT2, and DQGT1T2.  The default value
+    is DQG.
+
+* **CONSTRAIN_D3** (bool):
+
+    Enforce the additional condition that D3 be possitive and correctly
+    contract to D2?  Default false.
+
+* **CONSTRAIN_SPIN** (bool):
+
+    Do constrain the expectation value of spin squared? Default true.
 
 * **E_CONVERGENCE** (double):
 
@@ -37,7 +48,7 @@ INPUT OPTIONS
 
 * **R_CONVERGENCE** (double):
 
-    The convergence in the primal and dual errors. Default 1e-3.
+    The convergence in the primal and dual errors. Default 1e-4.
 
 * **MAXITER** (int):
 
@@ -81,6 +92,33 @@ INPUT OPTIONS
     from the **ACTIVE**, **RESTRICTED_DOCC**, **FROZEN_DOCC**, and
     **FROZEN_UOCC** arrays.
 
+* **WRITE_CHECKPOINT_FILE** (bool):
+
+    Do save progress in a checkpoint file?  Default false.
+
+* **CHECKPOINT_FREQUENCY** (bool):
+
+    Frequency of checkpoint file generation.  The checkpoint file is 
+    updated every **CHECKPOINT_FREQUENCY** iterations.  The default frequency
+    will be **ORBOPT_FREQUENCY**.
+
+* **RESTART_FROM_CHECKPOINT_FILE** (string):
+
+    File containing previous primal/dual solutions and integrals.
+
+* **DF_BASIS_SCF"** (string):
+
+    Auxiliary basis set for SCF density fitting computations.  Defaults
+    to a JKFIT basis.
+
+* **SCF_TYPE** (string):
+
+    What algorithm to use for the initial SCF computation.  Default DF.
+
+* **CHOLESKY_TOLERANCE** (double):
+
+    Tolerance for Cholesky decomposition of the ERI tensor.  Default 1e-4.
+
 * **MOLDEN_WRITE** (bool):
 
     Do write a MOLDEN output file containing the natural orbitals?  If yes, the filename will end in .molden, and the prefix is determined by **WRITER_FILE_LABEL** (if set), or else by the name of the output file plus the name of the current molecule.  Default false.
@@ -102,4 +140,4 @@ REFERENCES
 
 [2] J. Fosso-Tande, D. R. Nascimento, and A. E. DePrince III, *Mol. Phys.* accepted (2015). "Accuracy of two-particle N-representability conditions for describing different spin states and the singlet-triplet gap in the linear acene series"
 
-[3] J. Fosso-Tande, G. Gidofalvi, and A. E. DePrince III, in preparation.
+[3] J. Fosso-Tande, T.-S. Nguyen, G. Gidofalvi, and A. E. DePrince III, in preparation.
