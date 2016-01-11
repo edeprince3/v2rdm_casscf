@@ -56,7 +56,7 @@ To run the psi4 plugin v2rdm_casscf:
 
     The maximum number of outer iterations.  Default 10000.
 
-###Active-space specification
+###Active space specification
 
 * **FROZEN_DOCC** (array):
 
