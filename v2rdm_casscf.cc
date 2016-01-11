@@ -59,7 +59,7 @@ int read_options(std::string name, Options& options)
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
         /*- Do save progress in a checkpoint file? -*/
         options.add_bool("WRITE_CHECKPOINT_FILE",false);
-        /*- Frequency of orbital optimization.  The checkpoint file is 
+        /*- Frequency of checkpoint file generation.  The checkpoint file is 
         updated every CHECKPOINT_FREQUENCY iterations.  The default frequency
         will be ORBOPT_FREQUENCY. -*/
         options.add_bool("CHECKPOINT_FREQUENCY",200);

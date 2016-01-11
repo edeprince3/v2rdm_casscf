@@ -25,8 +25,7 @@ To run the psi4 plugin v2rdm_casscf:
 
 ##INPUT OPTIONS
 
-N-representability conditions
----
+###N-representability conditions
 
 * **POSITIVITY** (string):
 
@@ -43,6 +42,8 @@ N-representability conditions
 
     Do constrain the expectation value of spin squared? Default true.
 
+###Convergence
+
 * **E_CONVERGENCE** (double):
 
     The convergence in the primal/dual energy gap.  Default 1e-4.
@@ -54,6 +55,8 @@ N-representability conditions
 * **MAXITER** (int):
 
     The maximum number of outer iterations.  Default 10000.
+
+###Active-space specification
 
 * **FROZEN_DOCC** (array):
 
@@ -93,6 +96,8 @@ N-representability conditions
     from the **ACTIVE**, **RESTRICTED_DOCC**, **FROZEN_DOCC**, and
     **FROZEN_UOCC** arrays.
 
+###Restarting jobs
+
 * **WRITE_CHECKPOINT_FILE** (bool):
 
     Do save progress in a checkpoint file?  Default false.
@@ -107,6 +112,8 @@ N-representability conditions
 
     File containing previous primal/dual solutions and integrals.
 
+###Integrals and SCF type
+
 * **DF_BASIS_SCF** (string):
 
     Auxiliary basis set for SCF density fitting computations.  Defaults
@@ -120,13 +127,54 @@ N-representability conditions
 
     Tolerance for Cholesky decomposition of the ERI tensor.  Default 1e-4.
 
+###Orbital optimization
+
+* **ORBOPT_ONE_STEP** (int):
+
+    Flag to optimize orbitals using a quasi one-step type approach. Default 1.
+
+* **ORBOPT_GRADIENT_CONVERGENCE** (double):
+
+    Convergence in the orbital gradient norm.  Default 1e-4.
+
+* **ORBOPT_ENERGY_CONVERGENCE** (double):
+
+    Convergence in the energy for orbital rotations. Default 1e-8.
+
+* **ORBOPT_EXACT_DIAGONAL_HESSIAN** (int):
+
+    Flag for using exact expresions for diagonal Hessian elements.  Default 0.
+
+* **ORBOPT_FREQUENCY** (int):
+
+    Frequency of orbital optimization.  Optimization occurs every 
+    **ORBOPT_FREQUENCY** iterations.  Default 200.
+
+* **ORBOPT_ACTIVE_ACTIVE_ROTATIONS** (bool):
+
+    Do rotate active/active orbital pairs? Default false.
+
+###Additional files
+
 * **MOLDEN_WRITE** (bool):
 
-    Do write a MOLDEN output file containing the natural orbitals?  If yes, the filename will end in .molden, and the prefix is determined by **WRITER_FILE_LABEL** (if set), or else by the name of the output file plus the name of the current molecule.  Default false.
+    Do write a MOLDEN output file containing the natural orbitals?  If
+    yes, the filename will end in .molden, and the prefix is determined by
+    **WRITER_FILE_LABEL** (if set), or else by the name of the output file
+    plus the name of the current molecule.  Default false.
 
 * **WRITER_FILE_LABEL** (string):
 
-    Base filename for text files written by PSI, such as the MOLDEN output file, the Hessian file, the internal coordinate file, etc. Use the add_str_i function to make this string case sensitive.
+    Base filename for text files written by PSI, such as the MOLDEN output
+    file, the Hessian file, the internal coordinate file, etc. Use the
+    add_str_i function to make this string case sensitive.
+
+* **ORBOPT_WRITE** (bool):
+
+    Do write a ORBOPT output file?  If so, the filename will end in .orbopt,
+    and the prefix is determined by **WRITER_FILE_LABEL** (if set), or else by
+    the name of the output file plus the name of the current molecule.
+
 
 ##KNOWN ISSUES
 
