@@ -38,9 +38,13 @@ module focas_driver
 
     ! iteration variables
     real(wp) :: current_energy,last_energy,delta_energy,gradient_norm_tolerance,delta_energy_tolerance
-    real(wp) :: step_size,initial_energy
+    real(wp) :: initial_energy
     integer  :: iter,max_iter,error,converged
-  
+   
+    ! variables for trust radius
+    integer :: evaluate_gradient 
+    real(wp) :: step_size,e_new,e_init
+
     ! other variables
     logical :: fexist
 
@@ -124,77 +128,72 @@ module focas_driver
     kappa_                  = 0.0_wp
     converged               = 0
 
+    ! initialize trust radius variables
+    step_size         =  1.0_wp
+    evaluate_gradient = 1
+
     do 
+
+      if ( evaluate_gradient == 1 ) then
+
+        ! this means that the last step lowered the energy
+
+        ! calculate the current energy  
+        call compute_energy(int1,int2,den1,den2)
+        e_init = e_total_ 
+        
+        ! save initial energy
+        if ( iter == 0 ) initial_energy = e_init 
+
+        ! construct gradient (temporary Fock matrices allocated/deallocated within routine)
+        call orbital_gradient(int1,int2,den1,den2)
       
-      ! transform integrals
-      t0 = timer()
+        ! precondition gradient with the diagonal Hessian
+        call diagonal_inverse_hessian_preconditioner(orbital_gradient_,&
+            & q_,z_,int2,den1,den2)
 
-      if ( iter /= 0 ) call transform_driver(int1,int2,mo_coeff)      
+        ! update transformation coefficients
+        kappa_ = - step_size * orbital_gradient_
 
-      t1 = timer()
-      t_trans = t1 - t0
+      else
 
-      ! calculate the current energy
-      t0=timer()
+        ! update step size and adjust kappa
+        step_size = step_size / 2.0_wp
+        kappa_ = step_size * orbital_gradient_
 
-      call compute_energy(int1,int2,den1,den2)
-
-      current_energy = e_total_
-
-      if ( iter == 0 ) initial_energy = current_energy
-
-      delta_energy = last_energy - current_energy
-
-      t1=timer()
-      t_ene = t1 - t0
-
-      t0 = timer()
-      ! construct gradient (temporary Fock matrices allocated/deallocated within routine)
-      call orbital_gradient(int1,int2,den1,den2)
-
-      ! precondition gradient with the diagonal Hessian
-      call diagonal_inverse_hessian_preconditioner(orbital_gradient_,&
-          & q_,z_,int2,den1,den2)
-
-      ! update kappa_
-      step_size = 1.0_wp
-      kappa_    = - step_size * orbital_gradient_
-!      P = P + kappa_
-
-      ! possible DIIS extrapolation
-
-!      write(*,*)'before'
-!      write(*,*)P
-!
-!      if ( diis_%do_diis == 1 ) call diis_extrapolate(P,-kappa_)
-!
-!      write(*,*)'after',diis_%do_diis
-!      write(*,*)kappa_
-
-      t1 = timer()
-      t_gh = t1 - t0
-
-      ! from kappa, construct unitary transformation matrix ( U = exp(kappa) )
-      t0 = timer()
-
-      call compute_exponential(kappa_)
-
-      t1 = timer()
-      t_exp = t1 - t0
-
-      if ( log_print_ == 1 ) then  
-        write(fid_,'(a,1x,i5,1x,1(a,1x,f15.8,3x),2(a,1x,es11.3,2x),4(a,1x,f6.2,1x))')'iter:',iter,&
-                   & 'E(k):',current_energy,'E(k)-E(k-1)',-delta_energy,'||g||',grad_norm_,       &
-                   & 't(g+h):',t_gh,'t(E):',t_ene,'t(e^U):',t_exp,'t(tran):',t_trans
       endif
 
-      last_energy = current_energy
+      ! compute transformation matrix
+      call compute_exponential(kappa_)
+
+      ! transform the integrals
+      call transform_driver(int1,int2,mo_coeff)
+      
+      ! calculate the current energy  
+      call compute_energy(int1,int2,den1,den2)
+      e_new = e_total_ 
+
+      ! calculate energy change
+      delta_energy = e_new - e_init
+
+      if ( log_print_ == 1 ) then  
+        if (delta_energy < 0.0_wp) then
+          write(fid_,'(a,1x,i2,1x,a,1x,f15.8,1x,3(a,1x,es10.3,1x),a)')'iter:',iter,&
+               & 'E(k)',e_new,'dE',delta_energy,'||g||',grad_norm_,'|R|',step_size
+        else
+          write(fid_,'(a,1x,i2,1x,a,1x,f15.8,1x,3(a,1x,es10.3,1x),a)')'iter:',iter,&
+               & 'E(k)',e_new,'dE',delta_energy,'||g||',grad_norm_,'|R|',step_size,'rejected'
+        endif
+      endif
 
       iter = iter + 1
 
+      evaluate_gradient = 1
+      if ( delta_energy > 0.0_wp ) evaluate_gradient = 0
+
       if ( iter == max_iter ) exit
 
-      if ( ( delta_energy > delta_energy_tolerance ) .or. (grad_norm_ > gradient_norm_tolerance) ) cycle
+      if ( ( abs(delta_energy) > delta_energy_tolerance ) .or. (grad_norm_ > gradient_norm_tolerance) ) cycle
 
       converged = 1
 
@@ -210,7 +209,7 @@ module focas_driver
       endif
     endif
 
-!    stop
+    last_energy = e_new
 
     orbopt_data(10) = real(iter,kind=wp)
     orbopt_data(11) = grad_norm_
