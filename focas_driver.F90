@@ -42,8 +42,8 @@ module focas_driver
     integer  :: iter,max_iter,error,converged
    
     ! variables for trust radius
-    integer :: evaluate_gradient 
-    real(wp) :: step_size,e_new,e_init
+    integer :: evaluate_gradient,n_reject 
+    real(wp) :: step_size,step_size_factor,e_new,e_init
 
     ! other variables
     logical :: fexist
@@ -129,14 +129,16 @@ module focas_driver
     converged               = 0
 
     ! initialize trust radius variables
-    step_size         =  1.0_wp
+    step_size         = 1.0_wp
     evaluate_gradient = 1
+    step_size_factor  = 1.0_wp
 
     do 
 
       if ( evaluate_gradient == 1 ) then
 
         ! this means that the last step lowered the energy
+        n_reject = 0 
 
         ! calculate the current energy  
         call compute_energy(int1,int2,den1,den2)
@@ -157,9 +159,12 @@ module focas_driver
 
       else
 
+        ! last step did not lower the energy
+
         ! update step size and adjust kappa
-        step_size = step_size / 2.0_wp
+        step_size = step_size * step_size_factor
         kappa_ = step_size * orbital_gradient_
+        n_reject = n_reject + 1
 
       endif
 
@@ -192,6 +197,10 @@ module focas_driver
       if ( delta_energy > 0.0_wp ) evaluate_gradient = 0
 
       if ( iter == max_iter ) exit
+
+
+      if ( n_reject == 1 ) exit
+!      if ( ( abs(delta_energy) < 1.0e-6_wp ) .and. ( n_reject > 4 ) ) exit
 
       if ( ( abs(delta_energy) > delta_energy_tolerance ) .or. (grad_norm_ > gradient_norm_tolerance) ) cycle
 
