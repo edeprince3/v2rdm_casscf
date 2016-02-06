@@ -160,6 +160,7 @@ module focas_gradient
     max_grad_val_ = 0.0_wp
     max_grad_ind_ = 0
     max_grad_typ_ = 0
+    max_grad_sym_ = 0
 
     do a_sym = 1 , nirrep_
 
@@ -181,6 +182,8 @@ module focas_gradient
           max_grad_ind_(2) = i
 
           max_grad_typ_    = 2
+
+          max_grad_sym_    = a_sym
 
         end do
 
@@ -213,6 +216,8 @@ module focas_gradient
 
           max_grad_typ_    = 1
 
+          max_grad_sym_    = t_sym
+
         end do
 
       end do
@@ -243,6 +248,8 @@ module focas_gradient
           max_grad_ind_(2) = t
 
           max_grad_typ_    = 4
+
+          max_grad_sym_    = a_sym
 
         end do
 
@@ -276,6 +283,8 @@ module focas_gradient
             max_grad_ind_(2) = u
 
             max_grad_typ_    = 3
+
+            max_grad_sym_    = t_sym
 
           end do
 

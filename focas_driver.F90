@@ -137,11 +137,11 @@ module focas_driver
 
       write(fid_,*)
 
-      write(fid_,'((a4,1x),(a15,1x),3(a10,1x),1(a4,1x),(a9,1x),(a7,1x),(a10,1x),(a8,1x),a6)') &
-                & 'iter','E(k)','dE','||g||','max|g|','type','(i,j)','n_large','|g_large|','step','accept'
+      write(fid_,'((a4,1x),(a15,1x),3(a10,1x),1(a4,1x),(a3,1x),(a9,1x),(a7,1x),(a10,1x),(a8,1x),a6)') &
+                & 'iter','E(k)','dE','||g||','max|g|','type','sym','(i,j)','n_large','|g_large|','step','accept'
   
       write(fid_,'(a)')('---------------------------------------------------------------------&
-                       & ---------------------------------')
+                       & -------------------------------------')
 
     end if
 
@@ -196,9 +196,10 @@ module focas_driver
       if ( log_print_ == 1 ) then  
         if (delta_energy < 0.0_wp) then
 
-          write(fid_,'((i4,1x),(f15.8,1x),3(es10.3,1x),(a4,1x),2(i4,1x),(i7,1x),(es10.3,1x),(f8.5,1x),a6)') &
-              iter,e_new,delta_energy,grad_norm_,max_grad_val_,g_element_type_(max_grad_typ_),     &
-              max_grad_ind_,n_grad_large_,norm_grad_large_,step_size,'yes'
+          write(fid_,'((i4,1x),(f15.8,1x),3(es10.3,1x),(a4,1x),(i3,1x),2(i4,1x),(i7,1x),              &
+              & (es10.3,1x),(f8.5,1x),a6)')iter,e_new,delta_energy,grad_norm_,max_grad_val_,          &
+              & g_element_type_(max_grad_typ_),max_grad_sym_,trans_%class_to_irrep_map(max_grad_ind_),&
+              & n_grad_large_,norm_grad_large_,step_size,'yes'
 
         else
 

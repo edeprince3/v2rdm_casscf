@@ -155,6 +155,7 @@ module focas_data
   real(wp) :: max_grad_val_                                        ! largest gradient element
   real(wp) :: norm_grad_large_                                     ! total norm of large gradient elements 
   integer :: max_grad_ind_(2)                                      ! orbitalindeces for largest gradient element
+  integer :: max_grad_sym_                                         ! orbital pair symmetry
   integer :: max_grad_typ_                                         ! type of orbital rotation
   integer :: n_grad_large_                                         ! number of large gradient elements (val <= +/- 0.75_*max_grad_val) 
 
