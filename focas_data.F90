@@ -7,6 +7,7 @@ module focas_data
   integer, parameter :: ip = selected_int_kind(16)                  ! 64-bit integers (integral addressing)
   integer, parameter :: fid_ = 12345                               ! file identifier for output file
   integer, parameter :: max_nirrep_=8                              ! maximum number of irreps
+  character(3), parameter :: g_element_type_(4) =(/'a-i','e-i','a-a','e-a'/)
   integer, parameter :: group_mult_tab_(max_nirrep_,max_nirrep_) & ! irrep multiplication table
       & = reshape( (/    &  
       & 1,2,3,4,5,6,7,8, &
@@ -150,7 +151,13 @@ module focas_data
   real(wp) :: e_active_                                            ! active space energy
   real(wp) :: grad_norm_                                           ! norm of the gradient ddot(g,g)
   real(wp) :: min_diag_hessian_                                    ! smallest diagonal Hessian element
- 
+
+  real(wp) :: max_grad_val_                                        ! largest gradient element
+  real(wp) :: norm_grad_large_                                     ! total norm of large gradient elements 
+  integer :: max_grad_ind_(2)                                      ! orbitalindeces for largest gradient element
+  integer :: max_grad_typ_                                         ! type of orbital rotation
+  integer :: n_grad_large_                                         ! number of large gradient elements (val <= +/- 0.75_*max_grad_val) 
+
   contains
 
     pure function pq_index(i,j)

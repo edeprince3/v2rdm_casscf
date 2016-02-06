@@ -39,7 +39,7 @@ module focas_driver
     ! iteration variables
     real(wp) :: current_energy,last_energy,delta_energy,gradient_norm_tolerance,delta_energy_tolerance
     real(wp) :: initial_energy
-    integer  :: iter,max_iter,error,converged
+    integer  :: i,iter,max_iter,error,converged
    
     ! variables for trust radius
     integer :: evaluate_gradient,n_reject 
@@ -133,6 +133,18 @@ module focas_driver
     evaluate_gradient = 1
     step_size_factor  = 1.0_wp
 
+    if ( log_print_ == 1 ) then
+
+      write(fid_,*)
+
+      write(fid_,'((a4,1x),(a15,1x),3(a10,1x),1(a4,1x),(a9,1x),(a7,1x),(a10,1x),(a8,1x),a6)') &
+                & 'iter','E(k)','dE','||g||','max|g|','type','(i,j)','n_large','|g_large|','step','accept'
+  
+      write(fid_,'(a)')('---------------------------------------------------------------------&
+                       & ---------------------------------')
+
+    end if
+
     do 
 
       if ( evaluate_gradient == 1 ) then
@@ -183,11 +195,17 @@ module focas_driver
 
       if ( log_print_ == 1 ) then  
         if (delta_energy < 0.0_wp) then
-          write(fid_,'(a,1x,i2,1x,a,1x,f15.8,1x,3(a,1x,es10.3,1x),a)')'iter:',iter,&
-               & 'E(k)',e_new,'dE',delta_energy,'||g||',grad_norm_,'|R|',step_size
+
+          write(fid_,'((i4,1x),(f15.8,1x),3(es10.3,1x),(a4,1x),2(i4,1x),(i7,1x),(es10.3,1x),(f8.5,1x),a6)') &
+              iter,e_new,delta_energy,grad_norm_,max_grad_val_,g_element_type_(max_grad_typ_),     &
+              max_grad_ind_,n_grad_large_,norm_grad_large_,step_size,'yes'
+
         else
-          write(fid_,'(a,1x,i2,1x,a,1x,f15.8,1x,3(a,1x,es10.3,1x),a)')'iter:',iter,&
-               & 'E(k)',e_new,'dE',delta_energy,'||g||',grad_norm_,'|R|',step_size,'rejected'
+
+          write(fid_,'((i4,1x),(f15.8,1x),3(es10.3,1x),(a4,1x),2(i4,1x),(i7,1x),(es10.3,1x),(f8.5,1x),a6)') &
+              iter,e_new,delta_energy,grad_norm_,max_grad_val_,g_element_type_(max_grad_typ_),     &
+              max_grad_ind_,n_grad_large_,norm_grad_large_,step_size,'no'
+
         endif
       endif
 
@@ -211,6 +229,10 @@ module focas_driver
     end do
 
     if ( log_print_ == 1 ) then
+
+      write(fid_,'(a)')('---------------------------------------------------------------------&
+                       & ---------------------------------')
+
       if ( converged == 1 ) then
         write(fid_,'(a)')'gradient descent converged'
       else

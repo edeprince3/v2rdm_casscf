@@ -43,6 +43,9 @@ module focas_gradient
     ! compute gradient
     call compute_orbital_gradient()
 
+    ! determine value,type, and orbital indices for largest gradient element
+    call check_max_gradient()
+
 !gg    ! print the gradient 
 !gg    if ( log_print_ == 1 ) call print_orbital_gradient()
 
@@ -143,6 +146,277 @@ module focas_gradient
 
   end subroutine print_orbital_gradient
 
+  subroutine check_max_gradient()
+
+    implicit none
+
+    integer  :: grad_ind,a_sym,t_sym,i,a,t,u
+    real(wp) :: abs_grad_val,grad_tol
+
+    ! ********************************
+    ! external - doubly-occupied pairs
+    ! ********************************
+
+    max_grad_val_ = 0.0_wp
+    max_grad_ind_ = 0
+    max_grad_typ_ = 0
+
+    do a_sym = 1 , nirrep_
+
+      grad_ind = rot_pair_%pair_offset(a_sym,rot_pair_%ext_doc_type)
+
+      do i = first_index_(a_sym,1) , last_index_(a_sym,1)
+
+        do a = first_index_(a_sym,3) , last_index_(a_sym,3)
+
+          grad_ind = grad_ind + 1
+
+          abs_grad_val = abs(orbital_gradient_(grad_ind))
+
+          if ( abs_grad_val < max_grad_val_ ) cycle
+
+          max_grad_val_    = abs_grad_val 
+
+          max_grad_ind_(1) = a
+          max_grad_ind_(2) = i
+
+          max_grad_typ_    = 2
+
+        end do
+
+      end do
+
+    end do
+
+    ! ******************************
+    ! acitve - doubly-occupied pairs
+    ! ******************************
+
+    do t_sym = 1 , nirrep_
+
+      grad_ind = rot_pair_%pair_offset(t_sym,rot_pair_%act_doc_type)
+
+      do i = first_index_(t_sym,1) , last_index_(t_sym,1)
+
+        do t = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+          grad_ind = grad_ind + 1
+
+          abs_grad_val = abs(orbital_gradient_(grad_ind))
+
+          if ( abs_grad_val < max_grad_val_ ) cycle
+
+          max_grad_val_    = abs_grad_val
+
+          max_grad_ind_(1) = t
+          max_grad_ind_(2) = i
+
+          max_grad_typ_    = 1
+
+        end do
+
+      end do
+
+    end do
+
+    ! ***********************
+    ! external - active pairs
+    ! ***********************
+
+    do a_sym = 1 , nirrep_
+
+      grad_ind = rot_pair_%pair_offset(a_sym,rot_pair_%ext_act_type)
+
+      do t = first_index_(a_sym,2) , last_index_(a_sym,2)
+
+        do a = first_index_(a_sym,3) , last_index_(a_sym,3)
+
+          grad_ind = grad_ind + 1
+
+          abs_grad_val = abs(orbital_gradient_(grad_ind))
+
+          if ( abs_grad_val < max_grad_val_ ) cycle
+
+          max_grad_val_    = abs_grad_val
+
+          max_grad_ind_(1) = a
+          max_grad_ind_(2) = t
+
+          max_grad_typ_    = 4
+
+        end do
+
+      end do
+
+    end do
+
+    ! *********************
+    ! active - active pairs
+    ! *********************
+
+    if ( include_aa_rot_ == 1 ) then
+
+      do t_sym = 1 , nirrep_
+
+        grad_ind = rot_pair_%pair_offset(t_sym,rot_pair_%act_act_type)
+
+        do u = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+          do t = u + 1 , last_index_(t_sym,2)
+
+            grad_ind = grad_ind + 1
+
+            abs_grad_val = abs(orbital_gradient_(grad_ind))
+
+            if ( abs_grad_val < max_grad_val_ ) cycle
+
+            max_grad_val_    = abs_grad_val
+
+            max_grad_ind_(1) = t
+            max_grad_ind_(2) = u
+
+            max_grad_typ_    = 3
+
+          end do
+
+        end do
+
+      end do
+
+    end if
+
+    ! *************************************************************
+    ! check how many elements are within 75% of the largest element
+    ! *************************************************************
+
+    grad_tol         = 0.75_wp * max_grad_val_
+
+    norm_grad_large_ = 0.0_wp
+
+    n_grad_large_    = 0
+
+    ! ********************************
+    ! external - doubly-occupied pairs
+    ! ********************************
+
+    do a_sym = 1 , nirrep_
+
+      grad_ind = rot_pair_%pair_offset(a_sym,rot_pair_%ext_doc_type)
+
+      do i = first_index_(a_sym,1) , last_index_(a_sym,1)
+
+        do a = first_index_(a_sym,3) , last_index_(a_sym,3)
+
+          grad_ind = grad_ind + 1
+
+          abs_grad_val = abs(orbital_gradient_(grad_ind))
+
+          if ( abs_grad_val < grad_tol ) cycle
+
+          norm_grad_large_ = norm_grad_large_ + abs_grad_val * abs_grad_val
+
+          n_grad_large_ = n_grad_large_ + 1
+
+        end do
+
+      end do
+
+    end do
+
+    ! ******************************
+    ! acitve - doubly-occupied pairs
+    ! ******************************
+
+    do t_sym = 1 , nirrep_
+
+      grad_ind = rot_pair_%pair_offset(t_sym,rot_pair_%act_doc_type)
+
+      do i = first_index_(t_sym,1) , last_index_(t_sym,1)
+
+        do t = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+          grad_ind = grad_ind + 1
+
+          abs_grad_val = abs(orbital_gradient_(grad_ind))
+
+          if ( abs_grad_val < grad_tol ) cycle
+
+          norm_grad_large_ = norm_grad_large_ + abs_grad_val * abs_grad_val
+
+          n_grad_large_ = n_grad_large_ + 1
+
+        end do
+
+      end do
+
+    end do
+
+    ! ***********************
+    ! external - active pairs
+    ! ***********************
+
+    do a_sym = 1 , nirrep_
+
+      grad_ind = rot_pair_%pair_offset(a_sym,rot_pair_%ext_act_type)
+
+      do t = first_index_(a_sym,2) , last_index_(a_sym,2)
+
+        do a = first_index_(a_sym,3) , last_index_(a_sym,3)
+
+          grad_ind = grad_ind + 1
+
+          abs_grad_val = abs(orbital_gradient_(grad_ind))
+
+          if ( abs_grad_val < grad_tol ) cycle
+
+          norm_grad_large_ = norm_grad_large_ + abs_grad_val * abs_grad_val
+
+          n_grad_large_ = n_grad_large_ + 1
+
+        end do
+
+      end do
+
+    end do
+
+    ! *********************
+    ! active - active pairs
+    ! *********************
+
+    if ( include_aa_rot_ == 1 ) then
+
+      do t_sym = 1 , nirrep_
+
+        grad_ind = rot_pair_%pair_offset(t_sym,rot_pair_%act_act_type)
+
+        do u = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+          do t = u + 1 , last_index_(t_sym,2)
+
+            grad_ind = grad_ind + 1
+
+            abs_grad_val = abs(orbital_gradient_(grad_ind))
+
+            if ( abs_grad_val < grad_tol ) cycle
+
+            norm_grad_large_ = norm_grad_large_ + abs_grad_val * abs_grad_val
+
+            n_grad_large_ = n_grad_large_ + 1
+
+          end do
+
+        end do
+
+      end do
+
+    end if
+
+    norm_grad_large_ = sqrt(norm_grad_large_)
+
+    return
+
+  end subroutine check_max_gradient
+
   subroutine compute_orbital_gradient()
 
     ! subroutine to compute the orbital gradient without explicit storage
@@ -180,8 +454,6 @@ module focas_gradient
           orbital_gradient_(grad_ind) = 4.0_wp*( fock_i_%occ(a_sym)%val(a_i,i_i) &
                                        &       + fock_a_%occ(a_sym)%val(a_i,i_i) )
 
-!          write(*,'(a,5x,2(i4,1x),10x,es25.16)')'ed',a,i,orbital_gradient_(grad_ind)
-
         end do
 
       end do
@@ -211,8 +483,6 @@ module focas_gradient
                                       &  +       fock_a_%occ(t_sym)%val(t_i,i_i) )  &
                                       & - 2.0_wp * ( q_(t - ndoc_tot_,i) + z_(t - ndoc_tot_,i))
 
-!          write(*,'(a,5x,2(i4,1x),10x,es25.16)')'ad',t,i,orbital_gradient_(grad_ind)
-
         end do
 
       end do
@@ -234,8 +504,6 @@ module focas_gradient
           grad_ind = grad_ind + 1
 
           orbital_gradient_(grad_ind) = 2.0_wp * ( q_(t - ndoc_tot_,a) + z_(t - ndoc_tot_,a))
-
-!          write(*,'(a,5x,2(i4,1x),10x,es25.16)')'ea',a,t,orbital_gradient_(grad_ind)
 
         end do
     
@@ -261,8 +529,6 @@ module focas_gradient
 
             orbital_gradient_(grad_ind) = 2.0_wp * ( q_(u - ndoc_tot_,t) + &
                  & z_(u - ndoc_tot_,t) - q_(t - ndoc_tot_,u) - z_(t - ndoc_tot_,u))
-
-!          write(*,'(a,5x,2(i4,1x),10x,es25.16)')'aa',t,u,orbital_gradient_(grad_ind)
 
           end do
  
