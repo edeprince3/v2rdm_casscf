@@ -59,7 +59,7 @@ int read_options(std::string name, Options& options)
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
         /*- Do save progress in a checkpoint file? -*/
         options.add_bool("WRITE_CHECKPOINT_FILE",false);
-        /*- Frequency of orbital optimization.  The checkpoint file is 
+        /*- Frequency of checkpoint file generation.  The checkpoint file is 
         updated every CHECKPOINT_FREQUENCY iterations.  The default frequency
         will be ORBOPT_FREQUENCY. -*/
         options.add_int("CHECKPOINT_FREQUENCY",200);
@@ -81,7 +81,7 @@ int read_options(std::string name, Options& options)
         /*- convergence in the primal/dual energy gap -*/
         options.add_double("E_CONVERGENCE", 1e-4);
         /*- convergence in the primal error -*/
-        options.add_double("R_CONVERGENCE", 1e-3);
+        options.add_double("R_CONVERGENCE", 1e-4);
         /*- convergence for conjugate gradient solver. currently not used. -*/
         options.add_double("CG_CONVERGENCE", 1e-5);
         /*- maximum number of bpsdp outer iterations -*/

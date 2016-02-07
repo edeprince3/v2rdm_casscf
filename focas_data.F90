@@ -7,6 +7,7 @@ module focas_data
   integer, parameter :: ip = selected_int_kind(16)                  ! 64-bit integers (integral addressing)
   integer, parameter :: fid_ = 12345                               ! file identifier for output file
   integer, parameter :: max_nirrep_=8                              ! maximum number of irreps
+  character(3), parameter :: g_element_type_(4) =(/'a-i','e-i','a-a','e-a'/)
   integer, parameter :: group_mult_tab_(max_nirrep_,max_nirrep_) & ! irrep multiplication table
       & = reshape( (/    &  
       & 1,2,3,4,5,6,7,8, &
@@ -24,7 +25,7 @@ module focas_data
   real(wp), allocatable :: z_(:,:)                                 ! auxiliary matrix that contains cotractions of the fock_i with den1 ( nact*nmo storage)
 !  real(wp), allocatable :: fock_gen_(:,:)                          ! generalized Fock matrix (nmo*nmo storage)
   real(wp), allocatable :: orbital_gradient_(:)                    ! orbital gradient
-  real(wp), allocatable :: diagonal_orbital_hessian_(:)            ! diagonal elements of the orbital hessian
+  real(wp), allocatable :: orbital_hessian_(:)                     ! diagonal elements of the orbital hessian
   real(wp), allocatable :: kappa_(:)                               ! orbital rotation parameters (lt elements of skew-symmetric matrix, npair_ storage)
 
   ! *** symmetry data for integrals and densities
@@ -32,7 +33,7 @@ module focas_data
   type sym_info
     integer, allocatable     :: ngempi(:)                          ! number of geminals per irrep
     integer, allocatable     :: nnzpi(:)                           ! number of nnz matrix elements
-    integer, allocatable     :: offset(: )                         ! offset for first matrix element in this irrep
+    integer, allocatable     :: offset(:)                          ! offset for first matrix element in this irrep
     integer, allocatable     :: gemind(:,:)                        ! symmetry-reduced index of a geminal 
   end type sym_info
 
@@ -72,6 +73,8 @@ module focas_data
     integer :: nQ                                                  !  number of auxiliary function for density-fitted integrals
     integer :: use_df_teints                                       ! flag to use density-fitted 2-e integrals
     integer, allocatable :: class_to_df_map(:)                     ! mapping array to map orbital indeces from class order to df order
+    integer, allocatable :: occgemind(:,:)                         ! symmetry reduced geminal indeces for occupied oritals
+    integer, allocatable :: noccgempi(:)                           ! number of symmetry reduced geminals per irrep
   end type df_info
 
   type diis_info
@@ -92,6 +95,10 @@ module focas_data
     type(vector_block), allocatable :: ext(:)
   end type fock_info
 
+  type qint_info
+    type(matrix_block), allocatable :: tuQ(:) 
+  end type qint_info
+
   ! *** allocatable derived types
 
   type(sym_info)   :: dens_                                        ! density symmetry data
@@ -100,6 +107,7 @@ module focas_data
   type(diis_info)  :: diis_
   type(fock_info)  :: fock_i_ 
   type(fock_info)  :: fock_a_
+  type(qint_info)  :: qint_
  
   ! indexing derived types
   
@@ -143,7 +151,14 @@ module focas_data
   real(wp) :: e_active_                                            ! active space energy
   real(wp) :: grad_norm_                                           ! norm of the gradient ddot(g,g)
   real(wp) :: min_diag_hessian_                                    ! smallest diagonal Hessian element
- 
+
+  real(wp) :: max_grad_val_                                        ! largest gradient element
+  real(wp) :: norm_grad_large_                                     ! total norm of large gradient elements 
+  integer :: max_grad_ind_(2)                                      ! orbitalindeces for largest gradient element
+  integer :: max_grad_sym_                                         ! orbital pair symmetry
+  integer :: max_grad_typ_                                         ! type of orbital rotation
+  integer :: n_grad_large_                                         ! number of large gradient elements (val <= +/- 0.75_*max_grad_val) 
+
   contains
 
     pure function pq_index(i,j)

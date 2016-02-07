@@ -32,15 +32,24 @@ module focas_driver
     real(wp), intent(in)    :: den2(nnz_den2)  ! nonzero 2-e density matrix elements
     ! character
     character(*), intent(in) :: fname          ! name of file to print output
+    ! step size control parameters
+    real(wp), parameter     :: r_increase_tol=0.75_wp  ! dE ratio above which step size is increased
+    real(wp), parameter     :: r_decrease_tol=0.25_wp  ! dE ratio below which step size is reduced
+    real(wp), parameter     :: r_increase_fac=1.20_wp  ! factor by which to increase step size
+    real(wp), parameter     :: r_decrease_fac=0.70_wp  ! factor by which to reduce the step size 
 
     ! timing variables
     real(wp) :: t0,t1,t_ene,t_gh,t_exp,t_trans
 
     ! iteration variables
     real(wp) :: current_energy,last_energy,delta_energy,gradient_norm_tolerance,delta_energy_tolerance
-    real(wp) :: step_size,initial_energy
-    integer  :: iter,max_iter,error,converged
-  
+    real(wp) :: initial_energy,delta_energy_approximate
+    integer  :: i,iter,max_iter,error,converged
+   
+    ! variables for trust radius
+    integer :: evaluate_gradient,reject 
+    real(wp) :: step_size,step_size_update,step_size_factor,e_new,e_init,de_ratio
+
     ! other variables
     logical :: fexist
 
@@ -105,8 +114,11 @@ module focas_driver
     if ( df_vars_%use_df_teints == 1 ) error = df_map_setup(nnz_int2)
     if ( error /= 0 ) stop
 
-    ! print information
-    if ( log_print_ == 1 ) call print_info()    
+    ! allocate intermediate matrices for DF integrals
+    if ( df_vars_%use_df_teints == 1 ) call allocate_qint()
+
+!    ! print information
+!    if ( log_print_ == 1 ) call print_info()    
 
     ! **********************************************************************************
     ! *** at this point, everything is allocated and we are ready to do the optimization
@@ -121,77 +133,116 @@ module focas_driver
     kappa_                  = 0.0_wp
     converged               = 0
 
+    ! initialize trust radius variables
+    step_size         = 1.0_wp
+    evaluate_gradient = 1
+    step_size_factor  = 1.0_wp
+
+    if ( log_print_ == 1 ) then
+
+      write(fid_,*)
+
+      write(fid_,'((a4,1x),(a20,1x),4(a10,1x),1(a4,1x),(a3,1x),(a9,1x),(a7,1x),(a10,1x),(a8,1x),a6)') &
+                & 'iter','E(k)','dE','dE_pred','||g||','max|g|','type','sym','(i,j)','n_large',       &
+                & '|g_large|','step','accept'
+  
+      write(fid_,'(a)')('---------------------------------------------------------------------&
+                       & ------------------------------------------------')
+
+    end if
+
     do 
+
+      if ( evaluate_gradient == 1 ) then
+
+        ! calculate the current energy  
+        call compute_energy(int1,int2,den1,den2)
+        e_init = e_total_ 
+        
+        ! save initial energy
+        if ( iter == 0 ) initial_energy = e_init 
+
+        ! construct gradient (temporary Fock matrices allocated/deallocated within routine)
+        call orbital_gradient(int1,int2,den1,den2)
       
-      ! transform integrals
-      t0 = timer()
+        ! calculate diagonal Hessian elements
+        call diagonal_hessian(q_,z_,int2,den1,den2)
 
-      if ( iter /= 0 ) call transform_driver(int1,int2,mo_coeff)      
+        ! calculate approximate energy change
+        delta_energy_approximate = compute_approximate_de()
 
-      t1 = timer()
-      t_trans = t1 - t0
+        ! calculate -g/H
+        call precondition_step(kappa_)
 
-      ! calculate the current energy
-      t0=timer()
+        ! calculate approximate energy change
+        delta_energy_approximate = compute_approximate_de()
 
-      call compute_energy(int1,int2,den1,den2)
+        ! scale kappa by step size
+        kappa_ = step_size * kappa_
 
-      current_energy = e_total_
+      end if
 
-      if ( iter == 0 ) initial_energy = current_energy
-
-      delta_energy = last_energy - current_energy
-
-      t1=timer()
-      t_ene = t1 - t0
-
-      t0 = timer()
-      ! construct gradient (temporary Fock matrices allocated/deallocated within routine)
-      call orbital_gradient(int1,int2,den1,den2)
-
-      ! precondition gradient with the diagonal Hessian
-      call diagonal_inverse_hessian_preconditioner(orbital_gradient_,&
-          & q_,z_,int2,den1,den2)
-
-      ! update kappa_
-      step_size = 1.0_wp
-      kappa_    = - step_size * orbital_gradient_
-!      P = P + kappa_
-
-      ! possible DIIS extrapolation
-
-!      write(*,*)'before'
-!      write(*,*)P
-!
-!      if ( diis_%do_diis == 1 ) call diis_extrapolate(P,-kappa_)
-!
-!      write(*,*)'after',diis_%do_diis
-!      write(*,*)kappa_
-
-      t1 = timer()
-      t_gh = t1 - t0
-
-      ! from kappa, construct unitary transformation matrix ( U = exp(kappa) )
-      t0 = timer()
-
+      ! compute transformation matrix
       call compute_exponential(kappa_)
 
-      t1 = timer()
-      t_exp = t1 - t0
+      ! transform the integrals
+      call transform_driver(int1,int2,mo_coeff)
+      
+      ! calculate the current energy  
+      call compute_energy(int1,int2,den1,den2)
+      e_new = e_total_ 
+
+      ! calculate energy change
+      delta_energy = e_new - e_init
+
+      reject = 0 
+      if ( delta_energy > 0 ) reject = 1
 
       if ( log_print_ == 1 ) then  
-        write(fid_,'(a,1x,i5,1x,1(a,1x,f15.8,3x),2(a,1x,es11.3,2x),4(a,1x,f6.2,1x))')'iter:',iter,&
-                   & 'E(k):',current_energy,'E(k)-E(k-1)',-delta_energy,'||g||',grad_norm_,       &
-                   & 't(g+h):',t_gh,'t(E):',t_ene,'t(e^U):',t_exp,'t(tran):',t_trans
+
+        write(fid_,'((i4,1x),(f20.13,1x),4(es10.3,1x),(a4,1x),(i3,1x),2(i4,1x),(i7,1x),                &
+            & (es10.3,1x),(f8.5,1x),i6)')iter,e_new,delta_energy,delta_energy_approximate,grad_norm_, &
+            & max_grad_val_,g_element_type_(max_grad_typ_),max_grad_sym_,                             &
+            & trans_%class_to_irrep_map(max_grad_ind_),n_grad_large_,norm_grad_large_,step_size,reject
+
       endif
 
-      last_energy = current_energy
+      de_ratio = delta_energy/delta_energy_approximate
+
+      evaluate_gradient = 1
+
+      if ( de_ratio > r_increase_tol ) then
+ 
+        step_size = step_size * r_increase_fac
+
+      elseif ( de_ratio < r_decrease_tol ) then
+
+        step_size_update = step_size * ( 1 - r_decrease_fac )
+
+        step_size = step_size * r_decrease_fac
+ 
+        if ( delta_energy > 0 ) then
+
+          evaluate_gradient = 0
+
+          ! it is assumed that the orbitals have been rotated according to kappa_o = - r_o * g/H
+          ! if the step size is decreased by f, we transform according to kappa_n = r_o * ( 1 - f ) g/H
+
+          ! calculate - g/H
+          call precondition_step(kappa_)
+
+          ! determine new kappa
+          kappa_ = - step_size_update * kappa_
+     
+        end if
+
+      endif
 
       iter = iter + 1
 
       if ( iter == max_iter ) exit
 
-      if ( ( delta_energy > delta_energy_tolerance ) .or. (grad_norm_ > gradient_norm_tolerance) ) cycle
+      if ( ( abs(delta_energy) > delta_energy_tolerance ) .or. (grad_norm_ > gradient_norm_tolerance) ) cycle
 
       converged = 1
 
@@ -200,6 +251,10 @@ module focas_driver
     end do
 
     if ( log_print_ == 1 ) then
+
+      write(fid_,'(a)')('---------------------------------------------------------------------&
+                       & ------------------------------------------------')
+
       if ( converged == 1 ) then
         write(fid_,'(a)')'gradient descent converged'
       else
@@ -207,7 +262,27 @@ module focas_driver
       endif
     endif
 
-!    stop
+    if ( evaluate_gradient == 0 ) then
+
+      ! this means that the last step was not accepted, so transform back to last known good step
+
+      ! calculate - g/H
+      call precondition_step(kappa_)
+
+      ! determine new kappa
+      kappa_ = - ( step_size / r_decrease_fac ) * kappa_
+
+      ! compute transformation matrix
+      call compute_exponential(kappa_)
+
+      ! transform the integrals
+      call transform_driver(int1,int2,mo_coeff)      
+
+    end if
+
+    ! calculate the current energy  
+    call compute_energy(int1,int2,den1,den2)
+    last_energy = e_total_
 
     orbopt_data(10) = real(iter,kind=wp)
     orbopt_data(11) = grad_norm_
@@ -234,10 +309,13 @@ module focas_driver
   subroutine deallocate_final()
     implicit none
     call deallocate_temporary_fock_matrices()
+    if ( df_vars_%use_df_teints == 1 )       call deallocate_qint()
     if (allocated(orbital_gradient_))        deallocate(orbital_gradient_)
     if (allocated(kappa_))                   deallocate(kappa_)
     if (allocated(rot_pair_%pair_offset))    deallocate(rot_pair_%pair_offset)
     if (allocated(df_vars_%class_to_df_map)) deallocate(df_vars_%class_to_df_map)
+!    if (allocated(df_vars_%occgemind))       deallocate(df_vars_%occgemind)
+    if (allocated(df_vars_%noccgempi))       deallocate(df_vars_%noccgempi)
     call deallocate_transformation_matrices()
     call deallocate_hessian_data()
     return
@@ -246,9 +324,10 @@ module focas_driver
   subroutine allocate_initial()
     implicit none
 
-    ! allocate orbital gradient/kappa
+    !allocate orbital gradient/kappa
     allocate(orbital_gradient_(rot_pair_%n_tot))
     allocate(kappa_(rot_pair_%n_tot))
+    call allocate_hessian_data()
     orbital_gradient_ = 0.0_wp
     kappa_            = 0.0_wp
  
@@ -262,7 +341,7 @@ module focas_driver
     implicit none
     integer(ip), intent(in) :: nnz_int2
     integer(ip) :: num
-    integer :: npair,i_sym,i_class,ic,idf
+    integer :: npair,i_sym,i_class,ic,idf,j_sym,j_class,i,j,ij_sym,j_max
 
     df_map_setup = 1
 
@@ -307,10 +386,61 @@ module focas_driver
 
     end if
 
+    allocate(df_vars_%noccgempi(nirrep_))
+    df_vars_%noccgempi=dens_%ngempi
+
     df_map_setup = 0
 
     return
   end function df_map_setup
+
+  function compute_approximate_de()
+
+    implicit none
+
+    real(wp) :: compute_approximate_de,ddot
+
+    integer  :: i
+
+    compute_approximate_de= 2.0_wp * ddot(rot_pair_%n_tot,orbital_gradient_,1,kappa_,1)
+
+    do i = 1 , rot_pair_%n_tot
+
+      compute_approximate_de = compute_approximate_de + kappa_(i) * orbital_hessian_(i) * kappa_(i)
+ 
+    end do
+
+    compute_approximate_de = 0.5_wp * compute_approximate_de 
+
+    return
+
+  end function compute_approximate_de
+
+  subroutine precondition_step(step)
+
+    implicit none
+
+    real(wp) :: step(:)
+
+    integer  :: i
+    real(wp) :: h_val
+
+    do i = 1 , rot_pair_%n_tot
+
+      h_val = orbital_hessian_(i)
+
+      if ( h_val < 0.0_wp ) then
+         h_val = - h_val
+         num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
+      endif
+
+      step(i) = - orbital_gradient_(i) / h_val
+
+    end do
+
+    return
+
+  end subroutine precondition_step
 
   subroutine setup_rotation_indeces()
     implicit none

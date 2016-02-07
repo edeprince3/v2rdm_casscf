@@ -6,9 +6,8 @@ module focas_hessian
 
   contains
 
-    subroutine diagonal_inverse_hessian_preconditioner(grad,q,z,int2,den1,den2)
+    subroutine diagonal_hessian(q,z,int2,den1,den2)
       implicit none
-      real(wp), intent(inout) :: grad(:)
       real(wp), intent(in) :: int2(:),den1(:),den2(:)
       real(wp), intent(in) :: q(:,:),z(:,:)
       integer :: error
@@ -19,30 +18,29 @@ module focas_hessian
 
       ! active-doubly occupied pairs
 
-      if ( rot_pair_%n_ad > 0 ) error=diagonal_hessian_ad(grad,fock_i_%occ,fock_a_%occ,q,z,int2,den1,den2)
+      if ( rot_pair_%n_ad > 0 ) error=diagonal_hessian_ad(fock_i_%occ,fock_a_%occ,q,z,int2,den1,den2)
 
       ! active-active pairs
 
-      if ( rot_pair_%n_aa > 0 ) error=diagonal_hessian_aa(grad,fock_i_%occ,q,z,int2,den1,den2)
+      if ( rot_pair_%n_aa > 0 ) error=diagonal_hessian_aa(fock_i_%occ,q,z,int2,den1,den2)
 
       ! external-doubly occupied pairs
 
-      if ( rot_pair_%n_ed > 0 ) error=diagonal_hessian_ed(grad,fock_i_%occ,fock_i_%ext,fock_a_%occ,fock_a_%ext,int2)
+      if ( rot_pair_%n_ed > 0 ) error=diagonal_hessian_ed(fock_i_%occ,fock_i_%ext,fock_a_%occ,fock_a_%ext,int2)
 
       ! external-active pairs
 
-      if ( rot_pair_%n_ea > 0 ) error=diagonal_hessian_ea(grad,fock_i_%ext,fock_a_%ext,q,z,int2,den1,den2)
+      if ( rot_pair_%n_ea > 0 ) error=diagonal_hessian_ea(fock_i_%ext,fock_a_%ext,q,z,int2,den1,den2)
 
       return
-    end subroutine diagonal_inverse_hessian_preconditioner
+    end subroutine diagonal_hessian
 
-    integer function diagonal_hessian_ad(grad,f_i,f_a,q,z,int2,den1,den2)
+    integer function diagonal_hessian_ad(f_i,f_a,q,z,int2,den1,den2)
       implicit none
       ! subroutine to compute the diagonal Hessian matrix element H(ti|ti) according to Eq. 4.7c of
       ! Chaban, Schmidt, Gordon, Theor. Chem. Acc., 97, 88-95 (1997) 
       ! H(ti|ti) = 2 * [ 2 * { ( f_i(t,t) + f_a(t,t) ) - ( f_i(i,i) + f_a(i,i) ) }  + d(t,t) * ( f_i(i,i) + f_a(i,i) ) - q(t,t) -z(t) ]
       ! where z(t,t) = sum_{u} [ d(t,u) * f_i(t,u) ] ] && a \in ext & t,u \in act
-      real(wp), intent(inout) :: grad(:) 
       real(wp), intent(in) :: q(:,:),z(:,:),den1(:),den2(:),int2(:)
       type(matrix_block), intent(in) :: f_i(:),f_a(:)
 
@@ -92,16 +90,9 @@ module focas_hessian
 
             endif
 
-!            write(*,'(a,5x,i5,10x,es25.16)')'ad',grad_ind,h_val
-
-            if ( h_val < 0.0_wp ) then
-               h_val = - h_val
-               num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
-            endif
-
             if ( h_val < min_diag_hessian_ ) h_val = min_diag_hessian_
 
-            grad(grad_ind) = grad(grad_ind) / h_val
+            orbital_hessian_(grad_ind) = h_val
 
           end do
 
@@ -342,14 +333,13 @@ module focas_hessian
 
     end function te_terms_ad_df
 
-    integer function diagonal_hessian_aa(grad,f_i,q,z,int2,den1,den2)
+    integer function diagonal_hessian_aa(f_i,q,z,int2,den1,den2)
       implicit none
       ! subroutine to compute the exact diagonal Hessian matrix element H(tu|tu)
       ! according to Eq. A.3 in Jensen, Chem. Phys. 104, 229, (1982)
       ! H(tu|tu) = 2 * ( d(t,t) * f_i(u,u) + d(u,u) * f_i(t,t) - 2 * d(u,t) * f_i(u,t) 
       !                  - ( q(u,u) + q(t,t) + z(t,t) +z(u,u) ) )
       ! some 2-e contributions are neglected
-      real(wp),intent(inout) :: grad(:)
       real(wp), intent(in) :: den1(:),int2(:),den2(:)
       real(wp), intent(in) :: z(:,:),q(:,:)
       type(matrix_block), intent(in) :: f_i(:)
@@ -402,16 +392,9 @@ module focas_hessian
 
             end if
 
-!            write(*,'(a,5x,i5,10x,es25.16)')'aa',grad_ind,h_val
-
-            if ( h_val < 0.0_wp ) then 
-               h_val = - h_val
-               num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
-            endif
-
             if ( h_val < min_diag_hessian_ ) h_val = min_diag_hessian_
 
-            grad(grad_ind) = grad(grad_ind) / h_val
+            orbital_hessian_(grad_ind) = h_val
 
           end do
 
@@ -734,13 +717,12 @@ module focas_hessian
 
     end function te_terms_aa
 
-    integer function diagonal_hessian_ed(grad,f_i,f_i_ext,f_a,f_a_ext,int2)
+    integer function diagonal_hessian_ed(f_i,f_i_ext,f_a,f_a_ext,int2)
       implicit none
       ! subroutine to compute the diagonal Hessian matrix element H(ia|ia)according to Eq. 4.7a of
       ! Chaban, Schmidt, Gordon, Theor. Chem. Acc., 97, 88-95 (1997) 
       ! H(ai|ai) = 4 * (f_i(a,a) + f_a(a,a) ) - 4 * ( f_i(i,i) + f_a(i,i)) 
       ! a \in ext & i \in act
-      real(wp), intent(inout)        :: grad(:)
       real(wp), intent(in)           :: int2(:)
       type(vector_block), intent(in) :: f_i_ext(:),f_a_ext(:)
       type(matrix_block), intent(in) :: f_i(:),f_a(:)
@@ -786,16 +768,9 @@ module focas_hessian
 
             endif
 
-!            write(*,'(a,5x,i5,10x,es25.16)')'ed',grad_ind,h_val
-
-            if ( h_val < 0.0_wp ) then
-               h_val = - h_val
-               num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
-            endif
-
             if ( h_val < min_diag_hessian_ ) h_val = min_diag_hessian_
 
-            grad(grad_ind) = grad(grad_ind) / h_val
+            orbital_hessian_(grad_ind) = h_val
 
           end do
 
@@ -877,13 +852,12 @@ module focas_hessian
 
     end function te_terms_ed_df
 
-    integer function diagonal_hessian_ea(grad,f_i_ext,f_a_ext,q,z,int2,den1,den2)
+    integer function diagonal_hessian_ea(f_i_ext,f_a_ext,q,z,int2,den1,den2)
       implicit none
       ! subroutine to compute the diagonal Hessian matrix element H(ai|ai) according to Eq. 4.7b of
       ! Chaban, Schmidt, Gordon, Theor. Chem. Acc., 97, 88-95 (1997) 
       ! H(at|at) = 2 * [  d(t,t) * ( f_i(a,a) + f_a(a,a) ) - q(t,t) - z(t,t) ] 
       ! where z(t,t) = sum_{u} [ d(t,u) * f_i(t,u) ]  &&  a \in ext & t,u \in act 
-      real(wp), intent(inout) :: grad(:)
       real(wp), intent(in) :: z(:,:),q(:,:),int2(:),den1(:),den2(:)
       type(vector_block), intent(in) :: f_i_ext(:),f_a_ext(:)
 
@@ -932,17 +906,9 @@ module focas_hessian
 
             endif
 
-!            write(*,'(a,5x,i5,10x,6(es15.6,1x))')'ea',grad_ind,h_val,f_i_ext(a_sym)%val(a_i),&
-!            & f_a_ext(a_sym)%val(a_i),q(t-ndoc_tot_,t),z(t-ndoc_tot_,t),den1(tt_den)
-
-            if ( h_val < 0.0_wp ) then
-               h_val = - h_val
-               num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
-            endif
-
             if ( h_val < min_diag_hessian_ ) h_val = min_diag_hessian_
 
-            grad(grad_ind) = grad(grad_ind) / h_val
+            orbital_hessian_(grad_ind) = h_val
 
           end do
 
@@ -1129,9 +1095,11 @@ module focas_hessian
 
     subroutine allocate_hessian_data()
       implicit none
-      if (allocated(diagonal_orbital_hessian_)) call deallocate_hessian_data()
+      if (allocated(orbital_hessian_)) call deallocate_hessian_data()
 
-      ! allocate(diagonal_orbital_hessian_(rot_pair_%n_tot))
+      allocate(orbital_hessian_(rot_pair_%n_tot))
+
+      orbital_hessian_ = 0.0_wp
 
       return
     end subroutine allocate_hessian_data
@@ -1139,7 +1107,7 @@ module focas_hessian
     subroutine deallocate_hessian_data
       implicit none
 
-      if (allocated(diagonal_orbital_hessian_)) deallocate(diagonal_orbital_hessian_)
+      if (allocated(orbital_hessian_)) deallocate(orbital_hessian_)
       return
     end subroutine deallocate_hessian_data
 
