@@ -25,7 +25,7 @@ module focas_data
   real(wp), allocatable :: z_(:,:)                                 ! auxiliary matrix that contains cotractions of the fock_i with den1 ( nact*nmo storage)
 !  real(wp), allocatable :: fock_gen_(:,:)                          ! generalized Fock matrix (nmo*nmo storage)
   real(wp), allocatable :: orbital_gradient_(:)                    ! orbital gradient
-  real(wp), allocatable :: diagonal_orbital_hessian_(:)            ! diagonal elements of the orbital hessian
+  real(wp), allocatable :: orbital_hessian_(:)                     ! diagonal elements of the orbital hessian
   real(wp), allocatable :: kappa_(:)                               ! orbital rotation parameters (lt elements of skew-symmetric matrix, npair_ storage)
 
   ! *** symmetry data for integrals and densities

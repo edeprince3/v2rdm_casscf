@@ -2129,45 +2129,6 @@ module focas_gradient
     return
   end subroutine compute_f_i
 
-  integer function precondition_gradient(precond,gradient)
-    implicit none
-    ! simple subroutine to precondition the gradient according to
-    ! g(i) = g(i)/precond(i) if (precond(i) >  0
-    !      = g(i)            if (precond(i) <= 0
-    real(wp) :: gradient(:)
-    real(wp) :: precond(:)
-
-    integer :: n_ij,ij_pair,nij_negative
-
-    precondition_gradient = 1
-  
-    n_ij=size(gradient)
-     
-    if (n_ij /= size(precond) ) return
-
-    nij_negative = 0
-
-    do ij_pair = 1 , n_ij
-
-      if ( precond(ij_pair) > 0.0_wp ) then
-        gradient(ij_pair) = gradient(ij_pair) / precond(ij_pair)
-      else
-        gradient(ij_pair) = 0.0_wp
-        nij_negative = nij_negative + 1
-      endif    
-
-    end do
-
-    precondition_gradient = 0
-
-    if ( ( nij_negative /= 0 ) .and. ( log_print_ == 1 ) ) then
-      write(fid_,'(a,1x,i9,1x,a)')'!warning!',nij_negative,'diagonal Hessian elements were negative'
-    end if
-
-    return
-
-  end function precondition_gradient
- 
   subroutine allocate_temporary_fock_matrices()
     implicit none
     integer :: i_sym,ntot,nocc
