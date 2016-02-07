@@ -231,6 +231,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
     }
 
     // enforce symmetry
+/*
     for (int h = 0; h < nirrep_; h++) {
         for (long int ij = 0; ij < gems_ab[h]; ij++) {
             long int i = bas_ab_sym[h][ij][0];
@@ -270,6 +271,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
         }
         offset += gems_aa[h]*gems_aa[h];
     }
+*/
 }
 
 // D2 portion of A.x (and D1/Q1)
@@ -456,6 +458,7 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
     }
 
     // enforce symmetry
+/*
     for (int h = 0; h < nirrep_; h++) {
         for (long int ij = 0; ij < gems_ab[h]; ij++) {
             long int i = bas_ab_sym[h][ij][0];
@@ -495,6 +498,7 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
         }
         offset += gems_aa[h]*gems_aa[h];
     }
+*/
 }
 
 }}

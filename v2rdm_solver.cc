@@ -710,11 +710,11 @@ void  v2RDMSolver::common_init(){
     nconstraints_ += 1;                   // Tr(D2aa)
     nconstraints_ += 1;                   // Tr(D2bb)
 
-    for ( int h = 0; h < nirrep_; h++) {
-        nconstraints_ += gems_ab[h]*gems_ab[h]; // D2ab hermiticity
-        nconstraints_ += gems_aa[h]*gems_aa[h]; // D2aa hermiticity
-        nconstraints_ += gems_aa[h]*gems_aa[h]; // D2bb hermiticity
-    }
+    //for ( int h = 0; h < nirrep_; h++) {
+    //    nconstraints_ += gems_ab[h]*gems_ab[h]; // D2ab hermiticity
+    //    nconstraints_ += gems_aa[h]*gems_aa[h]; // D2aa hermiticity
+    //    nconstraints_ += gems_aa[h]*gems_aa[h]; // D2bb hermiticity
+    //}
 
     for ( int h = 0; h < nirrep_; h++) {
         nconstraints_ += amopi_[h]*amopi_[h]; // D1a <-> Q1a
@@ -1931,6 +1931,7 @@ void v2RDMSolver::BuildConstraints(){
         offset += amopi_[h]*amopi_[h];
     }
     // hermiticity
+/*
     for (int h = 0; h < nirrep_; h++) {
         for(int i = 0; i < gems_ab[h]; i++){
             for(int j = 0; j < gems_ab[h]; j++){
@@ -1955,6 +1956,7 @@ void v2RDMSolver::BuildConstraints(){
         }
         offset += gems_aa[h]*gems_aa[h]; 
     }
+*/
 
 
     if ( constrain_q2_ ) {
