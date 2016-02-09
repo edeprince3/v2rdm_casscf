@@ -62,7 +62,7 @@ int read_options(std::string name, Options& options)
         /*- Frequency of checkpoint file generation.  The checkpoint file is 
         updated every CHECKPOINT_FREQUENCY iterations.  The default frequency
         will be ORBOPT_FREQUENCY. -*/
-        options.add_bool("CHECKPOINT_FREQUENCY",200);
+        options.add_int("CHECKPOINT_FREQUENCY",200);
         /*- File containing previous primal/dual solutions and integrals. -*/
         options.add_str("RESTART_FROM_CHECKPOINT_FILE","");
         /*- Frequency with which the pentalty-parameter, mu, is updated. mu is
