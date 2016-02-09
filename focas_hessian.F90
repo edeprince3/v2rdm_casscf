@@ -12,7 +12,7 @@ module focas_hessian
       real(wp), intent(in) :: q(:,:),z(:,:)
       integer :: error
 
-      min_diag_hessian_           = 1.0e-2
+      min_diag_hessian_           = 1.0e-2_wp
 
       num_negative_diagonal_hessian_ = 0 
 
@@ -31,6 +31,9 @@ module focas_hessian
       ! external-active pairs
 
       if ( rot_pair_%n_ea > 0 ) error=diagonal_hessian_ea(fock_i_%ext,fock_a_%ext,q,z,int2,den1,den2)
+
+!      ! print the orbital hessian
+!      call print_orbital_hessian()
 
       return
     end subroutine diagonal_hessian
@@ -1110,5 +1113,81 @@ module focas_hessian
       if (allocated(orbital_hessian_)) deallocate(orbital_hessian_)
       return
     end subroutine deallocate_hessian_data
+
+  subroutine print_orbital_hessian()
+    implicit none
+    integer :: ij_pair,i,j,newline,i_class,j_class,j_class_start,j_start,i_sym
+    character(1) :: ityp,jtyp
+    ! loop over rotation pairs
+
+    write(fid_,'(a)')'orbital hessian:'
+
+    newline=0
+
+    ! the loop structure below cycles through the possible rotation pairs
+    ! rotation pairs are sorted according to symmetry and for each irrep,
+    ! the rotation pairs are sorted according to orbital classes: ad,ed,aa,ea
+    ! for each pair j>i; for more details, see subroutine setup_rotation_indeces in focas_main.F90
+
+    ij_pair = 0
+
+    do i_sym = 1 , nirrep_
+
+      do i_class = 1 , 3
+
+        j_class_start = i_class + 1
+
+        if ( ( include_aa_rot_ == 1 ) .and. ( i_class == 2 ) ) j_class_start = i_class
+
+        do j_class = j_class_start , 3
+
+          do i = first_index_(i_sym,i_class) , last_index_(i_sym,i_class)
+
+            j_start = first_index_(i_sym,j_class)
+
+            if ( i_class == j_class ) j_start = i + 1
+
+            do j = j_start , last_index_(i_sym,j_class)
+
+              if ( i_class == 1 ) then
+
+                ityp = 'd'
+
+                jtyp = 'a'
+
+                if ( j_class == 3 ) jtyp = 'e'
+
+              else
+
+                ityp = 'a'
+
+                jtyp = 'a'
+
+                if ( j_class == 3 ) jtyp = 'e'
+
+              end if
+
+              ij_pair = ij_pair + 1
+
+              write(fid_,'(a,a,a,a,i3,a,i3,a,1x,es10.3,4x)',advance='no')jtyp,'-',ityp,' (',j,',',i,')',orbital_hessian_(ij_pair)
+
+              newline = newline + 1
+
+              if ( mod(newline,4) == 0 ) write(fid_,*)
+
+            end do
+
+          end do
+
+        end do
+
+      end do
+
+    end do
+    if ( mod(newline,4) /= 0 ) write(fid_,*)
+
+    return
+
+  end subroutine print_orbital_hessian
 
 end module focas_hessian

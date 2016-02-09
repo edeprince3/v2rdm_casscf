@@ -128,7 +128,7 @@ module focas_driver
 !    P = 0.0_wp
 
     last_energy             = 0.0_wp
-    max_iter                = 20
+    max_iter                = 30
     iter                    = 0
     kappa_                  = 0.0_wp
     converged               = 0
@@ -158,6 +158,9 @@ module focas_driver
         ! calculate the current energy  
         call compute_energy(int1,int2,den1,den2)
         e_init = e_total_ 
+
+!        write(*,'(f25.17)')e_init
+!        stop
         
         ! save initial energy
         if ( iter == 0 ) initial_energy = e_init 
@@ -314,7 +317,6 @@ module focas_driver
     if (allocated(kappa_))                   deallocate(kappa_)
     if (allocated(rot_pair_%pair_offset))    deallocate(rot_pair_%pair_offset)
     if (allocated(df_vars_%class_to_df_map)) deallocate(df_vars_%class_to_df_map)
-!    if (allocated(df_vars_%occgemind))       deallocate(df_vars_%occgemind)
     if (allocated(df_vars_%noccgempi))       deallocate(df_vars_%noccgempi)
     call deallocate_transformation_matrices()
     call deallocate_hessian_data()
@@ -430,8 +432,8 @@ module focas_driver
       h_val = orbital_hessian_(i)
 
       if ( h_val < 0.0_wp ) then
-         h_val = - h_val
-         num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
+        h_val = - h_val
+        num_negative_diagonal_hessian_ = num_negative_diagonal_hessian_ + 1
       endif
 
       step(i) = - orbital_gradient_(i) / h_val

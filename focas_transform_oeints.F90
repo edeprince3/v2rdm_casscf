@@ -37,22 +37,22 @@ module focas_transform_oeints
         first_i  = i_offset + 1
         last_i   = i_offset + num_i
 
-!#ifdef BLAS
-!
+#ifdef BLAS
+
         call dgemm('N','N',num_i,num_i,num_i,1.0_wp,mo_coeff(first_i:last_i,first_i:last_i),num_i,&
                      trans_%u_irrep_block(i_sym)%val,num_i,0.0_wp,block_tmp,max_nmopi)
         call dgemm('T','N',num_i,num_i,num_i,1.0_wp,trans_%u_irrep_block(i_sym)%val,num_i, &
                      block_tmp,max_nmopi,0.0_wp,mo_coeff(first_i:last_i,first_i:last_i),num_i)
-!
-!#else
-!
-!        block_tmp(1:num_i,1:num_i) = matmul(mo_coeff(first_i:last_i,first_i:last_i),&
-!                                          & trans_%u_irrep_block(i_sym)%val)
-!
-!        mo_coeff(first_i:last_i,first_i:last_i) = matmul(transpose(trans_%u_irrep_block(i_sym)%val), &
-!                                                       & block_tmp(1:num_i,1:num_i))
-!
-!#endif
+
+#else
+
+        block_tmp(1:num_i,1:num_i) = matmul(mo_coeff(first_i:last_i,first_i:last_i),&
+                                          & trans_%u_irrep_block(i_sym)%val)
+
+        mo_coeff(first_i:last_i,first_i:last_i) = matmul(transpose(trans_%u_irrep_block(i_sym)%val), &
+                                                       & block_tmp(1:num_i,1:num_i))
+
+#endif
 
       end do
 

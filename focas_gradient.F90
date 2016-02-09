@@ -46,8 +46,8 @@ module focas_gradient
     ! determine value,type, and orbital indices for largest gradient element
     call check_max_gradient()
 
-!gg    ! print the gradient 
-!gg    if ( log_print_ == 1 ) call print_orbital_gradient()
+!    ! print the gradient 
+!    if ( log_print_ == 1 ) call print_orbital_gradient()
 
     return
   end subroutine orbital_gradient
@@ -1386,11 +1386,9 @@ module focas_gradient
 
                 call dcopy(df_vars_%nQ,int2(mw+1:mw+nQ),1,v_mw,1)
 
-                ! *** w > v --> factor of 2
-
                 ! loop over v indeces
 
-                do v = first_index_(w_sym,2) , w - 1 
+                do v = first_index_(w_sym,2) , last_index_(w_sym,2) !w - 1 
 
                   ! 1-e density element
                   den_ind = dens_%gemind(v,w)
@@ -1403,21 +1401,9 @@ module focas_gradient
                   vn      = df_pq_index(vdf,ndf) 
 
                   ! contract with integral/density matrix elements
-                  val     = val + dval * ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
+                  val     = val - dval * ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
 
                 end do ! end v loop
-
-                ! **** w == v --> factor of 1
-
-                ! 1-e density element
-                den_ind = dens_%gemind(w,w)
-                dval    = den1(den_ind)
-
-                ! 2-e exchange contribution - g(mw|wn)
-                wn      = df_pq_index(wdf,ndf) 
-
-                ! contract with integral/density matrix elements
-                val     = val + 0.5_wp * dval * ddot(df_vars_%nQ,v_mw,1,int2(wn+1:wn+nQ),1)
 
               end do ! end w loop
 
@@ -1428,13 +1414,15 @@ module focas_gradient
             if ( m_class == 3 ) then
 
               m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
-              fock_a_%ext(m_sym)%val(m_i) = fock_a_%ext(m_sym)%val(m_i) - val
+
+              fock_a_%ext(m_sym)%val(m_i) = fock_a_%ext(m_sym)%val(m_i) + 0.5_wp * val
 
             else
 
               m_i = trans_%class_to_irrep_map(m)
               n_i = trans_%class_to_irrep_map(n)
-              fock_a_%occ(m_sym)%val(m_i,n_i) = fock_a_%occ(m_sym)%val(m_i,n_i) - val
+
+              fock_a_%occ(m_sym)%val(m_i,n_i) = fock_a_%occ(m_sym)%val(m_i,n_i) + 0.5_wp * val
 
             endif
 
@@ -1481,11 +1469,9 @@ module focas_gradient
 
                   call dcopy(df_vars_%nQ,int2(mw+1:mw+nQ),1,v_mw,1)
 
-                  ! *** w > v --> factor of 2 
-
                   ! loop over v indeces
 
-                  do v = first_index_(w_sym,2) , w -1 
+                  do v = first_index_(w_sym,2) , last_index_(w_sym,2) !w -1 
 
                     ! 1-e density element
                     den_ind = dens_%gemind(v,w)
@@ -1498,21 +1484,9 @@ module focas_gradient
                     vn      = df_pq_index(vdf,ndf) 
 
                     ! contract with integral/density matrix elements
-                    val     = val + dval * ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
+                    val     = val - dval * ddot(df_vars_%nQ,v_mw,1,int2(vn+1:vn+nQ),1)
 
                   end do ! end v loop
-
-                  ! *** w == v --> factor of 1
-
-                  ! 1-e density element
-                  den_ind = dens_%gemind(w,w)
-                  dval    = den1(den_ind)
-
-                  ! 2-e exchange contribution - g(mw|wn)
-                  wn      = df_pq_index(wdf,ndf) 
-
-                  ! contract with integral/density matrix elements
-                  val     = val + 0.5_wp * dval * ddot(df_vars_%nQ,v_mw,1,int2(wn+1:wn+nQ),1)
 
                 end do ! end w loop
 
@@ -1523,7 +1497,7 @@ module focas_gradient
               m_i = trans_%class_to_irrep_map(m)
               n_i = trans_%class_to_irrep_map(n)
 
-              fock_a_%occ(m_sym)%val(m_i,n_i) = fock_a_%occ(m_sym)%val(m_i,n_i) - val
+              fock_a_%occ(m_sym)%val(m_i,n_i) = fock_a_%occ(m_sym)%val(m_i,n_i) + 0.5_wp * val
 
             end do ! end n loop
 

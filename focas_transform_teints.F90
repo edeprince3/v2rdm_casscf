@@ -38,6 +38,7 @@ module focas_transform_teints
 !$omp parallel shared(first_Q,last_Q,int2,df_vars_,nirrep_) num_threads(nthread_use_)
 !$omp do private(i_thread,Q,col,row,int_ind,col_sym,row_sym,col_min,col_max,row_min,row_max,ncol,nrow,col_off,row_off)
 #endif
+
       do i_thread = 1 , nthread_use_
 
         ! loop over Q indeces to be transformed by this thread
@@ -160,6 +161,7 @@ module focas_transform_teints
         end do ! end Q loop
 
       end do ! end i_thread loop
+
 #ifdef OMP
 !$omp end do
 !$omp end parallel
