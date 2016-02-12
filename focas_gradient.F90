@@ -37,6 +37,19 @@ module focas_gradient
       call compute_q_df(den2,int2)
     endif
 
+!    if ( log_print_ == 1) then
+!
+!      write(fid_,*)'*** INACTIVE ***'
+!      call print_f_matrix(fock_i_)
+!
+!      write(fid_,*)'*** ACTIVE ***'
+!      call print_f_matrix(fock_a_)
+!
+!      write(fid_,*)'*** AUXILIARY Q ***'
+!      call print_q_matrix(q_)
+!
+!    end if
+
     ! calculate auxiliary z matrix
     call compute_z(den1)
  
@@ -2102,6 +2115,136 @@ module focas_gradient
 
     return
   end subroutine compute_f_i
+
+  subroutine print_f_matrix(mat)
+
+    implicit none
+
+    type(fock_info) :: mat
+
+    integer :: m_sym,n_class,m_class,m,n,m_i,n_i
+    integer :: iprint
+
+    do m_sym = 1 , nirrep_
+
+      if ( ndocpi_(m_sym) + nactpi_(m_sym) > 0 ) then !allocated ( mat%occ(m_sym)%val ) ) then
+
+        write(fid_,'(a,1x,i1,2(i3,1x))')'lower-triangular elements for irrep',m_sym,&
+              & ndocpi_(m_sym) + nactpi_(m_sym) + nextpi_(m_sym) , ndocpi_(m_sym) + nactpi_(m_sym)
+
+        iprint=0
+ 
+        do m_class = 1 , 3 
+ 
+          do n_class = 1 , 2
+
+            do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class) 
+
+              do n = first_index_(m_sym,n_class) , min( m,last_index_(m_sym,n_class) )
+
+                iprint = iprint + 1
+
+                m_i              = trans_%class_to_irrep_map(m)
+                n_i              = trans_%class_to_irrep_map(n)
+ 
+                write(fid_,'(2(i3,1x),es20.13,1x)',advance='no')m_i,n_i,mat%occ(m_sym)%val(m_i,n_i)
+
+                if ( iprint < 4 ) cycle
+
+                iprint = 0
+                write(fid_,*)
+
+              end do
+
+            end do
+  
+          end do
+
+        end do
+
+        if ( iprint > 0 ) write(fid_,*)
+
+      end if
+
+      if ( nextpi_(m_sym) > 0 ) then
+
+         write(fid_,'(a,1x,i1,2(i3,1x))')'diagonal elements for irrep',m_sym,nextpi_(m_sym)
+
+         iprint = 0
+
+         do m = first_index_(m_sym,3) , last_index_(m_sym,3)
+           
+            iprint = iprint + 1
+ 
+            m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
+
+            write(fid_,'(2(i3,1x),es20.13,1x)',advance='no')m_i,n_i,mat%ext(m_sym)%val(m_i)
+
+            if ( iprint < 4 ) cycle
+
+            iprint = 0
+            write(fid_,*)
+
+         end do
+
+         if ( iprint > 0 ) write(fid_,*)
+
+      end if
+
+    end do
+
+    return
+
+  end subroutine print_f_matrix
+
+  subroutine print_q_matrix(mat)
+
+    implicit none
+
+    real(wp), intent(in) :: mat(:,:)
+ 
+    integer :: m,n,m_i,n_i,m_class,m_sym,iprint
+
+    do m_sym = 1 , nirrep_
+
+      if ( nactpi_(m_sym) == 0 ) cycle
+
+      write(fid_,'(a,1x,i1,2(i3,1x))')'matrix elements for irrep',m_sym,&
+         & nactpi_(m_sym) , ndocpi_(m_sym) + nactpi_(m_sym) + nextpi_(m_sym)
+
+      iprint = 0
+
+      do m_class = 1 , 3
+
+        do m = first_index_(m_sym,m_class) , last_index_(m_sym,m_class)
+
+          do n = first_index_(m_sym,2) , last_index_(m_sym,2)
+
+            iprint = iprint + 1
+
+            m_i              = trans_%class_to_irrep_map(m)
+            n_i              = trans_%class_to_irrep_map(n)
+
+            write(fid_,'(2(i3,1x),es20.13,1x)',advance='no')m_i,n_i,mat(m-ndocpi_(m_sym),n)
+
+            if ( iprint < 4 ) cycle
+
+            iprint = 0
+            write(fid_,*)
+
+          end do
+
+        end do
+
+      end do
+
+      if ( iprint > 0 ) write(fid_,*)
+
+    end do
+
+    return
+
+  end subroutine print_q_matrix
 
   subroutine allocate_temporary_fock_matrices()
     implicit none

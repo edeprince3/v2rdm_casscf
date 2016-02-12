@@ -1074,6 +1074,7 @@ void  v2RDMSolver::common_init(){
     outfile->Printf("        1-step algorithm:                   %5i\n",options_.get_int("ORBOPT_ONE_STEP"));    
     outfile->Printf("        g_convergence:                  %5.3le\n",options_.get_double("ORBOPT_GRADIENT_CONVERGENCE"));
     outfile->Printf("        e_convergence:                  %5.3le\n",options_.get_double("ORBOPT_ENERGY_CONVERGENCE"));
+    outfile->Printf("        maximum iterations:                 %5i\n",options_.get_int("ORBOPT_MAXITER"));
     outfile->Printf("        frequency:                          %5i\n",options_.get_int("ORBOPT_FREQUENCY"));
     outfile->Printf("        active-active rotations:            %5i\n",options_.get_int("ORBOPT_ACTIVE_ACTIVE_ROTATIONS"));
     outfile->Printf("        exact diagonal Hessian:             %5i\n",options_.get_int("ORBOPT_EXACT_DIAGONAL_HESSIAN"));
@@ -1271,7 +1272,7 @@ void  v2RDMSolver::common_init(){
         nthread = omp_get_max_threads();
     #endif
 
-    orbopt_data_    = (double*)malloc(13*sizeof(double));
+    orbopt_data_    = (double*)malloc(14*sizeof(double));
     orbopt_data_[0] = (double)nthread;
     orbopt_data_[1] = (double)options_.get_bool("ORBOPT_ACTIVE_ACTIVE_ROTATIONS");
     orbopt_data_[2] = (double)nfrzc_; //(double)options_.get_int("ORBOPT_FROZEN_CORE");
@@ -1280,14 +1281,15 @@ void  v2RDMSolver::common_init(){
     orbopt_data_[5] = (double)options_.get_bool("ORBOPT_WRITE");
     orbopt_data_[6] = (double)options_.get_int("ORBOPT_EXACT_DIAGONAL_HESSIAN");
     orbopt_data_[7] = (double)options_.get_int("ORBOPT_NUM_DIIS_VECTORS");
-    orbopt_data_[8] = 0.0;
+    orbopt_data_[8] = (double)options_.get_int("ORBOPT_MAXITER");
+    orbopt_data_[9] = 0.0;
     if ( is_df_ ) {
-      orbopt_data_[8] = 1.0;
+      orbopt_data_[9] = 1.0;
     }
-    orbopt_data_[9] = 0.0;  // number of iterations (output)
-    orbopt_data_[10] = 0.0;  // gradient norm (output)
-    orbopt_data_[11] = 0.0;  // change in energy (output)
-    orbopt_data_[12] = 0.0;  // converged?
+    orbopt_data_[10] = 0.0;  // number of iterations (output)
+    orbopt_data_[11] = 0.0;  // gradient norm (output)
+    orbopt_data_[12] = 0.0;  // change in energy (output)
+    orbopt_data_[13] = 0.0;  // converged?
     orbopt_converged_ = false;
 
     orbopt_transformation_matrix_ = (double*)malloc((nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
@@ -2981,12 +2983,12 @@ void v2RDMSolver::RotateOrbitals(){
           symmetry_energy_order,nrstc_,amo_,nrstv_,nirrep_,
           orbopt_data_,orbopt_outfile_);
 
-    outfile->Printf("            Orbital Optimization %s in %3i iterations \n",(int)orbopt_data_[12] ? "converged" : "did not converge",(int)orbopt_data_[9]);
-    outfile->Printf("            Total energy change: %11.6le\n",orbopt_data_[11]);
-    outfile->Printf("            Final gradient norm: %11.6le\n",orbopt_data_[10]);
+    outfile->Printf("            Orbital Optimization %s in %3i iterations \n",(int)orbopt_data_[13] ? "converged" : "did not converge",(int)orbopt_data_[10]);
+    outfile->Printf("            Total energy change: %11.6le\n",orbopt_data_[12]);
+    outfile->Printf("            Final gradient norm: %11.6le\n",orbopt_data_[11]);
     outfile->Printf("\n");
 
-    if ( fabs(orbopt_data_[11]) < orbopt_data_[4] ) {
+    if ( fabs(orbopt_data_[12]) < orbopt_data_[4] ) {
         orbopt_converged_ = true;
     }
 

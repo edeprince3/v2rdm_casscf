@@ -120,6 +120,8 @@ int read_options(std::string name, Options& options)
         /*- frequency of orbital optimization.  optimization occurs every 
         orbopt_frequency iterations -*/
         options.add_int("ORBOPT_FREQUENCY",200);
+        /*- maximum number of iterations for orbital optimization -*/
+        options.add_int("ORBOPT_MAXITER",20);
         /*- Do write a MOLDEN output file?  If so, the filename will end in
         .molden, and the prefix is determined by |globals__writer_file_label|
         (if set), or else by the name of the output file plus the name of

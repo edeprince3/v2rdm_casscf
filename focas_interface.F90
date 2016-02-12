@@ -24,7 +24,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer(ip) :: nnz_i2
   real(wp) :: integrals_1(nnz_i1),integrals_2(nnz_i2),density_1(nnz_d1),density_2(nnz_d2)
   real(wp) :: mo_coeff_out(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
-  real(wp) :: orbopt_data_io(13) 
+  real(wp) :: orbopt_data_io(14) 
   character(120) :: orbopt_log_file
   integer  :: syms(ncore_in+nact_in+nvirt_in)
 
@@ -58,7 +58,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   nmo=ncore_in+nact_in+nvirt_in
   nirrep=nirrep_in
   ! set density-fitted integral flag
-  df_ints = int(orbopt_data_io(9))
+  df_ints = int(orbopt_data_io(10))
 
   call setup_symmetry_arrays(syms)
 

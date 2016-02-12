@@ -24,7 +24,7 @@ module focas_driver
     integer, intent(in)     :: nactpi(nirrep)  ! number of active orbitals per irrep
     integer, intent(in)     :: nextpi(nirrep)  ! number of virtual orbitals per irrep (excluding forzen virtual orbitals) 
     ! real input
-    real(wp), intent(inout) :: orbopt_data(13) ! input/output array
+    real(wp), intent(inout) :: orbopt_data(14) ! input/output array
     real(wp), intent(inout) :: mo_coeff(:,:)   ! mo coefficient matrix
     real(wp), intent(in)    :: int1(nnz_int1)  ! nonzero 1-e integral matrix elements
     real(wp), intent(in)    :: int2(nnz_int2)  ! nonzero 2-e integral matrix elements 
@@ -62,8 +62,9 @@ module focas_driver
     delta_energy_tolerance      = orbopt_data(5)  
     log_print_                  = int(orbopt_data(6))
     use_exact_hessian_diagonal_ = int(orbopt_data(7))
-    diis_%max_num_diis          = int(orbopt_data(8)) 
-    df_vars_%use_df_teints      = int(orbopt_data(9))
+    diis_%max_num_diis          = int(orbopt_data(8))
+    max_iter                    = int(orbopt_data(9)) 
+    df_vars_%use_df_teints      = int(orbopt_data(10))
 
     ! orbitals should be sorted accoring to 
     ! 1) class (doubly occupied, active, virtual)
@@ -128,7 +129,6 @@ module focas_driver
 !    P = 0.0_wp
 
     last_energy             = 0.0_wp
-    max_iter                = 30
     iter                    = 0
     kappa_                  = 0.0_wp
     converged               = 0
@@ -159,9 +159,6 @@ module focas_driver
         call compute_energy(int1,int2,den1,den2)
         e_init = e_total_ 
 
-!        write(*,'(f25.17)')e_init
-!        stop
-        
         ! save initial energy
         if ( iter == 0 ) initial_energy = e_init 
 
@@ -287,10 +284,10 @@ module focas_driver
     call compute_energy(int1,int2,den1,den2)
     last_energy = e_total_
 
-    orbopt_data(10) = real(iter,kind=wp)
-    orbopt_data(11) = grad_norm_
-    orbopt_data(12) = last_energy - initial_energy
-    orbopt_data(13) = real(converged,kind=wp)
+    orbopt_data(11) = real(iter,kind=wp)
+    orbopt_data(12) = grad_norm_
+    orbopt_data(13) = last_energy - initial_energy
+    orbopt_data(14) = real(converged,kind=wp)
 
     ! debug
     ! call compute_energy(int1,int2,den1,den2)
