@@ -1,6 +1,8 @@
 /*
  *@BEGIN LICENSE
  *
+ * v2RDM-CASSCF, a plugin to:
+ *
  * PSI4: an ab initio quantum chemistry software package
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +19,10 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
+ * Copyright (c) 2014, The Florida State University. All rights reserved.
+ * 
  *@END LICENSE
+ *
  */
 
 #include "psi4-dec.h"

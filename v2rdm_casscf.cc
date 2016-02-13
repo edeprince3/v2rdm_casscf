@@ -1,11 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2rdm_casscf by 
- *
- *   Jacob Fosso-Tande
- *   Greg Gidofalvi
- *   Eugene DePrince
+ * v2RDM-CASSCF, a plugin to:
  *
  * PSI4: an ab initio quantum chemistry software package
  *
@@ -23,17 +19,11 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
+ * Copyright (c) 2014, The Florida State University. All rights reserved.
+ * 
  *@END LICENSE
+ *
  */
-
-/*                                                                      
- *@BEGIN LICENSE
-
-  Copyright (c) 2014, The Florida State University. All rights reserved.
-
- *@END LICENSE
- */
-
 
 #include "v2rdm_solver.h"
 

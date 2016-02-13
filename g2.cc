@@ -1,6 +1,8 @@
 /*
  *@BEGIN LICENSE
  *
+ * v2RDM-CASSCF, a plugin to:
+ *
  * PSI4: an ab initio quantum chemistry software package
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,19 +19,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- *
- * BP-v2RDM: a boundary-point semidefinite solver for variational 2-RDM
- *           computations.
- *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
  * 
  *@END LICENSE
  *
- * This code performs a semidefinite optimization of the electronic
- * energy according to the boundary-point algorithm described in
- * PRL 106, 083001 (2011).
- *
  */
+
 #include <psi4-dec.h>
 #include <libparallel/parallel.h>
 #include <liboptions/liboptions.h>
