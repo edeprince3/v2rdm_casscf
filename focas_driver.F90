@@ -30,6 +30,7 @@ module focas_driver
   use focas_hessian
   use focas_transform_driver
   use focas_exponential
+  use focas_redundant
   use focas_diis
 
   implicit none
@@ -134,6 +135,9 @@ module focas_driver
 
     ! determine indexing arrays (needed for sorts in the integral transformation step)
     call determine_transformation_maps()
+
+    ! check for numerically doubly-occupied or empty orbitals
+    call compute_opdm_nos(den1)
 
     ! set up df mapping arrays if density-fitted 2-e integrals are used
     error = 0
