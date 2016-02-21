@@ -974,16 +974,28 @@ void  v2RDMSolver::common_init(){
     // memory check happens here
 
     outfile->Printf("\n\n");
-    outfile->Printf( "        *******************************************************\n");
-    outfile->Printf( "        *                                                     *\n");
-    outfile->Printf( "        *    v-2RDM                                           *\n");
-    outfile->Printf( "        *                                                     *\n");
-    outfile->Printf( "        *    Ground-state variational 2-RDM optimization      *\n");
-    outfile->Printf( "        *    using a boundary-point semidefinite solver       *\n");
-    outfile->Printf( "        *                                                     *\n");
-    outfile->Printf( "        *    Eugene DePrince                                  *\n");
-    outfile->Printf( "        *                                                     *\n");
-    outfile->Printf( "        *******************************************************\n");
+    outfile->Printf( "        ****************************************************\n");
+    outfile->Printf( "        *                                                  *\n");
+    outfile->Printf( "        *    v2RDM-CASSCF                                  *\n");
+    outfile->Printf( "        *                                                  *\n");
+    outfile->Printf( "        *    A variational 2-RDM-driven approach to the    *\n");
+    outfile->Printf( "        *    active space self-consistent field method     *\n");
+    outfile->Printf( "        *                                                  *\n");
+    outfile->Printf( "        ****************************************************\n");
+
+    // TODO: add citations once we have volume numbers n'nat.
+    outfile->Printf("\n");
+    outfile->Printf("\n");
+    outfile->Printf("        The following papers should be cited when using v2RDM-CASSCF:\n");
+    outfile->Printf("\n");
+    outfile->Printf("        J. Fosso-Tande, D. R. Nascimento, and A. E. DePrince III,\n");
+    outfile->Printf("        Mol. Phys. in press (2015).\n");
+    outfile->Printf("\n");
+    outfile->Printf("            URL: http://dx.doi.org/10.1080/00268976.2015.1078008\n");
+    outfile->Printf("\n");
+    outfile->Printf("        J. Fosso-Tande, T.-S. Nguyen, G. Gidofalvi, and\n");
+    outfile->Printf("        A. E. DePrince III, submitted (2016).\n");
+    outfile->Printf("\n");
 
     outfile->Printf("\n");
     outfile->Printf("  ==> Convergence parameters <==\n");
