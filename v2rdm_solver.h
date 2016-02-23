@@ -52,6 +52,9 @@
 // TODO: move to psifiles.h
 #define PSIF_DCC_QMO          268
 #define PSIF_V2RDM_CHECKPOINT 269
+#define PSIF_V2RDM_D2AA       270
+#define PSIF_V2RDM_D2AB       271
+#define PSIF_V2RDM_D2BB       272
 
 namespace boost {
   template<class T> class shared_ptr;
@@ -405,6 +408,8 @@ class v2RDMSolver: public Wavefunction{
     /// total number of orbital optimization
     long int orbopt_iter_total_;
 
+    /// write 2RDM to disk
+    void WriteTPDM();
 };
 
 }}

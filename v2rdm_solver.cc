@@ -1550,6 +1550,10 @@ double v2RDMSolver::compute_energy() {
     MullikenPopulations();
     NaturalOrbitals();
 
+    if ( options_.get_bool("TPDM_WRITE") ) {
+        WriteTPDM();
+    }
+
     double end_total_time = omp_get_wtime();
 
     outfile->Printf("\n");
@@ -2997,6 +3001,25 @@ void v2RDMSolver::RotateOrbitals(){
     }
 
     RepackIntegrals();
+}
+
+void v2RDMSolver::WriteTPDM(){
+
+
+    boost::shared_ptr<PSIO> psio (new PSIO());
+
+    // D2aa
+    psio->open(PSIF_V2RDM_D2AA,PSIO_OPEN_NEW);
+    psio->close(PSIF_V2RDM_D2AA,1);
+
+    // D2bb
+    psio->open(PSIF_V2RDM_D2BB,PSIO_OPEN_NEW);
+    psio->close(PSIF_V2RDM_D2BB,1);
+
+    // D2ab
+    psio->open(PSIF_V2RDM_D2AB,PSIO_OPEN_NEW);
+    psio->close(PSIF_V2RDM_D2AB,1);
+
 }
 
 }} //end namespaces

@@ -47,6 +47,8 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
+        /*- Do write the 2-RDM to disk? -*/
+        options.add_bool("TPDM_WRITE",false);
         /*- Do save progress in a checkpoint file? -*/
         options.add_bool("WRITE_CHECKPOINT_FILE",false);
         /*- Frequency of checkpoint file generation.  The checkpoint file is 
