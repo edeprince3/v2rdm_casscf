@@ -124,6 +124,15 @@ module focas_data
     type(matrix_block), allocatable :: tuQ(:) 
   end type qint_info
 
+  type gen_f_info
+    type(matrix_block), allocatable :: doc(:)
+    type(matrix_block), allocatable :: act(:)  
+    type(matrix_block), allocatable :: ext(:)
+    type(vector_block), allocatable :: doc_e(:)
+    type(vector_block), allocatable :: act_e(:)
+    type(vector_block), allocatable :: ext_e(:)
+  end type gen_f_info
+ 
   ! *** allocatable derived types
 
   type(sym_info)   :: dens_                                        ! density symmetry data
@@ -133,7 +142,8 @@ module focas_data
   type(fock_info)  :: fock_i_ 
   type(fock_info)  :: fock_a_
   type(qint_info)  :: qint_
- 
+  type(gen_f_info) :: gen_f_
+  
   ! indexing derived types
   
   type(rot_info)   :: rot_pair_                                    ! info for rotation pair indexing

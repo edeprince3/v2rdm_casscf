@@ -28,7 +28,8 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
            &orbopt_log_file)
 
   
-  use focas_driver, only : focas_optimize
+  use focas_driver, only        : focas_optimize
+  use focas_semicanonical, only : compute_semicanonical_mos
 
   implicit none
   integer, parameter :: fid=99
@@ -105,10 +106,19 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
 
   nnz_den2 = sum(nnz_den_new)
 
-  call focas_optimize(mo_coeff,integrals_1,nnz_int1,integrals_2,nnz_int2,               &
-                    & density_1(1:nnz_den1),nnz_den1,density_2(1:nnz_den2),nnz_den2,&
-                    & ndocpi,nactpi,nextpi,nirrep,orbopt_data_io,orbopt_log_file)
+  if ( int(orbopt_data_io(9)) > 0 ) then
 
+    call focas_optimize(mo_coeff,integrals_1,nnz_int1,integrals_2,nnz_int2,               &
+                      & density_1(1:nnz_den1),nnz_den1,density_2(1:nnz_den2),nnz_den2,&
+                      & ndocpi,nactpi,nextpi,nirrep,orbopt_data_io,orbopt_log_file)
+
+  else
+
+    call compute_semicanonical_mos(density_1(1:nnz_den1),density_2(1:nnz_den2),integrals_1,&
+                      & integrals_2,nnz_den1,nnz_den2,nnz_int1,nnz_int2,mo_coeff,ndocpi,   &
+                      & nactpi,nextpi,nirrep,orbopt_data_io,orbopt_log_file)
+
+  end if
 
   call final_sort()
 

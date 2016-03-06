@@ -81,7 +81,7 @@ module focas_driver
 
 !    real(wp), allocatable :: P(:)
 
-    ! set up variables based on input jacobi_data
+    ! set up variables based on input orbopt_data
     nthread_use_                = int(orbopt_data(1))
     include_aa_rot_             = int(orbopt_data(2))
     gradient_norm_tolerance     = orbopt_data(4)
@@ -319,7 +319,8 @@ module focas_driver
     orbopt_data(14) = real(converged,kind=wp)
 
     ! debug
-    ! call compute_energy(int1,int2,den1,den2)
+    !call compute_energy(int1,int2,den1,den2)
+    !write(*,*)'opt',e_total_
 
     ! deallocate indexing arrays
     call deallocate_indexing_arrays()
