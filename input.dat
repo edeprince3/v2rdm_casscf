@@ -17,7 +17,7 @@ set {
   d_convergence 1e-8
   maxiter 500
   reference rhf
-  frozen_docc  [ 2, 0, 0, 0, 0, 2, 0, 0 ]
+  restricted_docc  [ 2, 0, 0, 0, 0, 2, 0, 0 ]
   active       [ 1, 0, 1, 1, 0, 1, 1, 1 ]
   #frozen_docc  [  4 ]
   #frozen_uocc  [ 18 ]
