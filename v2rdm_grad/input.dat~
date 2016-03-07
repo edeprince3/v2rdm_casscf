@@ -1,0 +1,58 @@
+
+# PYTHONPATH must include directory above plugin directory.
+#     Define either externally or here, then import plugin.
+sys.path.insert(0, '/home/jacob/v2rdm_casscf/')
+import v2rdm_grad
+memory 1000 mb
+molecule mol {
+0 1
+
+#H	0.0000	0.0000	0.0000
+#H 	0.0000 	0.0000 	0.7414
+n
+n 1 r
+
+#symmetry c1
+}
+
+set {
+  guess sad
+  basis cc-pvdz
+  scf_type pk #df
+  d_convergence 1e-8
+  maxiter 500
+  reference rhf
+  restricted_docc  [ 2, 0, 0, 0, 0, 2, 0, 0 ]
+  restricted_uocc  [ 4, 1, 2, 2, 1, 4, 2, 2 ]
+  #frozen_docc  [  4 ]
+  #frozen_uocc  [ 18 ]
+
+}
+mol.r =1.1
+gradient('OMP2',dertype=1)
+#gradient('scf',dertype=1)
+anal_grad = psi4.wavefunction().gradient()
+
+set v2rdm_grad{
+  positivity dqg
+  constrain_spin true
+  constrain_d3   false
+  spin_adapt_g2  false
+  spin_adapt_q2  false
+  r_convergence  1e-3
+  e_convergence  1e-3
+  cg_convergence 1e-6
+  maxiter 100000
+  DERTYPE FIRST
+}
+
+activate(mol)
+#mol.r =1.1
+energy('v2rdm_grad')
+#energy('cas2rdm')
+#for i in range (0,63):
+#    r = 0.8 + i*0.1
+#    mol.r = r
+#    set guess sad
+#    energy('cas2rdm')
+#    set guess read

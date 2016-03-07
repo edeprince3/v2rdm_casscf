@@ -1,0 +1,44 @@
+if you want to link to fortran functions, do the following.
+
+1.  Make a fresh makefile for your plugin (probably not necessary)
+    psi4 --new-plugin-makefile
+2.  vi Makefile
+3.  search for BINOBJ
+4.  delete everything BELOW that line
+5.  add what is below to the Makefile
+
+# fortran tuff
+F90       = ifort
+F90FLAGS  = -O3 -openmp -fPIC -DOMP -DBLAS
+LDFLAGS  += -lifcore
+#F90       = gfortran
+#F90FLAGS  = -g -C -fPIC
+#LDFLAGS  += -lgfortran
+F90SRC    = $(notdir $(wildcard *.F90))
+F90BINOBJ = $(F90SRC:%.F90=%.o)
+
+fortran:
+  $(F90) $(F90FLAGS) focas_data.F90 -c
+  $(F90) $(F90FLAGS) focas_gradient.F90 focas_data.o -c
+  $(F90) $(F90FLAGS) focas_energy.F90 focas_data.o -c
+  $(F90) $(F90FLAGS) focas_hessian.F90 focas_data.o -c
+  $(F90) $(F90FLAGS) focas_exponential.F90 focas_data.o -c
+  $(F90) $(F90FLAGS) focas_transform_teints.F90 focas_data.o -c
+  $(F90) $(F90FLAGS) focas_transform_oeints.F90 focas_data.o -c
+  $(F90) $(F90FLAGS) focas_transform_driver.F90 focas_transform_teints.o focas_transform_oeints.o -c
+  $(F90) $(F90FLAGS) focas_driver.F90 focas_exponential.o focas_transform_driver.o focas_energy.o focas_gradient.o focas_hessian.o -c
+  $(F90) $(F90FLAGS) focas_interface.F90 focas_driver.o -c
+  rm *.mod
+
+%.o: %.F90
+  $(F90) $(F90FLAGS) -c $<
+
+%.o: %.cc
+  $(CXX) $(CXXDEFS) $(CXXFLAGS) $(INCLUDES) -c $<
+
+$(PSITARGET): $(BINOBJ) $(F90BINOBJ)
+  $(CXX) $(LDFLAGS) -o $@ $^ $(CXXDEFS) $(PSIPLUGIN)
+
+# Erase all compiled intermediate files
+clean:
+  rm -f $(F90BINOBJ) $(BINOBJ) $(PSITARGET) *.d *.pyc *.test output.dat psi.timer.dat
