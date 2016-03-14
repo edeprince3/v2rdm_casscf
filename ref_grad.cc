@@ -135,46 +135,6 @@ namespace psi{
 	timer_off("Form J");
 	cQso->gemm(true, false, Jmhalf, bQso, 1.0, 0.0);
       }// end if ( options_.get_str("SCF_TYPE") == "DF" ) 
-      /*
-      // read integrals from disk if they were generated in the SCF
-      else if ( options_.get_str("SCF_TYPE") == "CD") {
-	//Get number of threads for DF
-	outfile->Printf("\tReading Cholesky vectors from disk ...\n");
-	naux = Process::environment.globals["NAUX (SCF)"];
-	boost::shared_ptr<BasisSet> primary = BasisSet::pyconstruct_orbital(molecule(), "BASIS", options_.get_str("BASIS"));
-	boost::shared_ptr<BasisSet> auxiliary = BasisSet::pyconstruct_auxiliary(molecule(),"DF_BASIS_SCF", 
-					        options_.get_str("DF_BASIS_SCF"), "JKFIT", options_.get_str("BASIS"), primary->has_puream());
-	boost::shared_ptr<BasisSet> zero(BasisSet::zero_ao_basis_set());
-	outfile->Printf("\tCholesky decomposition threshold: %8.2le\n", options_.get_double("CHOLESKY_TOLERANCE"));
-	
-	// ntri comes from sieve above
-	boost::shared_ptr<Matrix> Qmn = SharedMatrix(new Matrix("Qmn Integrals",naux,ntri_cd));
-	double** Qmnp = Qmn->pointer();
-	psio_->open(PSIF_DFSCF_BJ,PSIO_OPEN_OLD);
-	psio_->read_entry(PSIF_DFSCF_BJ, "(Q|mn) Integrals", (char*) Qmnp[0], sizeof(double) * ntri_cd * naux);
-	psio_->close(PSIF_DFSCF_BJ,1);
-	
-	cQso = SharedTensor2d(new Tensor2d("DF_BASIS_SCF C (Q|mn)", naux, nso_*nso_));
-	bQso = SharedTensor2d(new Tensor2d("DF_BASIS_SCF B (Q|mn)", naux, nso_, nso_));
-	
-	for (long int mn = 0; mn < ntri_cd; mn++) {
-	  long int m = function_pairs[mn].first;
-	  long int n = function_pairs[mn].second;
-	  for (long int P = 0; P < naux; P++) {
-	    bQso->set(P, (m*nso_) + n, Qmnp[P][mn]);
-	    bQso->set(P, (n*nso_) + m, Qmnp[P][mn]);
-	  }
-	}
-	outfile->Printf("\t DONE READING Cholesky decomposition vector\n");
-	// Form J^-1/2
-	timer_on("Form J");
-	formJ(auxiliary, zero);
-	outfile->Printf("\t DONE computing Jmhalf\n");
-	timer_off("Form J");
-	cQso->gemm(true, false, Jmhalf, bQso, 1.0, 0.0); //Jacob added
-	outfile->Printf("\t DONE computing CQoo\n");
-      }// end else if ( options_.get_str("SCF_TYPE") == "CD" ) */
-      
       else {
 	//Get number of threads for DF
 	df_ints_num_threads_ = options_.get_int("DF_INTS_NUM_THREADS");
