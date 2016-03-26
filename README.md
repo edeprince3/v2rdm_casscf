@@ -185,6 +185,6 @@ To run the psi4 plugin v2rdm_casscf:
 
 [1] J. M. Turney, A. C. Simmonett, R. M. Parrish, E. G. Hohenstein, F. A. Evangelista, J. T. Fermann, B. J.  Mintz, L. A. Burns, J. J. Wilke, M. L. Abrams, N. J. Russ, M. L. Leininger, C. L. Janssen, E. T. Seidl, W. D. Allen, H. F. Schaefer, R. A. King, E. F. Valeev, C. D. Sherrill, and T. D. Crawford, *WIREs: Comp. Molec. Sci.* **2**, 556 (2012). "Psi4: an open-source ab initio electronic structure program"
 
-[2] J. Fosso-Tande, D. R. Nascimento, and A. E. DePrince III, *Mol. Phys.* accepted (2015). "Accuracy of two-particle N-representability conditions for describing different spin states and the singlet-triplet gap in the linear acene series"
+[2] J. Fosso-Tande, D. R. Nascimento, and A. E. DePrince III, *Mol. Phys.* **114**, 423-430 (2015). "Accuracy of two-particle N-representability conditions for describing different spin states and the singlet-triplet gap in the linear acene series"
 
 [3] J. Fosso-Tande, T.-S. Nguyen, G. Gidofalvi, and A. E. DePrince III, in preparation.
