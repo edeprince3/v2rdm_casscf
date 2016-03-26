@@ -989,7 +989,7 @@ void  v2RDMSolver::common_init(){
     outfile->Printf("        The following papers should be cited when using v2RDM-CASSCF:\n");
     outfile->Printf("\n");
     outfile->Printf("        J. Fosso-Tande, D. R. Nascimento, and A. E. DePrince III,\n");
-    outfile->Printf("        Mol. Phys. in press (2015).\n");
+    outfile->Printf("        Mol. Phys. 114, 423-430 (2015).\n");
     outfile->Printf("\n");
     outfile->Printf("            URL: http://dx.doi.org/10.1080/00268976.2015.1078008\n");
     outfile->Printf("\n");
