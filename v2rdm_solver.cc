@@ -1545,14 +1545,18 @@ double v2RDMSolver::compute_energy() {
     Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc_+efzc_;
     Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc_+efzc_;
 
-    // compute and print natural orbital occupation numbers
+    // push final transformation matrix onto Ca_ and Cb_
     FinalTransformationMatrix();
-    MullikenPopulations();
-    NaturalOrbitals();
 
+    // write tpdm to disk?
     if ( options_.get_bool("TPDM_WRITE") ) {
         WriteTPDM();
+        ReadTPDM();
     }
+
+    // compute and print natural orbital occupation numbers
+    MullikenPopulations();
+    NaturalOrbitals();
 
     double end_total_time = omp_get_wtime();
 
