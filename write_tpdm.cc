@@ -284,6 +284,12 @@ void v2RDMSolver::WriteTPDM(){
 
 void v2RDMSolver::ReadTPDM(){
 
+    boost::shared_ptr<PSIO> psio (new PSIO());
+
+    if ( !psio->exists(PSIF_V2RDM_D2AB) ) return;
+    if ( !psio->exists(PSIF_V2RDM_D2AA) ) return;
+    if ( !psio->exists(PSIF_V2RDM_D2BB) ) return;
+
     double * D2aa = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
     double * D2bb = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
     double * D2ab = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
@@ -291,8 +297,6 @@ void v2RDMSolver::ReadTPDM(){
     memset((void*)D2aa,'\0',nmo_*nmo_*nmo_*nmo_*sizeof(double));
     memset((void*)D2bb,'\0',nmo_*nmo_*nmo_*nmo_*sizeof(double));
     memset((void*)D2ab,'\0',nmo_*nmo_*nmo_*nmo_*sizeof(double));
-
-    boost::shared_ptr<PSIO> psio (new PSIO());
 
     psio_address addr_aa = PSIO_ZERO;
     psio_address addr_bb = PSIO_ZERO;
@@ -455,6 +459,11 @@ void v2RDMSolver::ReadTPDM(){
 
     //printf("%20.12lf %20.12lf %20.12lf %20.12lf\n",en1,en2,enuc_,en1+en2+enuc_);
 
+    free(D2aa);
+    free(D2bb);
+    free(D2ab);
+    free(Da);
+    free(Db);
 }
 
 

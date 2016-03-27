@@ -126,6 +126,60 @@ v2RDMSolver::v2RDMSolver(boost::shared_ptr<Wavefunction> reference_wavefunction,
 
 v2RDMSolver::~v2RDMSolver()
 {
+    free(amopi_);
+    free(rstcpi_);
+    free(rstvpi_);
+    free(d2aboff);
+    free(d2aaoff);
+    free(d2bboff);
+    free(d1aoff);
+    free(d1boff);
+    free(q1aoff);
+    free(q1boff);
+    if ( constrain_q2_ ) {
+        if ( !spin_adapt_q2_ ) {
+            free(q2aboff);
+            free(q2aaoff);
+            free(q2bboff);
+        }else {
+            free(q2soff);
+            free(q2toff);
+            free(q2toff_p1);
+            free(q2toff_m1);
+        }
+    }
+    if ( constrain_g2_ ) {
+        if ( ! spin_adapt_g2_ ) {
+            free(g2aboff);
+            free(g2baoff);
+            free(g2aaoff);
+        }else {
+            free(g2soff);
+            free(g2toff);
+            free(g2toff_p1);
+            free(g2toff_m1);
+        }
+    }
+    if ( constrain_t1_ ) {
+        free(t1aaboff);
+        free(t1bbaoff);
+        free(t1aaaoff);
+        free(t1bbboff);
+    }
+    if ( constrain_t2_ ) {
+        free(t2aaboff);
+        free(t2bbaoff);
+        free(t2aaaoff);
+        free(t2bbboff);
+        free(t2abaoff);
+        free(t2baboff);
+    }
+    if ( constrain_d3_ ) {
+        free(d3aaaoff);
+        free(d3bbboff);
+        free(d3aaboff);
+        free(d3bbaoff);
+    }
 }
 
 void  v2RDMSolver::common_init(){
@@ -1334,6 +1388,8 @@ double v2RDMSolver::compute_energy() {
 
     double start_total_time = omp_get_wtime();
 
+    ReadTPDM();
+
     // hartree-fock guess
     Guess();
 
@@ -1575,6 +1631,9 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("      Total:                      %12.2lf s\n",end_total_time - start_total_time);
     outfile->Printf("\n");
 
+    // there is something weird with chkpt_ ... reset it
+    chkpt_.reset();
+
     return energy_primal + enuc_ + efzc_;
 }
 
@@ -1749,93 +1808,96 @@ void v2RDMSolver::Guess(){
     memset((void*)x_p,'\0',dimx_*sizeof(double));
     memset((void*)z_p,'\0',dimx_*sizeof(double));
 
-    // random guess
-    srand(0);
-    for (int i = 0; i < dimx_; i++) {
-        x_p[i] = ( (double)rand()/RAND_MAX - 1.0 ) * 2.0;
-    }
-    return;
+    if ( options_.get_str("TPDM_GUESS") == "HF" ) {
 
-    // Hartree-Fock guess for D2, D1, Q1, Q2, and G2
+        // Hartree-Fock guess for D2, D1, Q1, Q2, and G2
 
-    // D2ab
-    int poff1 = 0;
-    for (int h1 = 0; h1 < nirrep_; h1++) {
-        for (int i = 0; i < soccpi_[h1] + doccpi_[h1] - rstcpi_[h1] - frzcpi_[h1]; i++){
-            int poff2 = 0;
-            for (int h2 = 0; h2 < nirrep_; h2++) {
-                for (int j = 0; j < doccpi_[h2] - rstcpi_[h2] - frzcpi_[h2]; j++){
-                    int ii = i + poff1;
-                    int jj = j + poff2;
-                    int h3 = SymmetryPair(symmetry[ii],symmetry[jj]);
-                    int ij = ibas_ab_sym[h3][ii][jj];
-                    x_p[d2aboff[h3] + ij*gems_ab[h3]+ij] = 1.0;
+        // D2ab
+        int poff1 = 0;
+        for (int h1 = 0; h1 < nirrep_; h1++) {
+            for (int i = 0; i < soccpi_[h1] + doccpi_[h1] - rstcpi_[h1] - frzcpi_[h1]; i++){
+                int poff2 = 0;
+                for (int h2 = 0; h2 < nirrep_; h2++) {
+                    for (int j = 0; j < doccpi_[h2] - rstcpi_[h2] - frzcpi_[h2]; j++){
+                        int ii = i + poff1;
+                        int jj = j + poff2;
+                        int h3 = SymmetryPair(symmetry[ii],symmetry[jj]);
+                        int ij = ibas_ab_sym[h3][ii][jj];
+                        x_p[d2aboff[h3] + ij*gems_ab[h3]+ij] = 1.0;
+                    }
+                    poff2   += nmopi_[h2] - rstcpi_[h2] - frzcpi_[h2] - rstvpi_[h2] - frzvpi_[h2];
                 }
-                poff2   += nmopi_[h2] - rstcpi_[h2] - frzcpi_[h2] - rstvpi_[h2] - frzvpi_[h2];
+            }
+            poff1   += nmopi_[h1] - rstcpi_[h1] - frzcpi_[h1] - rstvpi_[h1] - frzvpi_[h1];
+        }
+
+        // d2aa
+        poff1 = 0;
+        for (int h1 = 0; h1 < nirrep_; h1++) {
+            for (int i = 0; i < soccpi_[h1] + doccpi_[h1] - rstcpi_[h1] - frzcpi_[h1]; i++){
+                int poff2 = 0;
+                for (int h2 = 0; h2 < nirrep_; h2++) {
+                    for (int j = 0; j < soccpi_[h2] + doccpi_[h2] - rstcpi_[h2] - frzcpi_[h2]; j++){
+                        int ii = i + poff1;
+                        int jj = j + poff2;
+                        if ( jj >= ii ) continue;
+                        int h3 = SymmetryPair(symmetry[ii],symmetry[jj]);
+                        int ij = ibas_aa_sym[h3][ii][jj];
+                        x_p[d2aaoff[h3] + ij*gems_aa[h3]+ij] = 1.0;
+                    }
+                    poff2   += nmopi_[h2] - rstcpi_[h2] - frzcpi_[h2] - rstvpi_[h2] - frzvpi_[h2];
+                }
+            }
+            poff1   += nmopi_[h1] - rstcpi_[h1] - frzcpi_[h1] - rstvpi_[h1] - frzvpi_[h1];
+        }
+
+        // d2bb
+        poff1 = 0;
+        for (int h1 = 0; h1 < nirrep_; h1++) {
+            for (int i = 0; i < doccpi_[h1] - rstcpi_[h1] - frzcpi_[h1]; i++){
+                int poff2 = 0;
+                for (int h2 = 0; h2 < nirrep_; h2++) {
+                    for (int j = 0; j < doccpi_[h2] - rstcpi_[h2] - frzcpi_[h2]; j++){
+                        int ii = i + poff1;
+                        int jj = j + poff2;
+                        if ( jj >= ii ) continue;
+                        int h3 = SymmetryPair(symmetry[ii],symmetry[jj]);
+                        int ij = ibas_aa_sym[h3][ii][jj];
+                        x_p[d2bboff[h3] + ij*gems_aa[h3]+ij] = 1.0;
+                    }
+                    poff2   += nmopi_[h2] - rstcpi_[h2] - frzcpi_[h2] - rstvpi_[h2] - frzvpi_[h2];
+                }
+            }
+            poff1   += nmopi_[h1] - rstcpi_[h1] - frzcpi_[h1] - rstvpi_[h1] - frzvpi_[h1];
+        }
+
+        // D1
+        for (int h = 0; h < nirrep_; h++) {
+            for (int i = rstcpi_[h] + frzcpi_[h]; i < doccpi_[h]+soccpi_[h]; i++) {
+                int ii = i - rstcpi_[h] - frzcpi_[h];
+                x_p[d1aoff[h]+ii*amopi_[h]+ii] = 1.0;
+            }
+            for (int i = rstcpi_[h] + frzcpi_[h]; i < doccpi_[h]; i++) {
+                int ii = i - rstcpi_[h] - frzcpi_[h];
+                x_p[d1boff[h]+ii*amopi_[h]+ii] = 1.0;
+            }
+            // Q1
+            for (int i = doccpi_[h]+soccpi_[h]; i < nmopi_[h]-rstvpi_[h]-frzvpi_[h]; i++) {
+                int ii = i - rstcpi_[h] - frzcpi_[h];
+                x_p[q1aoff[h]+ii*amopi_[h]+ii] = 1.0;
+            }
+            for (int i = doccpi_[h]; i < nmopi_[h]-rstvpi_[h] - frzvpi_[h]; i++) {
+                int ii = i - rstcpi_[h] - frzcpi_[h];
+                x_p[q1boff[h]+ii*amopi_[h]+ii] = 1.0;
             }
         }
-        poff1   += nmopi_[h1] - rstcpi_[h1] - frzcpi_[h1] - rstvpi_[h1] - frzvpi_[h1];
-    }
+    }else { // random guess
 
-    // d2aa
-    poff1 = 0;
-    for (int h1 = 0; h1 < nirrep_; h1++) {
-        for (int i = 0; i < soccpi_[h1] + doccpi_[h1] - rstcpi_[h1] - frzcpi_[h1]; i++){
-            int poff2 = 0;
-            for (int h2 = 0; h2 < nirrep_; h2++) {
-                for (int j = 0; j < soccpi_[h2] + doccpi_[h2] - rstcpi_[h2] - frzcpi_[h2]; j++){
-                    int ii = i + poff1;
-                    int jj = j + poff2;
-                    if ( jj >= ii ) continue;
-                    int h3 = SymmetryPair(symmetry[ii],symmetry[jj]);
-                    int ij = ibas_aa_sym[h3][ii][jj];
-                    x_p[d2aaoff[h3] + ij*gems_aa[h3]+ij] = 1.0;
-                }
-                poff2   += nmopi_[h2] - rstcpi_[h2] - frzcpi_[h2] - rstvpi_[h2] - frzvpi_[h2];
-            }
+        srand(0);
+        for (int i = 0; i < dimx_; i++) {
+            x_p[i] = ( (double)rand()/RAND_MAX - 1.0 ) * 2.0;
         }
-        poff1   += nmopi_[h1] - rstcpi_[h1] - frzcpi_[h1] - rstvpi_[h1] - frzvpi_[h1];
-    }
 
-    // d2bb
-    poff1 = 0;
-    for (int h1 = 0; h1 < nirrep_; h1++) {
-        for (int i = 0; i < doccpi_[h1] - rstcpi_[h1] - frzcpi_[h1]; i++){
-            int poff2 = 0;
-            for (int h2 = 0; h2 < nirrep_; h2++) {
-                for (int j = 0; j < doccpi_[h2] - rstcpi_[h2] - frzcpi_[h2]; j++){
-                    int ii = i + poff1;
-                    int jj = j + poff2;
-                    if ( jj >= ii ) continue;
-                    int h3 = SymmetryPair(symmetry[ii],symmetry[jj]);
-                    int ij = ibas_aa_sym[h3][ii][jj];
-                    x_p[d2bboff[h3] + ij*gems_aa[h3]+ij] = 1.0;
-                }
-                poff2   += nmopi_[h2] - rstcpi_[h2] - frzcpi_[h2] - rstvpi_[h2] - frzvpi_[h2];
-            }
-        }
-        poff1   += nmopi_[h1] - rstcpi_[h1] - frzcpi_[h1] - rstvpi_[h1] - frzvpi_[h1];
-    }
-
-    // D1
-    for (int h = 0; h < nirrep_; h++) {
-        for (int i = rstcpi_[h] + frzcpi_[h]; i < doccpi_[h]+soccpi_[h]; i++) {
-            int ii = i - rstcpi_[h] - frzcpi_[h];
-            x_p[d1aoff[h]+ii*amopi_[h]+ii] = 1.0;
-        }
-        for (int i = rstcpi_[h] + frzcpi_[h]; i < doccpi_[h]; i++) {
-            int ii = i - rstcpi_[h] - frzcpi_[h];
-            x_p[d1boff[h]+ii*amopi_[h]+ii] = 1.0;
-        }
-        // Q1
-        for (int i = doccpi_[h]+soccpi_[h]; i < nmopi_[h]-rstvpi_[h]-frzvpi_[h]; i++) {
-            int ii = i - rstcpi_[h] - frzcpi_[h];
-            x_p[q1aoff[h]+ii*amopi_[h]+ii] = 1.0;
-        }
-        for (int i = doccpi_[h]; i < nmopi_[h]-rstvpi_[h] - frzvpi_[h]; i++) {
-            int ii = i - rstcpi_[h] - frzcpi_[h];
-            x_p[q1boff[h]+ii*amopi_[h]+ii] = 1.0;
-        }
     }
 
     if ( constrain_q2_ ) {
@@ -1845,7 +1907,7 @@ void v2RDMSolver::Guess(){
             Q2_constraints_guess_spin_adapted(x);
         }
     }
-
+ 
     if ( constrain_g2_ ) {
         if ( ! spin_adapt_g2_ ) {
             G2_constraints_guess(x);
@@ -1853,7 +1915,7 @@ void v2RDMSolver::Guess(){
             G2_constraints_guess_spin_adapted(x);
         }
     }
-
+ 
     if ( constrain_t1_ ) {
         T1_constraints_guess(x);
     }
