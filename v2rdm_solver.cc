@@ -185,6 +185,10 @@ v2RDMSolver::~v2RDMSolver()
         free(d3aaboff);
         free(d3bbaoff);
     }
+
+    // there is something weird with chkpt_ ... reset it
+    chkpt_.reset();
+
 }
 
 void  v2RDMSolver::common_init(){
@@ -346,7 +350,7 @@ void  v2RDMSolver::common_init(){
     Da_ = SharedMatrix(reference_wavefunction_->Da());
     Db_ = SharedMatrix(reference_wavefunction_->Db());
     
-    //Ca_->print();
+    Ca_->print();
 
     epsilon_a_= boost::shared_ptr<Vector>(new Vector(nirrep_, nmopi_));
     epsilon_a_->copy(reference_wavefunction_->epsilon_a().get());
@@ -1396,8 +1400,6 @@ double v2RDMSolver::compute_energy() {
 
     double start_total_time = omp_get_wtime();
 
-    ReadTPDM();
-
     // hartree-fock guess
     Guess();
 
@@ -1463,6 +1465,7 @@ double v2RDMSolver::compute_energy() {
     int diis_iter         = 0;
     int replace_diis_iter = 1;
 
+    ReadTPDM();
     do {
 
         double start = omp_get_wtime();
@@ -1614,12 +1617,20 @@ double v2RDMSolver::compute_energy() {
         orbopt_data_[8] = -1.0;
         RotateOrbitals();
     }
+    Ca_->print();
     FinalTransformationMatrix();
+    Ca_->print();
+    for (int i = 0; i < nmo_-nfrzc_-nfrzv_; i++) {
+        for (int j = 0; j < nmo_-nfrzc_-nfrzv_; j++) {
+            printf("%5i %5i %20.12lf\n",i,j,orbopt_transformation_matrix_[i*(nmo_-nfrzc_-nfrzv_)+j]);
+        }
+    }
+    exit(0);
 
     // write tpdm to disk?
     if ( options_.get_bool("TPDM_WRITE") ) {
         WriteTPDM();
-        //ReadTPDM();
+        ReadTPDM();
     }
 
     // compute and print natural orbital occupation numbers
@@ -1643,8 +1654,8 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("      Total:                      %12.2lf s\n",end_total_time - start_total_time);
     outfile->Printf("\n");
 
-    // there is something weird with chkpt_ ... reset it
     chkpt_.reset();
+
 
     return energy_primal + enuc_ + efzc_;
 }
@@ -1666,9 +1677,10 @@ void v2RDMSolver::NaturalOrbitals() {
     boost::shared_ptr<Matrix> saveda ( new Matrix(Da) );
     Da->diagonalize(eigveca,eigvala,descending);
     eigvala->print();
+
     //Ca_->print();
     // build AO/NO transformation matrix (Ca_)
-    for (int h = 0; h < nirrep_; h++) {
+    /*for (int h = 0; h < nirrep_; h++) {
         for (int mu = 0; mu < nsopi_[h]; mu++) {
             double *  temp = (double*)malloc(nmopi_[h]*sizeof(double));
             double ** cp   = Ca_->pointer(h);
@@ -1685,7 +1697,7 @@ void v2RDMSolver::NaturalOrbitals() {
             }
             free(temp);
         }
-    }
+    }*/
     //Ca_->print();
 
     boost::shared_ptr<Matrix> Db (new Matrix(nirrep_,nmopi_,nmopi_));
@@ -1704,7 +1716,7 @@ void v2RDMSolver::NaturalOrbitals() {
     Db->diagonalize(eigvecb,eigvalb,descending);
     eigvalb->print();
     // build AO/NO transformation matrix (Cb_)
-    for (int h = 0; h < nirrep_; h++) {
+    /*for (int h = 0; h < nirrep_; h++) {
         for (int mu = 0; mu < nsopi_[h]; mu++) {
             double * temp  = (double*)malloc(nmopi_[h]*sizeof(double));
             double ** cp   = Cb_->pointer(h);
@@ -1721,7 +1733,7 @@ void v2RDMSolver::NaturalOrbitals() {
             }
             free(temp);
         }
-    }
+    }*/
 
     // Print a molden file
     if ( options_.get_bool("MOLDEN_WRITE") ) {
@@ -3024,12 +3036,14 @@ void v2RDMSolver::FinalTransformationMatrix() {
             free(temp);
         }
     }
+
     //for (int i = 0; i < nmo_; i++) {
     //    for (int j = 0; j < nmo_; j++) {
     //        printf("%5i %5i %20.12lf\n",i,j,orbopt_transformation_matrix_[i*nmo_+j]);
     //    }
     //}
     //Ca_->print();
+
 }
 
 void v2RDMSolver::RotateOrbitals(){
