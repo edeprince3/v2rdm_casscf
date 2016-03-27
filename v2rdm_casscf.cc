@@ -47,6 +47,8 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
+        /*- Semicanonicalize orbitals? -*/
+        options.add_bool("SEMICANONICALIZE_ORBITALS",true);
         /*- Type of guess -*/
         options.add_str("TPDM_GUESS","RANDOM", "RANDOM HF");
         /*- Do write the 2-RDM to disk? -*/

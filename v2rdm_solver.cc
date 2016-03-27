@@ -126,6 +126,11 @@ v2RDMSolver::v2RDMSolver(boost::shared_ptr<Wavefunction> reference_wavefunction,
 
 v2RDMSolver::~v2RDMSolver()
 {
+    free(tei_full_sym_);
+    free(oei_full_sym_);
+    free(d2_plus_core_sym_);
+    free(d1_plus_core_sym_);
+
     free(amopi_);
     free(rstcpi_);
     free(rstvpi_);
@@ -330,13 +335,16 @@ void  v2RDMSolver::common_init(){
     }
 
 
-    S_  = SharedMatrix(reference_wavefunction_->S());
-    Da_ = SharedMatrix(reference_wavefunction_->Da());
     Ca_ = SharedMatrix(reference_wavefunction_->Ca());
-    Fa_ = SharedMatrix(reference_wavefunction_->Fa());
-    Db_ = SharedMatrix(reference_wavefunction_->Db());
     Cb_ = SharedMatrix(reference_wavefunction_->Cb());
+
+    S_  = SharedMatrix(reference_wavefunction_->S());
+
+    Fa_ = SharedMatrix(reference_wavefunction_->Fa());
     Fb_ = SharedMatrix(reference_wavefunction_->Fb());
+
+    Da_ = SharedMatrix(reference_wavefunction_->Da());
+    Db_ = SharedMatrix(reference_wavefunction_->Db());
     
     //Ca_->print();
 
@@ -1602,6 +1610,10 @@ double v2RDMSolver::compute_energy() {
     Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc_+efzc_;
 
     // push final transformation matrix onto Ca_ and Cb_
+    if ( options_.get_bool("SEMICANONICALIZE_ORBITALS") ) {
+        orbopt_data_[8] = -1.0;
+        RotateOrbitals();
+    }
     FinalTransformationMatrix();
 
     // write tpdm to disk?
@@ -3022,16 +3034,13 @@ void v2RDMSolver::FinalTransformationMatrix() {
 
 void v2RDMSolver::RotateOrbitals(){
 
-/*   
-    if ( is_df_ ) {
-        throw PsiException("orbital optimization does not work with 3-index integrals yet",__FILE__,__LINE__);
-    }
-*/
     UnpackDensityPlusCore();
 
-    outfile->Printf("\n");
-    outfile->Printf("        ==> Orbital Optimization <==\n");
-    outfile->Printf("\n");
+    if ( orbopt_data_[8] > 0 ) {
+        outfile->Printf("\n");
+        outfile->Printf("        ==> Orbital Optimization <==\n");
+        outfile->Printf("\n");
+    }
 
     //int frzc = nfrzc_ + nrstc_;
 
@@ -3051,22 +3060,25 @@ void v2RDMSolver::RotateOrbitals(){
     //      d1_plus_core_sym_,d1_plus_core_dim_,d2_plus_core_sym_,d2_plus_core_dim_,
     //      symmetry_energy_order,frzcpi_,nrstc_,amo_,nrstv_,nirrep_,
     //      orbopt_data_,orbopt_outfile_);
+
     OrbOpt(orbopt_transformation_matrix_,
           oei_full_sym_,oei_full_dim_,tei_full_sym_,tei_full_dim_,
           d1_plus_core_sym_,d1_plus_core_dim_,d2_plus_core_sym_,d2_plus_core_dim_,
           symmetry_energy_order,nrstc_,amo_,nrstv_,nirrep_,
           orbopt_data_,orbopt_outfile_);
 
-    outfile->Printf("            Orbital Optimization %s in %3i iterations \n",(int)orbopt_data_[13] ? "converged" : "did not converge",(int)orbopt_data_[10]);
-    outfile->Printf("            Total energy change: %11.6le\n",orbopt_data_[12]);
-    outfile->Printf("            Final gradient norm: %11.6le\n",orbopt_data_[11]);
-    outfile->Printf("\n");
+    if ( orbopt_data_[8] > 0 ) {
+        outfile->Printf("            Orbital Optimization %s in %3i iterations \n",(int)orbopt_data_[13] ? "converged" : "did not converge",(int)orbopt_data_[10]);
+        outfile->Printf("            Total energy change: %11.6le\n",orbopt_data_[12]);
+        outfile->Printf("            Final gradient norm: %11.6le\n",orbopt_data_[11]);
+        outfile->Printf("\n");
 
-    if ( fabs(orbopt_data_[12]) < orbopt_data_[4] ) {
-        orbopt_converged_ = true;
+        if ( fabs(orbopt_data_[12]) < orbopt_data_[4] ) {
+            orbopt_converged_ = true;
+        }
+
+        RepackIntegrals();
     }
-
-    RepackIntegrals();
 }
 
 }} //end namespaces
