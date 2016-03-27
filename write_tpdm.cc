@@ -172,7 +172,7 @@ void v2RDMSolver::WriteTPDM(){
 
         for (int i = 0; i < rstcpi_[hi] + frzcpi_[hi]; i++) {
 
-            int ifull      = full_basis[i+pitzer_offset[hi]];
+            int ifull      = i + pitzer_offset_full[hi];
 
             // D2(ij; il) 
             for (int hj = 0; hj < nirrep_; hj++) {
@@ -308,11 +308,11 @@ void v2RDMSolver::ReadTPDM(){
 
     for (int n = 0; n < nab; n++) {
         tpdm d2;
+        psio->read(PSIF_V2RDM_D2AB,"D2ab",(char*)&d2,sizeof(tpdm),addr_ab,&addr_ab);
         int i = d2.i;
         int j = d2.j;
         int k = d2.k;
         int l = d2.l;
-        psio->read(PSIF_V2RDM_D2AB,"D2ab",(char*)&d2,sizeof(tpdm),addr_ab,&addr_ab);
         long int id = i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l;
         D2ab[id] = d2.val;
     }
@@ -326,11 +326,11 @@ void v2RDMSolver::ReadTPDM(){
 
     for (int n = 0; n < naa; n++) {
         tpdm d2;
+        psio->read(PSIF_V2RDM_D2AA,"D2aa",(char*)&d2,sizeof(tpdm),addr_aa,&addr_aa);
         int i = d2.i;
         int j = d2.j;
         int k = d2.k;
         int l = d2.l;
-        psio->read(PSIF_V2RDM_D2AA,"D2aa",(char*)&d2,sizeof(tpdm),addr_aa,&addr_aa);
         long int id = i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l;
         D2aa[id] = d2.val;
     }
@@ -344,11 +344,11 @@ void v2RDMSolver::ReadTPDM(){
 
     for (int n = 0; n < nbb; n++) {
         tpdm d2;
+        psio->read(PSIF_V2RDM_D2BB,"D2bb",(char*)&d2,sizeof(tpdm),addr_bb,&addr_bb);
         int i = d2.i;
         int j = d2.j;
         int k = d2.k;
         int l = d2.l;
-        psio->read(PSIF_V2RDM_D2BB,"D2bb",(char*)&d2,sizeof(tpdm),addr_bb,&addr_bb);
         long int id = i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l;
         D2bb[id] = d2.val;
     }
