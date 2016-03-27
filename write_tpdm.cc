@@ -141,7 +141,7 @@ void v2RDMSolver::WriteTPDM(){
                     psio->write(PSIF_V2RDM_D2AB,"D2ab",(char*)&d2,sizeof(tpdm),addr_ab,&addr_ab);
                     countab++;
 
-                    if ( i != j ) {
+                    if ( ifull != jfull ) {
 
                         psio->write(PSIF_V2RDM_D2AA,"D2aa",(char*)&d2,sizeof(tpdm),addr_aa,&addr_aa);
                         countaa++;
@@ -275,8 +275,6 @@ void v2RDMSolver::WriteTPDM(){
     psio->write_entry(PSIF_V2RDM_D2BB,"length",(char*)&countbb,sizeof(long int));
     psio->write_entry(PSIF_V2RDM_D2AB,"length",(char*)&countab,sizeof(long int));
 
-    printf("%5i %5i %5i\n",countaa,countbb,countab);
-
     // close files
     psio->close(PSIF_V2RDM_D2AA,1);
     psio->close(PSIF_V2RDM_D2BB,1);
@@ -365,9 +363,9 @@ void v2RDMSolver::ReadTPDM(){
             trab += D2ab[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+i*nmo_+j];
         }
     }
-    printf("  tr(d2aa) = %20.12lf\n",traa);
-    printf("  tr(d2bb) = %20.12lf\n",trbb);
-    printf("  tr(d2ab) = %20.12lf\n",trab);
+    //printf("  tr(d2aa) = %20.12lf\n",traa);
+    //printf("  tr(d2bb) = %20.12lf\n",trbb);
+    //printf("  tr(d2ab) = %20.12lf\n",trab);
 
     double * Da = (double*)malloc(nmo_*nmo_*sizeof(double));
     double * Db = (double*)malloc(nmo_*nmo_*sizeof(double));
@@ -401,8 +399,8 @@ void v2RDMSolver::ReadTPDM(){
         }
     }
 
-    printf(" tr(da) = %20.12lf\n",tra);
-    printf(" tr(db) = %20.12lf\n",trb);
+    //printf("  tr(da) = %20.12lf\n",tra);
+    //printf("  tr(db) = %20.12lf\n",trb);
 
     // check energy:
 
@@ -447,8 +445,6 @@ void v2RDMSolver::ReadTPDM(){
                 en1 += oei_full_sym_[offset2 + INDEX(i,j)] * Db[ifull*nmo_+jfull];
                 //en1 += K1->pointer(h)[i][j] * Da[ifull*nmo_+jfull];
                 //en1 += K1->pointer(h)[i][j] * Db[ifull*nmo_+jfull];
-//printf("%5i %5i %20.12lf %20.12lf\n",ifull,jfull,Da[ifull*nmo_+jfull],Db[ifull*nmo_+jfull]);
-
             }
         }
 
@@ -457,7 +453,7 @@ void v2RDMSolver::ReadTPDM(){
 
     }
 
-    printf("%20.12lf %20.12lf %20.12lf %20.12lf\n",en1,en2,enuc_,en1+en2+enuc_);
+    //printf("%20.12lf %20.12lf %20.12lf %20.12lf\n",en1,en2,enuc_,en1+en2+enuc_);
 
 }
 
