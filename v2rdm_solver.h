@@ -410,6 +410,9 @@ class v2RDMSolver: public Wavefunction{
 
     /// write 2RDM to disk
     void WriteTPDM();
+
+    /// write 2RDM to disk
+    void ReadTPDM();
 };
 
 }}

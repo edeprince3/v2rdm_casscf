@@ -47,6 +47,10 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
+        /*- Semicanonicalize orbitals? -*/
+        options.add_bool("SEMICANONICALIZE_ORBITALS",true);
+        /*- Type of guess -*/
+        options.add_str("TPDM_GUESS","RANDOM", "RANDOM HF");
         /*- Do write the 2-RDM to disk? -*/
         options.add_bool("TPDM_WRITE",false);
         /*- Do save progress in a checkpoint file? -*/
@@ -140,6 +144,9 @@ PsiReturnType v2rdm_casscf(Options& options)
     tstart();
 
     boost::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(Process::environment.wavefunction(),options));
+
+    //Process::environment.set_wavefunction(v2rdm);
+
     double energy = v2rdm->compute_energy();
 
     Process::environment.globals["CURRENT ENERGY"] = energy;
