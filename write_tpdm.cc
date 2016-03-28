@@ -290,7 +290,7 @@ void v2RDMSolver::ReadTPDM(){
     if ( !psio->exists(PSIF_V2RDM_D2AA) ) return;
     if ( !psio->exists(PSIF_V2RDM_D2BB) ) return;
 
-    Ca_->print();
+    //Ca_->print();
 
     double * D2aa = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
     double * D2bb = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));

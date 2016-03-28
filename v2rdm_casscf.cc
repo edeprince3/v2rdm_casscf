@@ -154,7 +154,7 @@ PsiReturnType v2rdm_casscf(Options& options)
 
     Process::environment.globals["CURRENT ENERGY"] = energy;
 
-    //v2rdm.reset();
+    v2rdm.reset();
 
     tstop();
 
