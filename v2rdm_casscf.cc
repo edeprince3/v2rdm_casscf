@@ -47,7 +47,9 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
-        /*- Semicanonicalize orbitals? -*/
+        /*- Do bypass SCF? -*/
+        options.add_bool("BYPASS_SCF",false);
+        /*- Do semicanonicalize orbitals? -*/
         options.add_bool("SEMICANONICALIZE_ORBITALS",true);
         /*- Type of guess -*/
         options.add_str("TPDM_GUESS","RANDOM", "RANDOM HF");
@@ -145,11 +147,14 @@ PsiReturnType v2rdm_casscf(Options& options)
 
     boost::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(Process::environment.wavefunction(),options));
 
-    //Process::environment.set_wavefunction(v2rdm);
+    //Process::environment.set_wavefunction((boost::shared_ptr<Wavefunction>)v2rdm);
+    Process::environment.set_wavefunction(v2rdm);
 
     double energy = v2rdm->compute_energy();
 
     Process::environment.globals["CURRENT ENERGY"] = energy;
+
+    v2rdm.reset();
 
     tstop();
 

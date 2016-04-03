@@ -185,6 +185,10 @@ v2RDMSolver::~v2RDMSolver()
         free(d3aaboff);
         free(d3bbaoff);
     }
+
+    // there is something weird with chkpt_ ... reset it
+    chkpt_.reset();
+
 }
 
 void  v2RDMSolver::common_init(){
@@ -346,8 +350,6 @@ void  v2RDMSolver::common_init(){
     Da_ = SharedMatrix(reference_wavefunction_->Da());
     Db_ = SharedMatrix(reference_wavefunction_->Db());
     
-    //Ca_->print();
-
     epsilon_a_= boost::shared_ptr<Vector>(new Vector(nirrep_, nmopi_));
     epsilon_a_->copy(reference_wavefunction_->epsilon_a().get());
     epsilon_b_= boost::shared_ptr<Vector>(new Vector(nirrep_, nmopi_));
@@ -1396,8 +1398,6 @@ double v2RDMSolver::compute_energy() {
 
     double start_total_time = omp_get_wtime();
 
-    ReadTPDM();
-
     // hartree-fock guess
     Guess();
 
@@ -1619,7 +1619,6 @@ double v2RDMSolver::compute_energy() {
     // write tpdm to disk?
     if ( options_.get_bool("TPDM_WRITE") ) {
         WriteTPDM();
-        //ReadTPDM();
     }
 
     // compute and print natural orbital occupation numbers
@@ -1643,8 +1642,8 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("      Total:                      %12.2lf s\n",end_total_time - start_total_time);
     outfile->Printf("\n");
 
-    // there is something weird with chkpt_ ... reset it
     chkpt_.reset();
+
 
     return energy_primal + enuc_ + efzc_;
 }
@@ -1666,9 +1665,10 @@ void v2RDMSolver::NaturalOrbitals() {
     boost::shared_ptr<Matrix> saveda ( new Matrix(Da) );
     Da->diagonalize(eigveca,eigvala,descending);
     eigvala->print();
+
     //Ca_->print();
     // build AO/NO transformation matrix (Ca_)
-    for (int h = 0; h < nirrep_; h++) {
+    /*for (int h = 0; h < nirrep_; h++) {
         for (int mu = 0; mu < nsopi_[h]; mu++) {
             double *  temp = (double*)malloc(nmopi_[h]*sizeof(double));
             double ** cp   = Ca_->pointer(h);
@@ -1685,7 +1685,7 @@ void v2RDMSolver::NaturalOrbitals() {
             }
             free(temp);
         }
-    }
+    }*/
     //Ca_->print();
 
     boost::shared_ptr<Matrix> Db (new Matrix(nirrep_,nmopi_,nmopi_));
@@ -1704,7 +1704,7 @@ void v2RDMSolver::NaturalOrbitals() {
     Db->diagonalize(eigvecb,eigvalb,descending);
     eigvalb->print();
     // build AO/NO transformation matrix (Cb_)
-    for (int h = 0; h < nirrep_; h++) {
+    /*for (int h = 0; h < nirrep_; h++) {
         for (int mu = 0; mu < nsopi_[h]; mu++) {
             double * temp  = (double*)malloc(nmopi_[h]*sizeof(double));
             double ** cp   = Cb_->pointer(h);
@@ -1721,7 +1721,7 @@ void v2RDMSolver::NaturalOrbitals() {
             }
             free(temp);
         }
-    }
+    }*/
 
     // Print a molden file
     if ( options_.get_bool("MOLDEN_WRITE") ) {
@@ -2950,46 +2950,6 @@ void v2RDMSolver::UnpackDensityPlusCore() {
 
 void v2RDMSolver::FinalTransformationMatrix() {
 
-    // test: transform oeis
-    /*offset = 0;
-    double diff = 0.0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (int ieo = 0; ieo < nmo_-nfrzv_; ieo++) {
-            int ifull = energy_to_pitzer_order[ieo];
-            int hi    = symmetry_full[ifull];
-            if ( h != hi ) continue;
-            int i     = ifull - pitzer_offset_full[hi];
-            for (int jeo = 0; jeo < nmo_-nfrzv_; jeo++) {
-                int jfull = energy_to_pitzer_order[jeo];
-                int hj    = symmetry_full[jfull];
-                if ( h != hj ) continue;
-                int j     = jfull - pitzer_offset_full[hj];
-                double dum = 0.0;
-                for (int keo = 0; keo < nmo_-nfrzv_; keo++) {
-                    int kfull = energy_to_pitzer_order[keo];
-                    int hk    = symmetry_full[kfull];
-                    if ( h != hk ) continue;
-                    int k     = kfull - pitzer_offset_full[hk];
-                    for (int leo = 0; leo < nmo_-nfrzv_; leo++) {
-                        int lfull = energy_to_pitzer_order[leo];
-                        int hl    = symmetry_full[lfull];
-                        if ( h != hl ) continue;
-                        int l     = lfull - pitzer_offset_full[hl];
-                        //dum += saveOEI_->pointer(h)[k][l] * orbopt_transformation_matrix_[ieo*nmo_+keo]
-                        //                                * orbopt_transformation_matrix_[jeo*nmo_+leo];
-                        dum += saveOEI_->pointer(h)[k][l] * orbopt_transformation_matrix_[keo*nmo_+ieo]
-                                                        * orbopt_transformation_matrix_[leo*nmo_+jeo];
-                    }
-                }
-                diff += (dum - oei_full_sym_[offset+INDEX(i,j)]) * (dum - oei_full_sym_[offset+INDEX(i,j)]);
-                printf("%5i %5i %20.12lf %20.12lf\n",i,j,dum,oei_full_sym_[offset+INDEX(i,j)]);
-            }
-        }
-        offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
-    }
-    printf("%20.12lf\n",diff);*/
-
-
     // update so/mo coefficient matrix (only need Ca_):
     for (int h = 0; h < nirrep_; h++) {
         double **ca_p = Ca_->pointer(h);
@@ -3013,7 +2973,8 @@ void v2RDMSolver::FinalTransformationMatrix() {
                     if ( h != hj ) continue;
                     int j     = jfull - pitzer_offset_full[hj];
 
-                    dum += ca_p[mu][j] * orbopt_transformation_matrix_[(jeo-nfrzc_)*(nmo_-nfrzc_-nfrzv_)+(ieo-nfrzc_)];
+                    //dum += ca_p[mu][j] * orbopt_transformation_matrix_[(jeo-nfrzc_)*(nmo_-nfrzc_-nfrzv_)+(ieo-nfrzc_)];
+                    dum += ca_p[mu][j] * orbopt_transformation_matrix_[(ieo-nfrzc_)*(nmo_-nfrzc_-nfrzv_)+(jeo-nfrzc_)];
                 }
                 temp[i] = dum;
             }
@@ -3024,12 +2985,40 @@ void v2RDMSolver::FinalTransformationMatrix() {
             free(temp);
         }
     }
+
+    // test: transform oei's:
+    /*boost::shared_ptr<MintsHelper> mints(new MintsHelper());
+    boost::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
+    K1->add(mints->so_kinetic());
+    K1->transform(Ca_);
+    offset = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (int ieo = 0; ieo < nmo_-nfrzv_; ieo++) {
+            int ifull = energy_to_pitzer_order[ieo];
+            int hi    = symmetry_full[ifull];
+            if ( h != hi ) continue;
+            int i     = ifull - pitzer_offset_full[hi];
+            for (int jeo = 0; jeo < nmo_-nfrzv_; jeo++) {
+                int jfull = energy_to_pitzer_order[jeo];
+                int hj    = symmetry_full[jfull];
+                if ( h != hj ) continue;
+                int j     = jfull - pitzer_offset_full[hj];
+                double dum = K1->pointer(h)[i][j] - oei_full_sym_[offset+INDEX(i,j)];
+                if ( fabs(dum) > 1e-6 ) {
+                    printf("%5i %5i %20.12lf %20.12lf\n",i,j,K1->pointer(h)[i][j],oei_full_sym_[offset+INDEX(i,j)]);
+                }
+            }
+        }
+        offset += nmopi_[h] * ( nmopi_[h] + 1 ) / 2;
+    }*/
+
     //for (int i = 0; i < nmo_; i++) {
     //    for (int j = 0; j < nmo_; j++) {
     //        printf("%5i %5i %20.12lf\n",i,j,orbopt_transformation_matrix_[i*nmo_+j]);
     //    }
     //}
     //Ca_->print();
+
 }
 
 void v2RDMSolver::RotateOrbitals(){

@@ -75,8 +75,6 @@ class v2RDMSolver: public Wavefunction{
 
   protected:
 
-    boost::shared_ptr<Matrix> saveOEI_;
-
     /// constrain Q2 to be positive semidefinite?
     bool constrain_q2_;
 
