@@ -413,7 +413,7 @@ module focas_transform_teints
 
       transform_teints_irrep_block = allocate_transform_scr()
 
-      if ( transform_teints_irrep_block /= 0 ) stop
+      if ( transform_teints_irrep_block /= 0 ) call abort_print(311)
 
       ! ********************************
       ! *** 1ST HALF TRANSFORM (kl-->tu)
@@ -695,7 +695,7 @@ module focas_transform_teints
 
           if (allocated(A)) allocate_transform_scr = deallocate_transform_scr()
 
-          if ( allocate_transform_scr /= 0 ) stop
+          if ( allocate_transform_scr /= 0 ) call abort_print(312)
 
           allocate(A(nnz_ij))
 
@@ -840,7 +840,7 @@ module focas_transform_teints
 
       transform_teints_g0_block = allocate_transform_scr_g0()
 
-      if ( transform_teints_g0_block /= 0 ) stop
+      if ( transform_teints_g0_block /= 0 ) call abort_print(313)
 
       ! ********************************
       ! *** 1ST HALF TRANSFORM (kl-->tu)
@@ -1093,7 +1093,7 @@ module focas_transform_teints
 
           if (allocated(A)) allocate_transform_scr_g0 = deallocate_transform_scr_g0()
 
-          if ( allocate_transform_scr_g0 /= 0 ) stop
+          if ( allocate_transform_scr_g0 /= 0 ) call abort_print(314)
 
           allocate(A(nnz_ij))
 

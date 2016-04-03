@@ -55,11 +55,11 @@ module focas_exponential
       do i_sym=1,nirrep_
 
         error = gather_kappa_block(kappa_in,k_block,i_sym)
-        if (error /= 0) stop
+        if (error /= 0) call print_abort(10) 
 
         error = 0
         if ( trans_%nmopi(i_sym) > 0 ) error = compute_block_exponential(k_block,i_sym,max_nmopi)
-        if (error /= 0) stop
+        if (error /= 0) call print_abort(11)
          
       end do
 

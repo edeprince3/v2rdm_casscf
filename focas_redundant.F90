@@ -35,7 +35,7 @@ module focas_redundant
 
         call analyze_block_nos(nos,opdm_block,nmo,block_sym)
 
-        if (error /= 0 ) stop
+        if (error /= 0 ) call abort_print(40)
 
         deallocate(opdm_block,nos)
 

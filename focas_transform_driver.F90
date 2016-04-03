@@ -40,7 +40,7 @@ module focas_transform_driver
 
       ! 1-e integrals
       error = transform_oeints(int1)
-      if ( error /= 0 ) stop   
+      if ( error /= 0 ) call abort_print(30)   
 
       ! 2-e integrals
       if ( df_vars_%use_df_teints == 0 ) then
@@ -48,11 +48,11 @@ module focas_transform_driver
       else
         error = transform_teints_df(int2)
       end if
-      if ( error /= 0 ) stop      
+      if ( error /= 0 ) call abort_print(31)
 
       ! mo_coeff matrix
       error = transform_mocoeff(mo_coeff)
-      if ( error /= 0 ) stop
+      if ( error /= 0 ) call abort_print(32)
 
       return
     end subroutine transform_driver

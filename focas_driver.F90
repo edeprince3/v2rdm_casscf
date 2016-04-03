@@ -142,7 +142,7 @@ module focas_driver
     ! set up df mapping arrays if density-fitted 2-e integrals are used
     error = 0
     if ( df_vars_%use_df_teints == 1 ) error = df_map_setup(nnz_int2)
-    if ( error /= 0 ) stop
+    if ( error /= 0 ) call abort_print(20)
 
     ! allocate intermediate matrices for DF integrals
     if ( df_vars_%use_df_teints == 1 ) call allocate_qint()

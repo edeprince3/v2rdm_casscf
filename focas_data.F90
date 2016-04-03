@@ -305,4 +305,70 @@ module focas_data
 #endif
     end function timer
 
+    subroutine print_error(error_code)
+
+      implicit none
+
+      integer, intent(in) :: error_code
+
+      if (error_code == 10) write(*,'(a)')'error encountered in function gather_kappa_block()'
+
+      if (error_code == 11) write(*,'(a)')'error encountered in function compute_block_exponential()'
+
+      if (error_code == 20) write(*,'(a)')'error encountered in function df_map_setup()'
+
+      if (error_code == 30) write(*,'(a)')'error encountered in function transform_oeints()'
+
+      if (error_code == 31) write(*,'(a)')'error encountered in function transform_teints()'
+
+      if (error_code == 32) write(*,'(a)')'error encountered in function transform_mocoeff()'
+
+      if (error_code == 311) write(*,'(a)')'error encountered in function transform_teints_irrep_block()'
+
+      if (error_code == 312) write(*,'(a)')'error encountered in function allocate_transform_scr()'
+
+      if (error_code == 313) write(*,'(a)')'error encountered in function transform_teints_g0_block()'
+
+      if (error_code == 314) write(*,'(a)')'error encountered in function allocate_transform_scr_g0()' 
+
+      if (error_code == 40) write(*,'(a)')'error encountered in function diagonalize_opdm()'
+
+      if (error_code == 50) write(*,'(a)')'error encountered in function transform_mocoeff()'
+
+      if (error_code == 510) write(*,'(a)')'error encountered in function precompute_coulomb()'
+
+      if (error_code == 511) write(*,'(a)')'error encountered in function compute_gen_fock_block_df() for inactive'
+
+      if (error_code == 512) write(*,'(a)')'error encountered in function compute_gen_fock_block_df() for active'
+
+      if (error_code == 513) write(*,'(a)')'error encountered in function compute_gen_fock_block_df() for external'
+
+      if (error_code == 521) write(*,'(a)')'error encountered in function compute_gen_fock_block() for inactive'
+
+      if (error_code == 522) write(*,'(a)')'error encountered in function compute_gen_fock_block() for active'
+
+      if (error_code == 523) write(*,'(a)')'error encountered in function compute_gen_fock_block() for external'
+
+      if (error_code == 531) write(*,'(a)')'error encountered in function copy_semicanonical_mos_block() for inactive'
+
+      if (error_code == 532) write(*,'(a)')'error encountered in function copy_semicanonical_mos_block() for active'
+
+      if (error_code == 533) write(*,'(a)')'error encountered in function copy_semicanonical_mos_block() for external'
+
+      if (error_code == 541) write(*,'(a)')'error encountered in function diagonalize_gen_fock_block() for inactive'
+
+      if (error_code == 542) write(*,'(a)')'error encountered in function diagonalize_gen_fock_block() for active'
+
+      if (error_code == 543) write(*,'(a)')'error encountered in function diagonalize_gen_fock_block() for external'
+
+      if (error_code == 544) write(*,'(a)')'error encountered in function diagonalize_opdm_block()'
+
+      if (error_code == 545) write(*,'(a)')'error encountered in function print_orbital_energies()'
+
+      stop
+
+      return
+
+    end subroutine print_error
+
 end module focas_data

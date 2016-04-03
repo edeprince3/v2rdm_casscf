@@ -84,18 +84,6 @@ module focas_energy
     ! total 2-e energy
     e2_total_      = e2_cc_ + e2_ca_ + e2_aa_
 
-    !write(fid_,'(a,1x,f25.10)')'e1_c',e1_c_
-    !write(fid_,'(a,1x,f25.10)')'e1_a',e1_a_
-    !write(fid_,'(a,1x,f25.10)')'e2_cc',e2_cc_
-    !write(fid_,'(a,1x,f25.10)')'e2_ca',e2_ca_
-    !write(fid_,'(a,1x,f25.10)')'e2_aa',e2_aa_
-    !write(fid_,'(a,1x,f25.10)')'e1_total',e1_total_
-    !write(fid_,'(a,1x,f25.10)')'e2_total',e2_total_
-    !write(fid_,'(a,1x,f25.10)')'e_frozen_core',e_frozen_core_
-    !write(fid_,'(a,1x,f25.10)')'e_active',e_active_
-    !write(fid_,'(a,1x,f25.10)')'e_total',e_total_
-    !stop
-
     return
   end subroutine compute_energy
 

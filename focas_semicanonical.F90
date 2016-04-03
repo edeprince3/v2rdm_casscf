@@ -68,48 +68,38 @@ module focas_semicanonical
       df_vars_%use_df_teints      = int(orbopt_data(10))
 
       if ( log_print_ == 1 ) then
+
         inquire(file=fname,exist=fexist)
+
         if (fexist) then
+
           open(fid_,file=fname,status='old',position='append')
+
         else
+
           open(fid_,file=fname,status='new')
+
         endif
+
+        write(fid_,'(a)')'omputing semicanonical orbitals'
+
       endif
 
       ! allocate variables and set up mapping arrays
       call allocate_semicanonical_initial(ndocpi,nactpi,nextpi,nirrep,int2_nnz)
-
-! start debug stuff
-!      call compute_energy(int1,int2,den1,den2)
-!      write(*,*)'semi-before',e_total_
-!end debug stuff
 
       ! compute the fock matrices
       call compute_gen_fock(int1,int2,den1)
 
       ! compute semicanonical orbitals and orbital energies
       error=diagonalize_gen_fock()
- 
+
       ! copy MO coefficients into U
       error=copy_semicanonical_mos()
 
       ! mo_coeff matrix
       error = transform_mocoeff(mo_coeff)
-      if ( error /= 0 ) stop
-
-! start debug stuff
-!
-!      ! transform
-!      call transform_driver(int1,int2,mo_coeff)
-!
-!      call compute_gen_fock(int1,int2,den1)
-!
-!      call check_gen_fock()
-!
-!      call compute_energy(int1,int2,den1,den2)
-!      write(*,*)'semi-after',e_total_
-!
-! end debug stuff
+      if ( error /= 0 ) call abort_print(50)
 
       ! deallocate variables
       call deallocate_semicanonical_final()
@@ -137,22 +127,22 @@ module focas_semicanonical
 
         ! precompute Coulob terms
         error = precompute_coulomb()
-        if ( error /= 0 ) stop
+        if ( error /= 0 ) call abort_print(510)
 
         ! inactive-inactive block
         offset = 0
         error=compute_gen_fock_block_df(1,gen_f_%doc)
-        if ( error /= 0 ) stop
+        if ( error /= 0 ) call abort_print(511)
 
         ! active-active block
         offset = ndocpi_
         error=compute_gen_fock_block_df(2,gen_f_%act)
-        if ( error /= 0 ) stop
+        if ( error /= 0 ) call abort_print(512)
       
         ! external-external block
         offset = ndocpi_ + nactpi_
         error=compute_gen_fock_block_df(3,gen_f_%ext)
-        if ( error /= 0 ) stop
+        if ( error /= 0 ) call abort_print(513)
 
         deallocate(coulomb)
 
@@ -161,17 +151,17 @@ module focas_semicanonical
         ! inactive-inactive block
         offset = 0
         error=compute_gen_fock_block(1,gen_f_%doc)
-        if ( error /= 0 ) stop
+        if ( error /= 0 ) call abort_print(521)
 
         ! active-active block
         offset = ndocpi_
         error=compute_gen_fock_block(2,gen_f_%act)
-        if ( error /= 0 ) stop
+        if ( error /= 0 ) call abort_print(522)
 
         ! external-external block
         offset = ndocpi_ + nactpi_
         error=compute_gen_fock_block(3,gen_f_%ext)     
-        if ( error /= 0 ) stop
+        if ( error /= 0 ) call abort_print(523)
 
       end if
 
@@ -455,8 +445,6 @@ module focas_semicanonical
 
                 end do
 
-!                write(*,'(2(i1,1x),5x,2(i2,1x),5x,f20.14)')p_class,p_sym,p_i,q_i,f_val
-
                 f_block(p_sym)%val(q_i,p_i) = f_val
                 f_block(p_sym)%val(p_i,q_i) = f_val
 
@@ -493,17 +481,17 @@ module focas_semicanonical
       offset = 0
       dims   = ndocpi_
       error=copy_semicanonical_mos_block(gen_f_%doc)
-      if ( error /= 0 ) stop
+      if ( error /= 0 ) call abort_print(531)
 
       offset = ndocpi_
       dims   = nactpi_
       error=copy_semicanonical_mos_block(gen_f_%act)
-      if ( error /= 0 ) stop
+      if ( error /= 0 ) call abort_print(532)
 
       offset = ndocpi_ + nactpi_
       dims   = nextpi_
       error=copy_semicanonical_mos_block(gen_f_%ext)
-      if ( error /= 0 ) stop
+      if ( error /= 0 ) call abort_print(533)
 
       copy_semicanonical_mos = 0
 
@@ -549,18 +537,18 @@ module focas_semicanonical
       integer :: error
 
       diagonalize_gen_fock = 1
- 
+
       ! inactive block
       error = diagonalize_gen_fock_block(gen_f_%doc,gen_f_%doc_e,ndocpi_)
-      if ( error /= 0 ) stop
+      if ( error /= 0 ) call abort_print(541)
 
       ! active block
       error = diagonalize_gen_fock_block(gen_f_%act,gen_f_%act_e,nactpi_)
-      if ( error /= 0 ) stop
+      if ( error /= 0 ) call abort_print(542)
 
       ! active block
       error = diagonalize_gen_fock_block(gen_f_%ext,gen_f_%ext_e,nextpi_)
-      if ( error /= 0 ) stop
+      if ( error /= 0 ) call abort_print(543)
 
       diagonalize_gen_fock = 0
 
@@ -585,12 +573,14 @@ module focas_semicanonical
             if ( nmo == 0 ) cycle
 
             error = diagonalize_opdm_block(e_block(p_sym)%val,f_block(p_sym)%val,nmo)
+            if ( error /= 0 ) call abort_print(544)
  
-            if ( error /= 0 ) stop
-
           end do
 
-          if ( log_print_ == 1 ) error = print_orbital_energies(e_block)
+          if ( log_print_ == 1 ) then
+            error = print_orbital_energies(e_block)
+            if (error /= 0) call abort_print(545)
+          end if
 
           return
 
@@ -617,6 +607,8 @@ module focas_semicanonical
             write(fid_,'(8(f9.4,1x))')e_block(p_sym)%val
 
           end do
+
+          print_orbital_energies = 0
 
           return
 
@@ -660,7 +652,7 @@ module focas_semicanonical
       ! set up df mapping arrays if density-fitted 2-e integrals are used
       error = 0
       if ( df_vars_%use_df_teints == 1 ) error = df_map_setup(int2_nnz)
-      if ( error /= 0 ) stop
+      if ( error /= 0 ) call abort_print(20)
 
       return
 
