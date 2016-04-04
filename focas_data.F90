@@ -305,7 +305,7 @@ module focas_data
 #endif
     end function timer
 
-    subroutine print_error(error_code)
+    subroutine abort_print(error_code)
 
       implicit none
 
@@ -369,6 +369,6 @@ module focas_data
 
       return
 
-    end subroutine print_error
+    end subroutine abort_print
 
 end module focas_data
