@@ -3,6 +3,8 @@
 *.d
 *.so
 psi*clean
+timer.dat
+output.dat
 
 tests/v2rdm*/timer.dat
 tests/v2rdm*/output.dat

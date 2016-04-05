@@ -60,7 +60,7 @@ int read_options(std::string name, Options& options)
         /*- Frequency of checkpoint file generation.  The checkpoint file is 
         updated every CHECKPOINT_FREQUENCY iterations.  The default frequency
         will be ORBOPT_FREQUENCY. -*/
-        options.add_int("CHECKPOINT_FREQUENCY",200);
+        options.add_int("CHECKPOINT_FREQUENCY",500);
         /*- File containing previous primal/dual solutions and integrals. -*/
         options.add_str("RESTART_FROM_CHECKPOINT_FILE","");
         /*- Frequency with which the pentalty-parameter, mu, is updated. mu is
@@ -117,7 +117,7 @@ int read_options(std::string name, Options& options)
         options.add_int("ORBOPT_NUM_DIIS_VECTORS",0);
         /*- frequency of orbital optimization.  optimization occurs every 
         orbopt_frequency iterations -*/
-        options.add_int("ORBOPT_FREQUENCY",200);
+        options.add_int("ORBOPT_FREQUENCY",500);
         /*- maximum number of iterations for orbital optimization -*/
         options.add_int("ORBOPT_MAXITER",20);
         /*- Do write a MOLDEN output file?  If so, the filename will end in
