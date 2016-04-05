@@ -26,13 +26,15 @@ set v2rdm_casscf {
   r_convergence  1e-4
   e_convergence  1e-4
   maxiter 20000
+  orbopt_frequency 200
+  mu_update_frequency 200
 }
 
 activate(n2)
 
 n2.r     = 0.5
-refscf   = -103.04337420425341 # TEST
-refv2rdm = -103.086370861461   # TEST
+refscf   = -103.04337420425350 # TEST
+refv2rdm = -103.086382067146   # TEST
 
 energy('v2rdm-casscf')
 

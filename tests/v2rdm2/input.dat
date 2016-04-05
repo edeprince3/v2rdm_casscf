@@ -31,7 +31,7 @@ activate(n2)
 
 n2.r     = 1.1
 refscf   = -108.95379624015767 # TEST
-refv2rdm = -109.094829037354   # TEST
+refv2rdm = -109.094784621661   # TEST
 
 energy('v2rdm-casscf')
 
