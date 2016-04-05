@@ -140,25 +140,20 @@ int read_options(std::string name, Options& options)
 }
 
 extern "C" 
-PsiReturnType v2rdm_casscf(Options& options)
+SharedWavefunction v2rdm_casscf(SharedWavefunction ref_wfn, Options& options)
 {
 
     tstart();
 
-    boost::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(Process::environment.wavefunction(),options));
-
-    //Process::environment.set_wavefunction((boost::shared_ptr<Wavefunction>)v2rdm);
-    Process::environment.set_wavefunction(v2rdm);
+    boost::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(ref_wfn,options));
 
     double energy = v2rdm->compute_energy();
 
     Process::environment.globals["CURRENT ENERGY"] = energy;
 
-    v2rdm.reset();
-
     tstop();
 
-    return Success;
+    return v2rdm;
 }
 
 }} // End namespaces

@@ -427,7 +427,7 @@ void v2RDMSolver::ReadTPDM(){
         }
     }
 
-    boost::shared_ptr<MintsHelper> mints(new MintsHelper());
+    boost::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
     boost::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
     K1->add(mints->so_kinetic());
     K1->transform(Ca_);

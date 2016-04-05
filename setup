@@ -3,15 +3,16 @@
 # setup and compilation script for v2rdm-casscf plugin to Psi4
 # 
 # 1. specify your fortran compiler
-F90=gfortran
+#F90=gfortran-mp-4.8
+F90=ifort
 
 # 2. specify fortran flags.  the default flags below should work
-F90_FLAGS='-fopenmp -O3 -fPIC -DOMP'
+F90_FLAGS='-heap-arrays -openmp -O2 -fPIC -DOMP'
 
 # 3. specify fortran libraries.
 
 # for ifort:
-F90_LIB=-lgfortran             
+F90_LIB=-lifcore                              
 
 # for gfortran ... but use the correct gcc directory
 #F90_LIB='-L/opt/local/lib/gcc48/ -lgfortran' 

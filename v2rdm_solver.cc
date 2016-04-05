@@ -119,7 +119,7 @@ static void evaluate_Ap(long int n, SharedVector Ax, SharedVector x, void * data
 namespace psi{ namespace v2rdm_casscf{
 
 v2RDMSolver::v2RDMSolver(boost::shared_ptr<Wavefunction> reference_wavefunction,Options & options):
-    Wavefunction(options,_default_psio_lib_){
+    Wavefunction(options){
     reference_wavefunction_ = reference_wavefunction;
     common_init();
 }
@@ -186,9 +186,6 @@ v2RDMSolver::~v2RDMSolver()
         free(d3bbaoff);
     }
 
-    // there is something weird with chkpt_ ... reset it
-    chkpt_.reset();
-
 }
 
 void  v2RDMSolver::common_init(){
@@ -213,6 +210,7 @@ void  v2RDMSolver::common_init(){
     nso_      = reference_wavefunction_->nso();
     nmo_      = reference_wavefunction_->nmo();
     nsopi_    = reference_wavefunction_->nsopi();
+    molecule_ = reference_wavefunction_->molecule();
 
     // restricted doubly occupied orbitals per irrep (optimized)
     rstcpi_   = (int*)malloc(nirrep_*sizeof(int));
@@ -1298,10 +1296,9 @@ void  v2RDMSolver::common_init(){
         outfile->Printf("\n");
         
         double start = omp_get_wtime();
-        boost::shared_ptr<Wavefunction> wfn = Process::environment.wavefunction();
         std::vector<shared_ptr<MOSpace> > spaces;
         spaces.push_back(MOSpace::all);
-        boost::shared_ptr<IntegralTransform> ints(new IntegralTransform(wfn, spaces, IntegralTransform::Restricted,
+        boost::shared_ptr<IntegralTransform> ints(new IntegralTransform(reference_wavefunction_, spaces, IntegralTransform::Restricted,
             				      IntegralTransform::IWLOnly, IntegralTransform::PitzerOrder, IntegralTransform::None, false));
         ints->set_dpd_id(0);
         ints->set_keep_iwl_so_ints(true);
@@ -1368,7 +1365,7 @@ void  v2RDMSolver::common_init(){
 
     // don't change the length of this filename
     orbopt_outfile_ = (char*)malloc(120*sizeof(char));
-    std::string filename = get_writer_file_prefix() + ".orbopt";
+    std::string filename = get_writer_file_prefix(reference_wavefunction_->molecule()->name()) + ".orbopt";
     strcpy(orbopt_outfile_,filename.c_str());
     if ( options_.get_bool("ORBOPT_WRITE") ) { 
         FILE * fp = fopen(orbopt_outfile_,"w");
@@ -1642,9 +1639,6 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("      Total:                      %12.2lf s\n",end_total_time - start_total_time);
     outfile->Printf("\n");
 
-    chkpt_.reset();
-
-
     return energy_primal + enuc_ + efzc_;
 }
 
@@ -1732,7 +1726,7 @@ void v2RDMSolver::NaturalOrbitals() {
         boost::shared_ptr<MoldenWriter> molden(new MoldenWriter(reference_wavefunction_));
         boost::shared_ptr<Vector> zero (new Vector("",nirrep_,nmopi_));
         zero->zero();
-        std::string filename = get_writer_file_prefix() + ".molden";
+        std::string filename = get_writer_file_prefix(reference_wavefunction_->molecule()->name()) + ".molden";
         molden->write(filename,Ca_,Cb_,zero, zero,eigvala,eigvalb);
     }
 }
@@ -1806,8 +1800,8 @@ void v2RDMSolver::MullikenPopulations() {
     }
 
     // compute mulliken charges:
-    boost::shared_ptr<MyOEProp> oe(new MyOEProp());
-    oe->compute_mulliken_charges_custom(Da_,Db_);
+    //boost::shared_ptr<MyOEProp> oe(new MyOEProp());
+    //oe->compute_mulliken_charges_custom(Da_,Db_);
     
     free(temp);    
 }
