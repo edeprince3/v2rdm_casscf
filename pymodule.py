@@ -52,7 +52,6 @@ def run_v2rdm_casscf(name, **kwargs):
     psi4.set_local_option('SCF', 'DF_INTS_IO', 'SAVE')
 
     # Your plugin's psi4 run sequence goes here
-    #if ( psi4.get_option("V2RDM_CASSCF","BYPASS_SCF") == False ):
     scf_wfn = scf_helper(name, **kwargs)
 
     # if restarting from a checkpoint file, this file

@@ -47,8 +47,6 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
-        /*- Do bypass SCF? -*/
-        options.add_bool("BYPASS_SCF",false);
         /*- Do semicanonicalize orbitals? -*/
         options.add_bool("SEMICANONICALIZE_ORBITALS",true);
         /*- Type of guess -*/
