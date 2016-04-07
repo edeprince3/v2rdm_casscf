@@ -103,42 +103,55 @@ module focas_redundant
       integer :: iwork_tmp(1),neig_found
       real(wp) :: work_tmp(1,1),val
  
-      ! determine the values for # of eigenvlaues to be foudn as well as min/max
-      il=1
-      vl=-huge(1.0_wp)
-      vu=0.0_wp
-      diag_tol=2.0_wp*epsilon(1.0_wp)
+!      ! determine the values for # of eigenvlaues to be foudn as well as min/max
+!      il=1
+!      vl=-huge(1.0_wp)
+!      vu=0.0_wp
+!      diag_tol=2.0_wp*epsilon(1.0_wp)
+!
+!      ! allocate the first temporary matrix
+!      allocate(isuppz(2*nmo))
+!
+!      ! figure out optimal dimensions for iwork and work
+!      call dsyevr('v','a','u',nmo,opdm_block,nmo,vl,vu,il,nmo,diag_tol,neig_found,nos,vecs,&
+!                 & nmo,isuppz,work_tmp,-1,iwork_tmp,-1,diagonalize_opdm_block)
+!
+!      ! something did not go right so return without diagonalization
+!      if ( diagonalize_opdm_block /= 0 ) then
+!        deallocate(isuppz)
+!        return
+!      end if
+!
+!      ! save optimal workspace values
+!      liwork=iwork_tmp(1)
+!      lwork=int(work_tmp(1,1))
+!
+!      ! allocate remaining temporary matrices
+!      allocate(work(lwork),iwork(liwork),vecs(nmo,nmo))
+! 
+!      ! diagonalize
+!      call dsyevr('v','a','u',nmo,opdm_block,nmo,vl,vu,il,nmo,diag_tol,neig_found,nos,vecs,&
+!                 & nmo,isuppz,work,lwork,iwork,liwork,diagonalize_opdm_block)
+!
+!      ! save eigenvectors
+!      opdm_block = vecs
+!
+!      ! deallocate temporary matrices
+!      deallocate(isuppz,work,iwork,vecs)
 
-      ! allocate the first temporary matrix
-      allocate(isuppz(2*nmo))
-
-      ! figure out optimal dimensions for iwork and work
-      call dsyevr('v','a','u',nmo,opdm_block,nmo,vl,vu,il,nmo,diag_tol,neig_found,nos,vecs,&
-                 & nmo,isuppz,work_tmp,-1,iwork_tmp,-1,diagonalize_opdm_block)
-
-      ! something did not go right so return without diagonalization
-      if ( diagonalize_opdm_block /= 0 ) then
-        deallocate(isuppz)
-        return
-      end if
-
-      ! save optimal workspace values
-      liwork=iwork_tmp(1)
+      call dsyev('v','u',nmo,opdm_block,nmo,nos,work_tmp,-1,diagonalize_opdm_block)
       lwork=int(work_tmp(1,1))
-
-      ! allocate remaining temporary matrices
-      allocate(work(lwork),iwork(liwork),vecs(nmo,nmo))
- 
-      ! diagonalize
-      call dsyevr('v','a','u',nmo,opdm_block,nmo,vl,vu,il,nmo,diag_tol,neig_found,nos,vecs,&
-                 & nmo,isuppz,work,lwork,iwork,liwork,diagonalize_opdm_block)
-
-      ! save eigenvectors
-      opdm_block = vecs
-
-      ! deallocate temporary matrices
-      deallocate(isuppz,work,iwork,vecs)
-
+      if ( diagonalize_opdm_block /= 0 ) then
+        return
+      endif
+      allocate(work(lwork))
+      call dsyev('v','u',nmo,opdm_block,nmo,nos,work,lwork,diagonalize_opdm_block)
+      if ( diagonalize_opdm_block /= 0 ) then 
+        deallocate(work)
+        return
+      endif
+    
+      deallocate(work)
       return
 
     end function diagonalize_opdm_block

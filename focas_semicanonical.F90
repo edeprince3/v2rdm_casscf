@@ -582,6 +582,8 @@ module focas_semicanonical
             if (error /= 0) call abort_print(545)
           end if
 
+          diagonalize_gen_fock_block = error
+
           return
 
         end function diagonalize_gen_fock_block
