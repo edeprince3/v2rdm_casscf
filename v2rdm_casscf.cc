@@ -47,6 +47,8 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
+        /*- Do optimize orbitals? -*/
+        options.add_bool("OPTIMIZE_ORBITALS",true);
         /*- Do semicanonicalize orbitals? -*/
         options.add_bool("SEMICANONICALIZE_ORBITALS",true);
         /*- Type of guess -*/

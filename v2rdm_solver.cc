@@ -1510,7 +1510,6 @@ double v2RDMSolver::compute_energy() {
         Ax->subtract(b);
         ep = sqrt(Ax->norm());
 
-        //RotateOrbitals();
         // don't update mu every iteration
         if ( oiter % mu_update_frequency == 0 && oiter > 0) {
             mu = mu*ep/ed;
@@ -1526,23 +1525,27 @@ double v2RDMSolver::compute_energy() {
         double current_energy = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
         energy_dual   = C_DDOT(nconstraints_,b->pointer(),1,y->pointer(),1);
 
-        if ( orbopt_one_step == 1 && oiter % orbopt_frequency == 0 && oiter > 0 && current_energy+enuc_+efzc_ < escf_ ) {
+        if ( options_.get_bool("OPTIMIZE_ORBITALS") ) {
+            if ( orbopt_one_step == 1 && oiter % orbopt_frequency == 0 && oiter > 0 && current_energy+enuc_+efzc_ < escf_ ) {
 
-            start = omp_get_wtime();
-            RotateOrbitals();
-            end = omp_get_wtime();
+                start = omp_get_wtime();
+                RotateOrbitals();
+                end = omp_get_wtime();
 
-            orbopt_time_      += end - start;
-            orbopt_iter_total_++;
+                orbopt_time_      += end - start;
+                orbopt_iter_total_++;
 
-            // reset DIIS
-            diis_oiter_       = 0;
-            diis_iter         = 0;
-            replace_diis_iter = 1;
+                // reset DIIS
+                diis_oiter_       = 0;
+                diis_iter         = 0;
+                replace_diis_iter = 1;
 
-            // compute current primal and dual energies
-            current_energy = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
-            energy_dual   = C_DDOT(nconstraints_,b->pointer(),1,y->pointer(),1);
+                // compute current primal and dual energies
+                current_energy = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
+                energy_dual   = C_DDOT(nconstraints_,b->pointer(),1,y->pointer(),1);
+            }
+        }else {
+            orbopt_converged_ = true;
         }
 
 
@@ -1559,16 +1562,20 @@ double v2RDMSolver::compute_energy() {
         denergy_primal = fabs(energy_primal - current_energy);
         energy_primal = current_energy;
 
-        if ( ep < r_convergence_ && ed < r_convergence_ && egap < e_convergence_ ) {
+        if ( options_.get_bool("OPTIMIZE_ORBITALS") ) {
+            if ( ep < r_convergence_ && ed < r_convergence_ && egap < e_convergence_ ) {
 
-            start = omp_get_wtime();
-            RotateOrbitals();
-            end = omp_get_wtime();
+                start = omp_get_wtime();
+                RotateOrbitals();
+                end = omp_get_wtime();
 
-            orbopt_time_      += end - start;
-            orbopt_iter_total_++;
+                orbopt_time_      += end - start;
+                orbopt_iter_total_++;
 
-            energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
+                energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
+            }
+        }else {
+            orbopt_converged_ = true;
         }
 
         if ( options_.get_bool("WRITE_CHECKPOINT_FILE") && oiter % options_.get_int("CHECKPOINT_FREQUENCY") == 0 && oiter > 0) {
@@ -2554,6 +2561,9 @@ void v2RDMSolver::Update_xz() {
         }
 
         mat->diagonalize(eigvec,eigval);
+        //for (int p = 0; p < dimensions_[i]; p++) {
+        //    if ( fabs(eigval->pointer()[p]) < r_convergence_*0.1 ) eigval->pointer()[p] = 0.0;
+        //}
 
         // separate U+ and U-, transform back to nondiagonal basis
 

@@ -43,7 +43,7 @@ using namespace fnocc;
 namespace psi{ namespace v2rdm_casscf{
 
 // TODO: replace junk1/junk2
-void v2RDMSolver::DIIS(double*c,long int nvec,long int n,int replace_diis_iter){
+void v2RDMSolver::DIIS(double*c,long int nvec,int replace_diis_iter){
     long int nvar      = nvec+1;
     long int * ipiv    = (long int*)malloc(nvar*sizeof(long int));
     double * temp      = (double*)malloc(sizeof(double)*maxdiis_*maxdiis_);
@@ -69,11 +69,11 @@ void v2RDMSolver::DIIS(double*c,long int nvec,long int n,int replace_diis_iter){
     if (nvec <= 3) {
         for (long int i = 0; i < nvec; i++) {
             sprintf(evector,"evector%li",i+1);
-            psio->read_entry(PSIF_DCC_EVEC,evector,(char*)&junk1[0],n*sizeof(double));
+            psio->read_entry(PSIF_DCC_EVEC,evector,(char*)&junk1[0],dimdiis_*sizeof(double));
             for (long int j = i; j < nvec; j++){
                 sprintf(evector,"evector%li",j+1);
-                psio->read_entry(PSIF_DCC_EVEC,evector,(char*)&junk2[0],n*sizeof(double));
-                double sum  = C_DDOT(n,junk1,1,junk2,1);
+                psio->read_entry(PSIF_DCC_EVEC,evector,(char*)&junk2[0],dimdiis_*sizeof(double));
+                double sum  = C_DDOT(dimdiis_,junk1,1,junk2,1);
                 A[i*nvar+j] = sum;
                 A[j*nvar+i] = sum;
             }
@@ -87,11 +87,11 @@ void v2RDMSolver::DIIS(double*c,long int nvec,long int n,int replace_diis_iter){
             i = replace_diis_iter - 1;
         }
         sprintf(evector,"evector%li",i+1);
-        psio->read_entry(PSIF_DCC_EVEC,evector,(char*)&junk1[0],n*sizeof(double));
+        psio->read_entry(PSIF_DCC_EVEC,evector,(char*)&junk1[0],dimdiis_*sizeof(double));
         for (long int j = 0; j < nvec; j++){
             sprintf(evector,"evector%li",j+1);
-            psio->read_entry(PSIF_DCC_EVEC,evector,(char*)&junk2[0],n*sizeof(double));
-            double sum  = C_DDOT(n,junk1,1,junk2,1);
+            psio->read_entry(PSIF_DCC_EVEC,evector,(char*)&junk2[0],dimdiis_*sizeof(double));
+            double sum  = C_DDOT(dimdiis_,junk1,1,junk2,1);
             A[i*nvar+j] = sum;
             A[j*nvar+i] = sum;
         }
@@ -129,7 +129,6 @@ void v2RDMSolver::DIIS(double*c,long int nvec,long int n,int replace_diis_iter){
 }
 
 void v2RDMSolver::DIIS_WriteOldVector(long int iter,int diis_iter,int replace_diis_iter){
-    long int arraysize = dimx_;
 
     char*oldvector=(char*)malloc(1000*sizeof(char));
 
@@ -150,15 +149,14 @@ void v2RDMSolver::DIIS_WriteOldVector(long int iter,int diis_iter,int replace_di
     psio_address addr;
     addr = PSIO_ZERO;
 
-    psio->write(PSIF_DCC_OVEC,oldvector,(char*)&rx->pointer()[0],arraysize*sizeof(double),addr,&addr);
-    psio->write(PSIF_DCC_OVEC,oldvector,(char*)&rz->pointer()[0],arraysize*sizeof(double),addr,&addr);
+    psio->write(PSIF_DCC_OVEC,oldvector,(char*)&rx->pointer()[0],dimdiis_*sizeof(double),addr,&addr);
+    psio->write(PSIF_DCC_OVEC,oldvector,(char*)&rz->pointer()[0],dimdiis_*sizeof(double),addr,&addr);
     psio->close(PSIF_DCC_OVEC,1);
     psio.reset();
 
     free(oldvector);
 }
 void v2RDMSolver::DIIS_WriteErrorVector(int diis_iter,int replace_diis_iter,int iter){
-    long int arraysize = dimx_;
 
     char*evector   = (char*)malloc(1000*sizeof(char));
     if (diis_iter<=maxdiis_ && iter<=maxdiis_){
@@ -183,8 +181,8 @@ void v2RDMSolver::DIIS_WriteErrorVector(int diis_iter,int replace_diis_iter,int 
     psio_address addr;
     addr = PSIO_ZERO;
 
-    psio->write(PSIF_DCC_EVEC,evector,(char*)&rx_error->pointer()[0],arraysize*sizeof(double),addr,&addr);
-    psio->write(PSIF_DCC_EVEC,evector,(char*)&rz_error->pointer()[0],arraysize*sizeof(double),addr,&addr);
+    psio->write(PSIF_DCC_EVEC,evector,(char*)&rx_error->pointer()[0],dimdiis_*sizeof(double),addr,&addr);
+    psio->write(PSIF_DCC_EVEC,evector,(char*)&rz_error->pointer()[0],dimdiis_*sizeof(double),addr,&addr);
 
     psio->close(PSIF_DCC_EVEC,1);
     psio.reset();
@@ -192,8 +190,6 @@ void v2RDMSolver::DIIS_WriteErrorVector(int diis_iter,int replace_diis_iter,int 
     free(evector);
 }
 void v2RDMSolver::DIIS_Extrapolate(int diis_iter,int&replace_diis_iter){
-
-    long int arraysize = dimx_;
 
     char*oldvector;
     oldvector=(char*)malloc(1000*sizeof(char));
@@ -203,8 +199,8 @@ void v2RDMSolver::DIIS_Extrapolate(int diis_iter,int&replace_diis_iter){
 
     psio_address addr;
 
-    memset((void*)rx->pointer(),'\0',arraysize*sizeof(double));
-    memset((void*)rz->pointer(),'\0',arraysize*sizeof(double));
+    memset((void*)rx->pointer(),'\0',dimdiis_*sizeof(double));
+    memset((void*)rz->pointer(),'\0',dimdiis_*sizeof(double));
 
     long int max = diis_iter;
     if (max > maxdiis_) max = maxdiis_;
@@ -214,11 +210,11 @@ void v2RDMSolver::DIIS_Extrapolate(int diis_iter,int&replace_diis_iter){
         addr = PSIO_ZERO;
         sprintf(oldvector,"oldvector%li",j);
 
-        psio->read(PSIF_DCC_OVEC,oldvector,(char*)&junk1[0],arraysize*sizeof(double),addr,&addr);
-        C_DAXPY(arraysize,diisvec_[j-1],junk1,1,rx->pointer(),1);
+        psio->read(PSIF_DCC_OVEC,oldvector,(char*)&junk1[0],dimdiis_*sizeof(double),addr,&addr);
+        C_DAXPY(dimdiis_,diisvec_[j-1],junk1,1,rx->pointer(),1);
 
-        psio->read(PSIF_DCC_OVEC,oldvector,(char*)&junk1[0],arraysize*sizeof(double),addr,&addr);
-        C_DAXPY(arraysize,diisvec_[j-1],junk1,1,rz->pointer(),1);
+        psio->read(PSIF_DCC_OVEC,oldvector,(char*)&junk1[0],dimdiis_*sizeof(double),addr,&addr);
+        C_DAXPY(dimdiis_,diisvec_[j-1],junk1,1,rz->pointer(),1);
 
         //if ( fabs( diisvec[j-1] ) < min ) {
         //    min = fabs( diisvec[j-1] );

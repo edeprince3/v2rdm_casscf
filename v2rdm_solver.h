@@ -163,7 +163,7 @@ class v2RDMSolver: public Wavefunction{
     boost::shared_ptr<Matrix> GetOEI();
 
     /// DIIS stuff
-    void DIIS(double*c,long int nvec,long int n,int replace_diis_iter);
+    void DIIS(double*c,long int nvec,int replace_diis_iter);
     void DIIS_WriteOldVector(long int iter,int diis_iter,int replace_diis_iter);
     void DIIS_WriteErrorVector(int diis_iter,int replace_diis_iter,int iter);
     void DIIS_Extrapolate(int diis_iter,int&replace_diis_iter);
@@ -172,6 +172,7 @@ class v2RDMSolver: public Wavefunction{
     double * junk1;
     double * junk2;
     long int diis_oiter_;
+    long int dimdiis_;
 
     /// offsets
     int * d1aoff;  

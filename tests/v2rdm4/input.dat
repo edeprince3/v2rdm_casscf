@@ -1,17 +1,20 @@
-#! cc-pvdz N2 (6,6) active space Test DQG
+#! H3 / cc-pvdz / D+D3 vs full CI, scf_type = PK
 
 # job description
-print '        Li / STO-3G / D+D3 vs full CI, scf_type = PK'
+print '        H3 / cc-pvdz / D+D3 vs full CI, scf_type = PK'
 
 sys.path.insert(0, '../../..')
 import v2rdm_casscf
 
-molecule li {
+molecule h3 {
 0 2
-Li
+H
+H 1 1.0
+H 1 2.0 2 90.0
 }
 
 set {
+  guess sad
   basis sto-3g
   scf_type pk
   d_convergence      1e-10
@@ -27,9 +30,10 @@ set v2rdm_casscf {
   e_convergence  1e-6
   maxiter 20000
   optimize_orbitals false
+  semicanonicalize_orbitals false
 }
 
-activate(li)
+activate(h3)
 v2rdm = energy('v2rdm-casscf')
 fci   = energy('fci')
 
