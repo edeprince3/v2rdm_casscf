@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 
 # add new tests here
-subdirs := v2rdm1 v2rdm2 v2rdm3
+subdirs := v2rdm1 v2rdm2 v2rdm3 v2rdm4
 
 all-tests := $(addsuffix .test, $(subdirs))
 
