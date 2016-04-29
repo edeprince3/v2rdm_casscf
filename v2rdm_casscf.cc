@@ -55,6 +55,8 @@ int read_options(std::string name, Options& options)
         options.add_str("TPDM_GUESS","RANDOM", "RANDOM HF");
         /*- Do write the 2-RDM to disk? -*/
         options.add_bool("TPDM_WRITE",false);
+        /*- Do write the 3-RDM to disk? -*/
+        options.add_bool("3PDM_WRITE",false);
         /*- Do save progress in a checkpoint file? -*/
         options.add_bool("WRITE_CHECKPOINT_FILE",false);
         /*- Frequency of checkpoint file generation.  The checkpoint file is 

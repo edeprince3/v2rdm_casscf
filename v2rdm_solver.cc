@@ -1635,6 +1635,10 @@ double v2RDMSolver::compute_energy() {
     if ( options_.get_bool("TPDM_WRITE") ) {
         WriteActiveTPDM();
     }
+    // write 3-particle density matrix to disk?
+    if ( options_.get_bool("3PDM_WRITE") ) {
+        WriteActive3PDM();
+    }
 
     // compute and print natural orbital occupation numbers
     MullikenPopulations();

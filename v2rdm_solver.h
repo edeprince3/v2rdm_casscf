@@ -55,6 +55,10 @@
 #define PSIF_V2RDM_D2AA       270
 #define PSIF_V2RDM_D2AB       271
 #define PSIF_V2RDM_D2BB       272
+#define PSIF_V2RDM_D3AAA      273
+#define PSIF_V2RDM_D3AAB      274
+#define PSIF_V2RDM_D3BBA      275
+#define PSIF_V2RDM_D3BBB      276
 
 namespace boost {
   template<class T> class shared_ptr;
@@ -413,8 +417,14 @@ class v2RDMSolver: public Wavefunction{
     /// write active-active-active-active 2RDM to disk
     void WriteActiveTPDM();
 
-    /// write 2RDM to disk
+    /// read 2RDM from disk
     void ReadTPDM();
+
+    /// write active 3RDM to disk
+    void WriteActive3PDM();
+
+    /// read 3RDM from disk
+    void Read3PDM();
 };
 
 }}
