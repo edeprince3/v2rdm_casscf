@@ -1633,7 +1633,7 @@ double v2RDMSolver::compute_energy() {
 
     // write tpdm to disk?
     if ( options_.get_bool("TPDM_WRITE") ) {
-        WriteTPDM();
+        WriteActiveTPDM();
     }
 
     // compute and print natural orbital occupation numbers

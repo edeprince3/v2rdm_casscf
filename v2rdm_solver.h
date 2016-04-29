@@ -407,8 +407,11 @@ class v2RDMSolver: public Wavefunction{
     /// total number of orbital optimization
     long int orbopt_iter_total_;
 
-    /// write 2RDM to disk
+    /// write full 2RDM to disk
     void WriteTPDM();
+
+    /// write active-active-active-active 2RDM to disk
+    void WriteActiveTPDM();
 
     /// write 2RDM to disk
     void ReadTPDM();

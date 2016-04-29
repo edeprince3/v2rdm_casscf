@@ -281,6 +281,88 @@ void v2RDMSolver::WriteTPDM(){
     psio->close(PSIF_V2RDM_D2AB,1);
 
 }
+void v2RDMSolver::WriteActiveTPDM(){
+
+    double * x_p = x->pointer();
+
+    boost::shared_ptr<PSIO> psio (new PSIO());
+
+    psio->open(PSIF_V2RDM_D2AA,PSIO_OPEN_NEW);
+    psio->open(PSIF_V2RDM_D2BB,PSIO_OPEN_NEW);
+    psio->open(PSIF_V2RDM_D2AB,PSIO_OPEN_NEW);
+
+    psio_address addr_aa = PSIO_ZERO;
+    psio_address addr_bb = PSIO_ZERO;
+    psio_address addr_ab = PSIO_ZERO;
+
+    long int countaa = 0;
+    long int countbb = 0;
+    long int countab = 0;
+
+    // active-active part
+
+    for (int h = 0; h < nirrep_; h++) {
+
+        for (int ij = 0; ij < gems_ab[h]; ij++) {
+
+            int i     = bas_ab_sym[h][ij][0];
+            int j     = bas_ab_sym[h][ij][1];
+            int ifull = full_basis[i];
+            int jfull = full_basis[j];
+
+            for (int kl = 0; kl < gems_ab[h]; kl++) {
+
+                int k     = bas_ab_sym[h][kl][0];
+                int l     = bas_ab_sym[h][kl][1];
+                int kfull = full_basis[k];
+                int lfull = full_basis[l];
+
+                double valab = x_p[d2aboff[h] + ij*gems_ab[h] + kl];
+
+                tpdm d2;
+                d2.i   = ifull;
+                d2.j   = jfull;
+                d2.k   = kfull;
+                d2.l   = lfull;
+                d2.val = valab;
+                psio->write(PSIF_V2RDM_D2AB,"D2ab",(char*)&d2,sizeof(tpdm),addr_ab,&addr_ab);
+                countab++;
+
+                if ( i != j && k != l ) {
+
+                    int ija = ibas_aa_sym[h][i][j];
+                    int kla = ibas_aa_sym[h][k][l];
+
+                    int sij = i < j ? 1 : -1;
+                    int skl = k < l ? 1 : -1;
+
+                    double valaa = sij * skl * x_p[d2aaoff[h] + ija*gems_aa[h] + kla];
+                    double valbb = sij * skl * x_p[d2bboff[h] + ija*gems_aa[h] + kla];
+
+                    d2.val = valaa;
+                    psio->write(PSIF_V2RDM_D2AA,"D2aa",(char*)&d2,sizeof(tpdm),addr_aa,&addr_aa);
+                    countaa++;
+
+                    d2.val = valbb;
+                    psio->write(PSIF_V2RDM_D2BB,"D2bb",(char*)&d2,sizeof(tpdm),addr_bb,&addr_bb);
+                    countbb++;
+
+                }
+            }
+        }
+    }
+
+    // write the number of entries in each file
+    psio->write_entry(PSIF_V2RDM_D2AA,"length",(char*)&countaa,sizeof(long int));
+    psio->write_entry(PSIF_V2RDM_D2BB,"length",(char*)&countbb,sizeof(long int));
+    psio->write_entry(PSIF_V2RDM_D2AB,"length",(char*)&countab,sizeof(long int));
+
+    // close files
+    psio->close(PSIF_V2RDM_D2AA,1);
+    psio->close(PSIF_V2RDM_D2BB,1);
+    psio->close(PSIF_V2RDM_D2AB,1);
+
+}
 
 void v2RDMSolver::ReadTPDM(){
 
