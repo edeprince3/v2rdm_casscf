@@ -332,63 +332,161 @@ void v2RDMSolver::Read3PDM(){
     printf("  tr(d3bba) = %20.12lf\n",trbba);
     printf("  tr(d3bbb) = %20.12lf\n",trbbb);*/
 
-    // check energy from D2 = L(D3):
-    /*double en2 = 0.0;
-    for (int i = 0; i < nmo_; i++) {
-        for (int j = 0; j < nmo_; j++) {
-            for (int k = 0; k < nmo_; k++) {
-                for (int l = 0; l < nmo_; l++) {
+    // check that 3-RDM contracts properly to 2-RDM:
 
-                    double eri = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(i,k),1,Qmo_+nQ_*INDEX(j,l),1);
-                    
-                    en2 +=       eri * D2ab[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
-                    en2 += 0.5 * eri * D2aa[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
-                    en2 += 0.5 * eri * D2bb[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
+    double * D2aa = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
+    double * D2bb = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
+    double * D2ab = (double*)malloc(nmo_*nmo_*nmo_*nmo_*sizeof(double));
 
-                }
-            }
-        }
-    }
+    memset((void*)D2aa,'\0',nmo_*nmo_*nmo_*nmo_*sizeof(double));
+    memset((void*)D2bb,'\0',nmo_*nmo_*nmo_*nmo_*sizeof(double));
+    memset((void*)D2ab,'\0',nmo_*nmo_*nmo_*nmo_*sizeof(double));
 
-    boost::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
-    boost::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
-    K1->add(mints->so_kinetic());
-    K1->transform(Ca_);
+    double en2 = 0.0;
+    int n1 = nmo_;
+    int n2 = n1 * nmo_;
+    int n3 = n2 * nmo_;
+    int n4 = n3 * nmo_;
+    int n5 = n4 * nmo_;
+    double * x_p = x->pointer();
 
-    double en1 = 0.0;
+    int na = nalpha_ - nrstc_ - nfrzc_;
+    int nb = nbeta_ - nrstc_ - nfrzc_;
 
-    long int offset = 0;
-    long int offset2 = 0;
+    double error_aa = 0.0;
     for (int h = 0; h < nirrep_; h++) {
+        for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i = bas_aa_sym[h][ij][0];
+            int j = bas_aa_sym[h][ij][1];
 
-        for (int i = 0; i < nmopi_[h]; i++) {
+            int ifull  = full_basis[i];
+            int jfull  = full_basis[j];
 
-            int ifull = i + offset;
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int k = bas_aa_sym[h][kl][0];
+                int l = bas_aa_sym[h][kl][1];
 
-            for (int j = 0; j < nmopi_[h]; j++) {
+                int kfull  = full_basis[k];
+                int lfull  = full_basis[l];
 
-                int jfull = j + offset;
+                double d2aa_aaa = 0.0;
+                double d2aa_aab = 0.0;
+                double d2bb_bba = 0.0;
+                double d2bb_bbb = 0.0;
 
+                for (int q = 0; q < nmo_; q++) {
+                    d2aa_aaa += D3aaa[ifull*n5 + jfull * n4 + q * n3 + kfull * n2 + lfull * n1 + q];
+                    d2aa_aab += D3aab[ifull*n5 + jfull * n4 + q * n3 + kfull * n2 + lfull * n1 + q];
+                    d2bb_bbb += D3bbb[ifull*n5 + jfull * n4 + q * n3 + kfull * n2 + lfull * n1 + q];
+                    d2bb_bba += D3bba[ifull*n5 + jfull * n4 + q * n3 + kfull * n2 + lfull * n1 + q];
+                }
 
-                en1 += oei_full_sym_[offset2 + INDEX(i,j)] * Da[ifull*nmo_+jfull];
-                en1 += oei_full_sym_[offset2 + INDEX(i,j)] * Db[ifull*nmo_+jfull];
-                //en1 += K1->pointer(h)[i][j] * Da[ifull*nmo_+jfull];
-                //en1 += K1->pointer(h)[i][j] * Db[ifull*nmo_+jfull];
+                d2aa_aaa /= (na - 2.0);
+                d2aa_aab /= nb;
+                d2bb_bbb /= (nb - 2.0);
+                d2bb_bba /= na;
+
+                double dum = d2aa_aaa - x_p[d2aaoff[h] + ij*gems_aa[h] + kl];
+                error_aa += dum*dum;
+                dum = d2aa_aab - x_p[d2aaoff[h] + ij*gems_aa[h] + kl];
+                error_aa += dum*dum;
+                dum = d2bb_bbb - x_p[d2bboff[h] + ij*gems_aa[h] + kl];
+                error_aa += dum*dum;
+                dum = d2bb_bba - x_p[d2bboff[h] + ij*gems_aa[h] + kl];
+                error_aa += dum*dum;
+
+                // again, with other indices
+
+                d2aa_aaa = 0.0;
+                d2aa_aab = 0.0;
+                d2bb_bba = 0.0;
+                d2bb_bbb = 0.0;
+
+                for (int q = 0; q < nmo_; q++) {
+                    d2aa_aaa += D3aaa[jfull*n5 + ifull * n4 + q * n3 + lfull * n2 + kfull * n1 + q];
+                    d2aa_aab += D3aab[jfull*n5 + ifull * n4 + q * n3 + lfull * n2 + kfull * n1 + q];
+                    d2bb_bbb += D3bbb[jfull*n5 + ifull * n4 + q * n3 + lfull * n2 + kfull * n1 + q];
+                    d2bb_bba += D3bba[jfull*n5 + ifull * n4 + q * n3 + lfull * n2 + kfull * n1 + q];
+                }
+
+                d2aa_aaa /= (na - 2.0);
+                d2aa_aab /= nb;
+                d2bb_bbb /= (nb - 2.0);
+                d2bb_bba /= na;
+
+                dum = d2aa_aaa - x_p[d2aaoff[h] + ij*gems_aa[h] + kl];
+                error_aa += dum*dum;
+                dum = d2aa_aab - x_p[d2aaoff[h] + ij*gems_aa[h] + kl];
+                error_aa += dum*dum;
+                dum = d2bb_bbb - x_p[d2bboff[h] + ij*gems_aa[h] + kl];
+                error_aa += dum*dum;
+                dum = d2bb_bba - x_p[d2bboff[h] + ij*gems_aa[h] + kl];
+                error_aa += dum*dum;
+
+                //printf("%20.12lf %20.12lf %20.12lf\n",d2aa_aaa,d2aa_aab,x_p[d2aaoff[h] + ij*gems_aa[h] + kl]);
             }
         }
-
-        offset  += nmopi_[h] - frzvpi_[h];
-        offset2 += ( nmopi_[h] - frzvpi_[h] ) * ( nmopi_[h] - frzvpi_[h] + 1 ) / 2;
-
     }
+    printf("norm of error in aa/bb 2-RDM contracted from 3-RDM: %20.12lf\n",sqrt(error_aa));
 
-    printf("%20.12lf %20.12lf %20.12lf %20.12lf\n",en1,en2,enuc_,en1+en2+enuc_);
+
+    double error_ab = 0.0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (int ij = 0; ij < gems_ab[h]; ij++) {
+            int i = bas_ab_sym[h][ij][0];
+            int j = bas_ab_sym[h][ij][1];
+
+            int ifull  = full_basis[i];
+            int jfull  = full_basis[j];
+
+            for (int kl = 0; kl < gems_ab[h]; kl++) {
+                int k = bas_ab_sym[h][kl][0];
+                int l = bas_ab_sym[h][kl][1];
+
+                int kfull  = full_basis[k];
+                int lfull  = full_basis[l];
+
+                double d2ab_aab = 0.0;
+                double d2ab_bba = 0.0;
+
+                for (int q = 0; q < nmo_; q++) {
+                    d2ab_aab += D3aab[ifull*n5 + q * n4 + jfull * n3 + kfull * n2 + q * n1 + lfull];
+                    d2ab_bba += D3bba[jfull*n5 + q * n4 + ifull * n3 + lfull * n2 + q * n1 + kfull];
+                }
+
+                d2ab_aab /= (na - 1.0);
+                d2ab_bba /= (nb - 1.0);
+
+                double dum = d2ab_aab - x_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                error_ab += dum*dum;
+                dum = d2ab_bba - x_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                error_ab += dum*dum;
+
+                // again, with a different summation index
+
+                d2ab_aab = 0.0;
+                d2ab_bba = 0.0;
+
+                for (int q = 0; q < nmo_; q++) {
+                    d2ab_aab += D3aab[q*n5 + ifull * n4 + jfull * n3 + q * n2 + kfull * n1 + lfull];
+                    d2ab_bba += D3bba[q*n5 + jfull * n4 + ifull * n3 + q * n2 + lfull * n1 + kfull];
+                }
+
+                d2ab_aab /= (na - 1.0);
+                d2ab_bba /= (nb - 1.0);
+
+                dum = d2ab_aab - x_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                error_ab += dum*dum;
+                dum = d2ab_bba - x_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                error_ab += dum*dum;
+            }
+        }
+    }
+    printf("norm of error in ab 2-RDM contracted from 3-RDM:    %20.12lf\n",sqrt(error_ab));
 
     free(D2aa);
     free(D2bb);
     free(D2ab);
-    free(Da);
-    free(Db);*/
 
     free(D3aaa);
     free(D3aab);
