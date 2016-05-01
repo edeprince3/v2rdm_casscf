@@ -785,6 +785,22 @@ void  v2RDMSolver::common_init(){
     for ( int h = 0; h < nirrep_; h++) {
         nconstraints_ += amopi_[h]*amopi_[h]; // contract D2aa        -> D1 a
     }
+    // additional spin constraints for singlets:
+    if ( constrain_spin_ && nalpha_ == nbeta_ ) {
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += amopi_[h]*amopi_[h]; // D1a = D1b
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += gems_aa[h]*gems_aa[h]; // D2aa = D2bb
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += gems_aa[h]*gems_aa[h]; // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += gems_aa[h]*gems_aa[h]; // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
+        }
+    }
+
     for ( int h = 0; h < nirrep_; h++) {
         nconstraints_ += amopi_[h]*amopi_[h]; // contract D2bb        -> D1 b
     }
@@ -2040,34 +2056,21 @@ void v2RDMSolver::BuildConstraints(){
         }
         offset += amopi_[h]*amopi_[h];
     }
-    // hermiticity
-/*
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < gems_ab[h]; i++){
-            for(int j = 0; j < gems_ab[h]; j++){
-                b_p[offset + i*gems_ab[h]] = 0.0;
-            }
+    // additional spin constraints for singlets:
+    if ( constrain_spin_ && nalpha_ == nbeta_ ) {
+        for ( int h = 0; h < nirrep_; h++) {
+            offset += amopi_[h]*amopi_[h]; // D1a = D1b
         }
-        offset += gems_ab[h]*gems_ab[h]; 
-    }
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < gems_aa[h]; i++){
-            for(int j = 0; j < gems_aa[h]; j++){
-                b_p[offset + i*gems_aa[h]] = 0.0;
-            }
+        for ( int h = 0; h < nirrep_; h++) {
+            offset += gems_aa[h]*gems_aa[h]; // D2aa = D2bb
         }
-        offset += gems_aa[h]*gems_aa[h]; 
-    }
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < gems_aa[h]; i++){
-            for(int j = 0; j < gems_aa[h]; j++){
-                b_p[offset + i*gems_aa[h]] = 0.0;
-            }
+        for ( int h = 0; h < nirrep_; h++) {
+            offset += gems_aa[h]*gems_aa[h]; // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
         }
-        offset += gems_aa[h]*gems_aa[h]; 
+        for ( int h = 0; h < nirrep_; h++) {
+            offset += gems_aa[h]*gems_aa[h]; // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
+        }
     }
-*/
-
 
     if ( constrain_q2_ ) {
         if ( !spin_adapt_q2_ ) {
