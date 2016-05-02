@@ -1664,7 +1664,7 @@ double v2RDMSolver::compute_energy() {
     // write 3-particle density matrix to disk?
     if ( options_.get_bool("3PDM_WRITE") && options_.get_bool("CONSTRAIN_D3")) {
         WriteActive3PDM();
-        Read3PDM();
+        //Read3PDM();
     }
 
     // compute and print natural orbital occupation numbers
