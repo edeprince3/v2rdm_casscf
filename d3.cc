@@ -225,10 +225,75 @@ void v2RDMSolver::D3_constraints_Au(SharedVector A,SharedVector u){
 
     // additional spin constraints for singlets:
     if ( constrain_spin_ && nalpha_ == nbeta_ ) {
+        // D3aab = D3bba
         for ( int h = 0; h < nirrep_; h++) {
             C_DCOPY(trip_aab[h]*trip_aab[h],u_p + d3aaboff[h],1,A_p + offset,1);
             C_DAXPY(trip_aab[h]*trip_aab[h],-1.0,u_p + d3bbaoff[h],1,A_p + offset,1);
             offset += trip_aab[h]*trip_aab[h];
+        }
+        // D3aaa <- D3aab
+        for ( int h = 0; h < nirrep_; h++) {
+            C_DCOPY(trip_aaa[h]*trip_aaa[h],u_p + d3aaaoff[h],1,A_p + offset,1);
+            for (int pqr = 0; pqr < trip_aaa[h]; pqr++) {
+                int p = bas_aaa_sym[h][pqr][0];
+                int q = bas_aaa_sym[h][pqr][1];
+                int r = bas_aaa_sym[h][pqr][2];
+                int pqr_b = ibas_aab_sym[h][p][q][r];
+                int prq_b = ibas_aab_sym[h][p][r][q];
+                int qrp_b = ibas_aab_sym[h][q][r][p];
+                for (int stu = 0; stu < trip_aaa[h]; stu++) {
+                    int s = bas_aaa_sym[h][stu][0];
+                    int t = bas_aaa_sym[h][stu][1];
+                    int u = bas_aaa_sym[h][stu][2];
+                    int stu_b = ibas_aab_sym[h][s][t][u];
+                    int sut_b = ibas_aab_sym[h][s][u][t];
+                    int tus_b = ibas_aab_sym[h][t][u][s];
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3aaboff[h] + pqr_b * trip_aab[h] + stu_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] += 1.0/3.0 * u_p[d3aaboff[h] + pqr_b * trip_aab[h] + sut_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3aaboff[h] + pqr_b * trip_aab[h] + tus_b];
+
+                    A_p[offset + pqr*trip_aaa[h] + stu] += 1.0/3.0 * u_p[d3aaboff[h] + prq_b * trip_aab[h] + stu_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3aaboff[h] + prq_b * trip_aab[h] + sut_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] += 1.0/3.0 * u_p[d3aaboff[h] + prq_b * trip_aab[h] + tus_b];
+
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3aaboff[h] + qrp_b * trip_aab[h] + stu_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] += 1.0/3.0 * u_p[d3aaboff[h] + qrp_b * trip_aab[h] + sut_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3aaboff[h] + qrp_b * trip_aab[h] + tus_b];
+                }
+            }
+            offset += trip_aaa[h]*trip_aaa[h];
+        }
+        // D3bbb <- D3bba
+        for ( int h = 0; h < nirrep_; h++) {
+            C_DCOPY(trip_aaa[h]*trip_aaa[h],u_p + d3bbboff[h],1,A_p + offset,1);
+            for (int pqr = 0; pqr < trip_aaa[h]; pqr++) {
+                int p = bas_aaa_sym[h][pqr][0];
+                int q = bas_aaa_sym[h][pqr][1];
+                int r = bas_aaa_sym[h][pqr][2];
+                int pqr_b = ibas_aab_sym[h][p][q][r];
+                int prq_b = ibas_aab_sym[h][p][r][q];
+                int qrp_b = ibas_aab_sym[h][q][r][p];
+                for (int stu = 0; stu < trip_aaa[h]; stu++) {
+                    int s = bas_aaa_sym[h][stu][0];
+                    int t = bas_aaa_sym[h][stu][1];
+                    int u = bas_aaa_sym[h][stu][2];
+                    int stu_b = ibas_aab_sym[h][s][t][u];
+                    int sut_b = ibas_aab_sym[h][s][u][t];
+                    int tus_b = ibas_aab_sym[h][t][u][s];
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3bbaoff[h] + pqr_b * trip_aab[h] + stu_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] += 1.0/3.0 * u_p[d3bbaoff[h] + pqr_b * trip_aab[h] + sut_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3bbaoff[h] + pqr_b * trip_aab[h] + tus_b];
+
+                    A_p[offset + pqr*trip_aaa[h] + stu] += 1.0/3.0 * u_p[d3bbaoff[h] + prq_b * trip_aab[h] + stu_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3bbaoff[h] + prq_b * trip_aab[h] + sut_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] += 1.0/3.0 * u_p[d3bbaoff[h] + prq_b * trip_aab[h] + tus_b];
+
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3bbaoff[h] + qrp_b * trip_aab[h] + stu_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] += 1.0/3.0 * u_p[d3bbaoff[h] + qrp_b * trip_aab[h] + sut_b];
+                    A_p[offset + pqr*trip_aaa[h] + stu] -= 1.0/3.0 * u_p[d3bbaoff[h] + qrp_b * trip_aab[h] + tus_b];
+                }
+            }
+            offset += trip_aaa[h]*trip_aaa[h];
         }
     }
 
@@ -398,10 +463,75 @@ void v2RDMSolver::D3_constraints_ATu(SharedVector A,SharedVector u){
 
     // additional spin constraints for singlets:
     if ( constrain_spin_ && nalpha_ == nbeta_ ) {
+        // D3aab = D3bba
         for ( int h = 0; h < nirrep_; h++) {
             C_DAXPY(trip_aab[h]*trip_aab[h], 1.0,u_p + offset,1,A_p + d3aaboff[h],1);
             C_DAXPY(trip_aab[h]*trip_aab[h],-1.0,u_p + offset,1,A_p + d3bbaoff[h],1);
             offset += trip_aab[h]*trip_aab[h];
+        }
+        // D3aaa <- D3aab
+        for ( int h = 0; h < nirrep_; h++) {
+            C_DAXPY(trip_aaa[h]*trip_aaa[h],1.0,u_p + offset,1,A_p+d3aaaoff[h],1);
+            for (int pqr = 0; pqr < trip_aaa[h]; pqr++) {
+                int p = bas_aaa_sym[h][pqr][0];
+                int q = bas_aaa_sym[h][pqr][1];
+                int r = bas_aaa_sym[h][pqr][2];
+                int pqr_b = ibas_aab_sym[h][p][q][r];
+                int prq_b = ibas_aab_sym[h][p][r][q];
+                int qrp_b = ibas_aab_sym[h][q][r][p];
+                for (int stu = 0; stu < trip_aaa[h]; stu++) {
+                    int s = bas_aaa_sym[h][stu][0];
+                    int t = bas_aaa_sym[h][stu][1];
+                    int u = bas_aaa_sym[h][stu][2];
+                    int stu_b = ibas_aab_sym[h][s][t][u];
+                    int sut_b = ibas_aab_sym[h][s][u][t];
+                    int tus_b = ibas_aab_sym[h][t][u][s];
+                    A_p[d3aaboff[h] + pqr_b * trip_aab[h] + stu_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3aaboff[h] + pqr_b * trip_aab[h] + sut_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3aaboff[h] + pqr_b * trip_aab[h] + tus_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                                                                                                                   
+                    A_p[d3aaboff[h] + prq_b * trip_aab[h] + stu_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3aaboff[h] + prq_b * trip_aab[h] + sut_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3aaboff[h] + prq_b * trip_aab[h] + tus_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                                                                                                                   
+                    A_p[d3aaboff[h] + qrp_b * trip_aab[h] + stu_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3aaboff[h] + qrp_b * trip_aab[h] + sut_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3aaboff[h] + qrp_b * trip_aab[h] + tus_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                }
+            }
+            offset += trip_aaa[h]*trip_aaa[h];
+        }
+        // D3bbb <- D3bba
+        for ( int h = 0; h < nirrep_; h++) {
+            C_DAXPY(trip_aaa[h]*trip_aaa[h],1.0,u_p + offset,1,A_p+d3bbboff[h],1);
+            for (int pqr = 0; pqr < trip_aaa[h]; pqr++) {
+                int p = bas_aaa_sym[h][pqr][0];
+                int q = bas_aaa_sym[h][pqr][1];
+                int r = bas_aaa_sym[h][pqr][2];
+                int pqr_b = ibas_aab_sym[h][p][q][r];
+                int prq_b = ibas_aab_sym[h][p][r][q];
+                int qrp_b = ibas_aab_sym[h][q][r][p];
+                for (int stu = 0; stu < trip_aaa[h]; stu++) {
+                    int s = bas_aaa_sym[h][stu][0];
+                    int t = bas_aaa_sym[h][stu][1];
+                    int u = bas_aaa_sym[h][stu][2];
+                    int stu_b = ibas_aab_sym[h][s][t][u];
+                    int sut_b = ibas_aab_sym[h][s][u][t];
+                    int tus_b = ibas_aab_sym[h][t][u][s];
+                    A_p[d3bbaoff[h] + pqr_b * trip_aab[h] + stu_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3bbaoff[h] + pqr_b * trip_aab[h] + sut_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3bbaoff[h] + pqr_b * trip_aab[h] + tus_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                                                                                                                   
+                    A_p[d3bbaoff[h] + prq_b * trip_aab[h] + stu_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3bbaoff[h] + prq_b * trip_aab[h] + sut_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3bbaoff[h] + prq_b * trip_aab[h] + tus_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                                                                                                                   
+                    A_p[d3bbaoff[h] + qrp_b * trip_aab[h] + stu_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3bbaoff[h] + qrp_b * trip_aab[h] + sut_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                    A_p[d3bbaoff[h] + qrp_b * trip_aab[h] + tus_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
+                }
+            }
+            offset += trip_aaa[h]*trip_aaa[h];
         }
     }
 

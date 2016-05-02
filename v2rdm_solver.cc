@@ -927,6 +927,10 @@ void  v2RDMSolver::common_init(){
             for (int h = 0; h < nirrep_; h++) {
                 nconstraints_ += trip_aab[h]*trip_aab[h]; // D3aab = D3bba 
             }
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aaa[h]*trip_aaa[h]; // D3aab -> D3aaa 
+                nconstraints_ += trip_aaa[h]*trip_aaa[h]; // D3bba -> D3bbb
+            }
         }
     }
 
@@ -2467,6 +2471,10 @@ void v2RDMSolver::BuildConstraints(){
         if ( constrain_spin_ && nalpha_ == nbeta_ ) {
             for (int h = 0; h < nirrep_; h++) {
                 offset += trip_aab[h]*trip_aab[h]; // D3aab = D3bba 
+            }
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aaa[h]*trip_aaa[h]; // D3aab -> D3aaa 
+                offset += trip_aaa[h]*trip_aaa[h]; // D3bba -> D3bbb
             }
         }
     }
