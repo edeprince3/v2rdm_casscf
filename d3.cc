@@ -223,6 +223,15 @@ void v2RDMSolver::D3_constraints_Au(SharedVector A,SharedVector u){
         }
     }
 
+    // additional spin constraints for singlets:
+    if ( constrain_spin_ && nalpha_ == nbeta_ ) {
+        for ( int h = 0; h < nirrep_; h++) {
+            C_DCOPY(trip_aab[h]*trip_aab[h],u_p + d3aaboff[h],1,A_p + offset,1);
+            C_DAXPY(trip_aab[h]*trip_aab[h],-1.0,u_p + d3bbaoff[h],1,A_p + offset,1);
+            offset += trip_aab[h]*trip_aab[h];
+        }
+    }
+
 }
 
 // D3 portion of A^T.y 
@@ -386,6 +395,16 @@ void v2RDMSolver::D3_constraints_ATu(SharedVector A,SharedVector u){
             offset += gems_ab[h] * gems_ab[h];
         }
     }
+
+    // additional spin constraints for singlets:
+    if ( constrain_spin_ && nalpha_ == nbeta_ ) {
+        for ( int h = 0; h < nirrep_; h++) {
+            C_DAXPY(trip_aab[h]*trip_aab[h], 1.0,u_p + offset,1,A_p + d3aaboff[h],1);
+            C_DAXPY(trip_aab[h]*trip_aab[h],-1.0,u_p + offset,1,A_p + d3bbaoff[h],1);
+            offset += trip_aab[h]*trip_aab[h];
+        }
+    }
+
 }
 
 }} // end namespaces

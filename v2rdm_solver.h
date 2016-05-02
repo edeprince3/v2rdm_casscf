@@ -425,6 +425,9 @@ class v2RDMSolver: public Wavefunction{
 
     /// read 3RDM from disk
     void Read3PDM();
+
+    /// check spin structure of 1- and 2-RDM
+    void CheckSpinStructure();
 };
 
 }}

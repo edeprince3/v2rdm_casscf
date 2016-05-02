@@ -1258,6 +1258,25 @@ void v2RDMSolver::G2_constraints_Au(SharedVector A,SharedVector u){
         }
         offset += 2*gems_ab[h]*2*gems_ab[h];
     }
+
+    // maximal spin constraint (sum_i G2(kl,ii) = 0)
+    /*for (int kl = 0; kl < gems_ab[0]; kl++) {
+        double dum = 0.0;
+        for (int i = 0; i < amo_; i++) {
+            int ii = ibas_ab_sym[0][i][i];
+            dum += u_p[g2aboff[0] + kl*gems_ab[0]+ii];
+        }
+        A_p[offset + kl] = dum;
+    }
+    offset += gems_ab[0];
+    for (int kl = 0; kl < gems_ab[0]; kl++) {
+        double dum = 0.0;
+        for (int i = 0; i < amo_; i++) {
+            int ii = ibas_ab_sym[0][i][i];
+            dum += u_p[g2aboff[0] + ii*gems_ab[0]+kl];
+        }
+        A_p[offset + kl] = dum;
+    }*/
 }
 
 // G2 portion of A^T.y (with symmetry)
@@ -1454,6 +1473,24 @@ void v2RDMSolver::G2_constraints_ATu(SharedVector A,SharedVector u){
 
         offset += 2*gems_ab[h]*2*gems_ab[h];
     }
+
+    // maximal spin constraint (sum_i G2(kl,ii) = 0)
+    /*for (int kl = 0; kl < gems_ab[0]; kl++) {
+        double dum = u_p[offset + kl];
+        for (int i = 0; i < amo_; i++) {
+            int ii = ibas_ab_sym[0][i][i];
+            A_p[g2aboff[0] + kl*gems_ab[0]+ii] += dum;
+        }
+    }
+    offset += gems_ab[0];
+    for (int kl = 0; kl < gems_ab[0]; kl++) {
+        double dum = u_p[offset + kl];
+        for (int i = 0; i < amo_; i++) {
+            int ii = ibas_ab_sym[0][i][i];
+            A_p[g2aboff[0] + ii*gems_ab[0]+kl] += dum;
+        }
+    }
+    offset += gems_ab[0];*/
 }
 
 }} // end namespaces

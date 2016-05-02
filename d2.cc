@@ -240,7 +240,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
             C_DAXPY(gems_aa[h]*gems_aa[h],-1.0, u_p + offset, 1, A_p + d2bboff[h],1);
             offset += gems_aa[h]*gems_aa[h];
         }
-        // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
+        // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr])
         for ( int h = 0; h < nirrep_; h++) {
             C_DAXPY(gems_aa[h]*gems_aa[h],1.0,u_p + offset,1,A_p + d2aaoff[h],1);
             for (int ij = 0; ij < gems_aa[h]; ij++) {
@@ -261,7 +261,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
             }   
             offset += gems_aa[h]*gems_aa[h];
         }   
-        // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
+        // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr])
         for ( int h = 0; h < nirrep_; h++) {
             C_DAXPY(gems_aa[h]*gems_aa[h],1.0,u_p + offset,1,A_p + d2bboff[h],1);
             for (int ij = 0; ij < gems_aa[h]; ij++) {
@@ -483,7 +483,7 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
             C_DAXPY(gems_aa[h]*gems_aa[h],-1.0,u_p + d2bboff[h],1,A_p + offset,1);
             offset += gems_aa[h]*gems_aa[h];
         }
-        // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
+        // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr])
         for ( int h = 0; h < nirrep_; h++) {
             C_DCOPY(gems_aa[h]*gems_aa[h],u_p + d2aaoff[h],1,A_p + offset,1);
             for (int ij = 0; ij < gems_aa[h]; ij++) {
@@ -504,7 +504,7 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
             }
             offset += gems_aa[h]*gems_aa[h];
         }
-        // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
+        // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr])
         for ( int h = 0; h < nirrep_; h++) {
             C_DCOPY(gems_aa[h]*gems_aa[h],u_p + d2bboff[h],1,A_p + offset,1);
             for (int ij = 0; ij < gems_aa[h]; ij++) {

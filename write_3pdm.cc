@@ -488,6 +488,9 @@ void v2RDMSolver::Read3PDM(){
     free(D2bb);
     free(D2ab);
 
+    C_DAXPY(n5*nmo_,-1.0,D3bba,1,D3aab,1);
+    printf("d3aab=d3bba %20.12lf\n",C_DNRM2(n5*nmo_,D3aab,1));
+
     free(D3aaa);
     free(D3aab);
     free(D3bba);

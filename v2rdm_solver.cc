@@ -856,6 +856,10 @@ void  v2RDMSolver::common_init(){
                 nconstraints_ += gems_ab[h]*gems_ab[h]; // G2t_m1
             }
         }
+        //if ( constrain_spin_ ) {
+        //    nconstraints_ += gems_ab[0];
+        //    nconstraints_ += gems_ab[0];
+        //}
     }
     if ( constrain_t1_ ) {
         for (int h = 0; h < nirrep_; h++) {
@@ -916,6 +920,12 @@ void  v2RDMSolver::common_init(){
         if ( nbeta_ - nrstc_ - nfrzc_ > 1 ) {
             for (int h = 0; h < nirrep_; h++) {
                 nconstraints_ += gems_ab[h]*gems_ab[h]; // D3bba -> D2ab
+            }
+        }
+        // additional spin constraints for singlets:
+        if ( constrain_spin_ && nalpha_ == nbeta_ ) {
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aab[h]*trip_aab[h]; // D3aab = D3bba 
             }
         }
     }
@@ -1654,6 +1664,7 @@ double v2RDMSolver::compute_energy() {
     // write 3-particle density matrix to disk?
     if ( options_.get_bool("3PDM_WRITE") && options_.get_bool("CONSTRAIN_D3")) {
         WriteActive3PDM();
+        Read3PDM();
     }
 
     // compute and print natural orbital occupation numbers
@@ -1677,7 +1688,71 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("      Total:                      %12.2lf s\n",end_total_time - start_total_time);
     outfile->Printf("\n");
 
+    //CheckSpinStructure();
+
     return energy_primal + enuc_ + efzc_;
+}
+
+void v2RDMSolver::CheckSpinStructure() {
+    double * x_p = x->pointer();
+    // D1a = D1b
+    for ( int h = 0; h < nirrep_; h++) {
+        C_DAXPY(amopi_[h]*amopi_[h],-1.0,x_p + d1boff[h],1,x_p + d1aoff[h],1);
+        printf("d1 %20.12lf\n",C_DNRM2(amopi_[h]*amopi_[h],x_p + d1aoff[h],1));
+    }
+    // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
+    for ( int h = 0; h < nirrep_; h++) {
+        double tot = 0.0;
+        for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i = bas_aa_sym[h][ij][0];
+            int j = bas_aa_sym[h][ij][1];
+            int ijb = ibas_ab_sym[h][i][j];
+            int jib = ibas_ab_sym[h][j][i];
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int k = bas_aa_sym[h][kl][0];
+                int l = bas_aa_sym[h][kl][1];
+                int klb = ibas_ab_sym[h][k][l];
+                int lkb = ibas_ab_sym[h][l][k];
+                double dum = x_p[d2aaoff[h] + ij*gems_aa[h]+kl];
+                dum -= 0.5 * x_p[d2aboff[h] + ijb*gems_ab[h] + klb];
+                dum += 0.5 * x_p[d2aboff[h] + jib*gems_ab[h] + klb];
+                dum += 0.5 * x_p[d2aboff[h] + ijb*gems_ab[h] + lkb];
+                dum -= 0.5 * x_p[d2aboff[h] + jib*gems_ab[h] + lkb];
+                tot += dum*dum;
+            }
+        }
+        printf("d2ab -> d2aa %20.12lf\n",sqrt(tot));
+    }
+    // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr])
+    for ( int h = 0; h < nirrep_; h++) {
+        double tot = 0.0;
+        for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i = bas_aa_sym[h][ij][0];
+            int j = bas_aa_sym[h][ij][1];
+            int ijb = ibas_ab_sym[h][i][j];
+            int jib = ibas_ab_sym[h][j][i];
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int k = bas_aa_sym[h][kl][0];
+                int l = bas_aa_sym[h][kl][1];
+                int klb = ibas_ab_sym[h][k][l];
+                int lkb = ibas_ab_sym[h][l][k];
+                double dum = x_p[d2aaoff[h] + ij*gems_aa[h]+kl];
+                dum -= 0.5 * x_p[d2aboff[h] + ijb*gems_ab[h] + klb];
+                dum += 0.5 * x_p[d2aboff[h] + jib*gems_ab[h] + klb];
+                dum += 0.5 * x_p[d2aboff[h] + ijb*gems_ab[h] + lkb];
+                dum -= 0.5 * x_p[d2aboff[h] + jib*gems_ab[h] + lkb];
+                tot += dum*dum;
+            }
+        }
+        printf("d2ab -> d2bb %20.12lf\n",sqrt(tot));
+    }
+    // D2aa = D2bb
+    for ( int h = 0; h < nirrep_; h++) {
+        C_DAXPY(gems_aa[h]*gems_aa[h],-1.0,x_p + d2bboff[h],1,x_p + d2aaoff[h],1);
+        printf("d2aa=d2bb %20.12lf\n",C_DNRM2(gems_aa[h]*gems_aa[h],x_p + d2aaoff[h],1));
+    }
+
+
 }
 
 void v2RDMSolver::NaturalOrbitals() {
@@ -2212,6 +2287,10 @@ void v2RDMSolver::BuildConstraints(){
                 offset += gems_ab[h]*gems_ab[h]; 
             }
         }
+        //if ( constrain_spin_ ) {
+        //    offset += gems_ab[0];
+        //    offset += gems_ab[0];
+        //}
     }
 
     if ( constrain_t1_ ) {
@@ -2382,6 +2461,12 @@ void v2RDMSolver::BuildConstraints(){
                     }
                 }
                 offset += gems_ab[h]*gems_ab[h];
+            }
+        }
+        // additional spin constraints for singlets:
+        if ( constrain_spin_ && nalpha_ == nbeta_ ) {
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aab[h]*trip_aab[h]; // D3aab = D3bba 
             }
         }
     }
