@@ -282,6 +282,28 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
             }
             offset += gems_aa[h]*gems_aa[h];
         }
+       // D200 = 1/(2 sqrt(1+dpq)sqrt(1+drs)) ( D2ab[pq][rs] + D2ab[pq][sr] + D2ab[qp][rs] + D2ab[qp][sr] )
+        for ( int h = 0; h < nirrep_; h++) {
+            C_DAXPY(gems_ab[h]*gems_ab[h],1.0,u_p + offset,1,A_p + d200off[h],1);
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                double dij = ( i == j ) ? sqrt(2.0) : 1.0;
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    double dkl = ( k == l ) ? sqrt(2.0) : 1.0;
+                    A_p[d2aboff[h] + ij*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[offset + ij*gems_ab[h] + kl];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[offset + ij*gems_ab[h] + kl];
+                    A_p[d2aboff[h] + ij*gems_ab[h] + lk] -= 0.5 / ( dij * dkl ) * u_p[offset + ij*gems_ab[h] + kl];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + lk] -= 0.5 / ( dij * dkl ) * u_p[offset + ij*gems_ab[h] + kl];
+                }
+            }
+            offset += gems_ab[h]*gems_ab[h];
+        }
+    }else if ( constrain_spin_ ) { // nonsinglets
     }
 
 }
@@ -525,6 +547,28 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
             }
             offset += gems_aa[h]*gems_aa[h];
         }
+        // D200 = 1/(2 sqrt(1+dpq)sqrt(1+drs)) ( D2ab[pq][rs] + D2ab[pq][sr] + D2ab[qp][rs] + D2ab[qp][sr] )
+        for ( int h = 0; h < nirrep_; h++) {
+            C_DCOPY(gems_ab[h]*gems_ab[h],u_p + d200off[h],1,A_p + offset,1);
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                double dij = ( i == j ) ? sqrt(2.0) : 1.0;
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    double dkl = ( k == l ) ? sqrt(2.0) : 1.0;
+                    A_p[offset + ij*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                    A_p[offset + ij*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[d2aboff[h] + ji*gems_ab[h] + kl];
+                    A_p[offset + ij*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[d2aboff[h] + ij*gems_ab[h] + lk];
+                    A_p[offset + ij*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[d2aboff[h] + ji*gems_ab[h] + lk];
+                }
+            }
+            offset += gems_ab[h]*gems_ab[h];
+        }
+    }else if ( constrain_spin_ ) { // nonsinglets
     }
 
 }
