@@ -282,7 +282,7 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
             }
             offset += gems_aa[h]*gems_aa[h];
         }
-       // D200 = 1/(2 sqrt(1+dpq)sqrt(1+drs)) ( D2ab[pq][rs] + D2ab[pq][sr] + D2ab[qp][rs] + D2ab[qp][sr] )
+        // D200 = 1/(2 sqrt(1+dpq)sqrt(1+drs)) ( D2ab[pq][rs] + D2ab[pq][sr] + D2ab[qp][rs] + D2ab[qp][sr] )
         for ( int h = 0; h < nirrep_; h++) {
             C_DAXPY(gems_ab[h]*gems_ab[h],1.0,u_p + offset,1,A_p + d200off[h],1);
             for (int ij = 0; ij < gems_ab[h]; ij++) {
@@ -303,7 +303,79 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
             }
             offset += gems_ab[h]*gems_ab[h];
         }
-    }else if ( constrain_spin_ ) { // nonsinglets
+    }else if ( constrain_spin_ ) { // nonsinglets ... big block
+
+        for ( int h = 0; h < nirrep_; h++) {
+            // D200
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                double dij = ( i == j ) ? sqrt(2.0) : 1.0;
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    double dkl = ( k == l ) ? sqrt(2.0) : 1.0;
+                    A_p[d200off[h] + ij*2*gems_ab[h] + kl] += u_p[offset + ij*2*gems_ab[h] + kl];
+                    A_p[d2aboff[h] + ij*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[offset + ij*2*gems_ab[h] + kl];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[offset + ij*2*gems_ab[h] + kl];
+                    A_p[d2aboff[h] + ij*gems_ab[h] + lk] -= 0.5 / ( dij * dkl ) * u_p[offset + ij*2*gems_ab[h] + kl];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + lk] -= 0.5 / ( dij * dkl ) * u_p[offset + ij*2*gems_ab[h] + kl];
+                }
+            }
+            // D201
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                double dij = ( i == j ) ? sqrt(2.0) : 1.0;
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    A_p[d200off[h] + (ij)*2*gems_ab[h] + (kl+gems_ab[h])] += u_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[d2aboff[h] + ij*gems_ab[h] + kl] -= 0.5 / dij * u_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[d2aboff[h] + ij*gems_ab[h] + lk] += 0.5 / dij * u_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + kl] -= 0.5 / dij * u_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + lk] += 0.5 / dij * u_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])];
+                }
+            }
+            // D210
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    double dkl = ( k == l ) ? sqrt(2.0) : 1.0;
+                    A_p[d200off[h] + (ij+gems_ab[h])*2*gems_ab[h] + (kl)] += u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)];
+                    A_p[d2aboff[h] + ij*gems_ab[h] + kl] -= 0.5 / dkl * u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)];
+                    A_p[d2aboff[h] + ij*gems_ab[h] + lk] -= 0.5 / dkl * u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + kl] += 0.5 / dkl * u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + lk] += 0.5 / dkl * u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)];
+                }
+            }
+            // D211
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    A_p[d200off[h] + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])] += u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[d2aboff[h] + ij*gems_ab[h] + kl] -= 0.5 * u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + kl] += 0.5 * u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[d2aboff[h] + ij*gems_ab[h] + lk] += 0.5 * u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[d2aboff[h] + ji*gems_ab[h] + lk] -= 0.5 * u_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])];
+                }
+            }
+            offset += 4*gems_ab[h]*gems_ab[h];
+        }
     }
 
 }
@@ -568,7 +640,79 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
             }
             offset += gems_ab[h]*gems_ab[h];
         }
-    }else if ( constrain_spin_ ) { // nonsinglets
+    }else if ( constrain_spin_ ) { // nonsinglets ... big block
+
+        for ( int h = 0; h < nirrep_; h++) {
+            // D200
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                double dij = ( i == j ) ? sqrt(2.0) : 1.0;
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    double dkl = ( k == l ) ? sqrt(2.0) : 1.0;
+                    A_p[offset + ij*2*gems_ab[h] + kl] += u_p[d200off[h] + ij*2*gems_ab[h] + kl];
+                    A_p[offset + ij*2*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                    A_p[offset + ij*2*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[d2aboff[h] + ji*gems_ab[h] + kl];
+                    A_p[offset + ij*2*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[d2aboff[h] + ij*gems_ab[h] + lk];
+                    A_p[offset + ij*2*gems_ab[h] + kl] -= 0.5 / ( dij * dkl ) * u_p[d2aboff[h] + ji*gems_ab[h] + lk];
+                }
+            }
+            // D201
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                double dij = ( i == j ) ? sqrt(2.0) : 1.0;
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    A_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])] += u_p[d200off[h] + (ij)*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])] -= 0.5 / dij * u_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                    A_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])] += 0.5 / dij * u_p[d2aboff[h] + ij*gems_ab[h] + lk];
+                    A_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])] -= 0.5 / dij * u_p[d2aboff[h] + ji*gems_ab[h] + kl];
+                    A_p[offset + (ij)*2*gems_ab[h] + (kl+gems_ab[h])] += 0.5 / dij * u_p[d2aboff[h] + ji*gems_ab[h] + lk];
+                }
+            }
+            // D210
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    double dkl = ( k == l ) ? sqrt(2.0) : 1.0;
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)] += u_p[d200off[h] + (ij+gems_ab[h])*2*gems_ab[h] + (kl)];
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)] -= 0.5 / dkl * u_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)] -= 0.5 / dkl * u_p[d2aboff[h] + ij*gems_ab[h] + lk];
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)] += 0.5 / dkl * u_p[d2aboff[h] + ji*gems_ab[h] + kl];
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl)] += 0.5 / dkl * u_p[d2aboff[h] + ji*gems_ab[h] + lk];
+                }
+            }
+            // D211
+            for (int ij = 0; ij < gems_ab[h]; ij++) {
+                int i = bas_ab_sym[h][ij][0];
+                int j = bas_ab_sym[h][ij][1];
+                int ji = ibas_ab_sym[h][j][i];
+                for (int kl = 0; kl < gems_ab[h]; kl++) {
+                    int k = bas_ab_sym[h][kl][0];
+                    int l = bas_ab_sym[h][kl][1];
+                    int lk = ibas_ab_sym[h][l][k];
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])] += u_p[d200off[h] + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])];
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])] -= 0.5 * u_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])] += 0.5 * u_p[d2aboff[h] + ji*gems_ab[h] + kl];
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])] += 0.5 * u_p[d2aboff[h] + ij*gems_ab[h] + lk];
+                    A_p[offset + (ij+gems_ab[h])*2*gems_ab[h] + (kl+gems_ab[h])] -= 0.5 * u_p[d2aboff[h] + ji*gems_ab[h] + lk];
+                }
+            }
+            offset += 4*gems_ab[h]*gems_ab[h];
+        }
     }
 
 }

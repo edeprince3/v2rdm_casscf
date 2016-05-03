@@ -1727,7 +1727,7 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("      Total:                      %12.2lf s\n",end_total_time - start_total_time);
     outfile->Printf("\n");
 
-    CheckSpinStructure();
+    //CheckSpinStructure();
 
     return energy_primal + enuc_ + efzc_;
 }
