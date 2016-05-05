@@ -26,8 +26,8 @@ set v2rdm_casscf {
   r_convergence  1e-4
   e_convergence  1e-4
   maxiter 20000
-  orbopt_frequency 200
-  mu_update_frequency 200
+  #orbopt_frequency 200
+  #mu_update_frequency 200
 }
 
 activate(n2)
