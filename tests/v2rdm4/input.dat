@@ -77,7 +77,7 @@ compare_values(e_singlet, ref_singlet, 4, "singlet") # TEST
 
 activate(triplet)
 ref_triplet = -338.495170913420 # TEST
-e_triplet = energy('v2rdm-casscf', molecule=triplet)
+e_triplet = energy('v2rdm-casscf')
 
 compare_values(e_triplet, ref_triplet, 4, "triplet") # TEST
 
