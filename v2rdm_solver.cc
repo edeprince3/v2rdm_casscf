@@ -56,7 +56,6 @@
 
 #include"cg_solver.h"
 #include"v2rdm_solver.h"
-#include"oeprop.h"
 
 // greg
 #include "fortran.h"
@@ -1951,10 +1950,6 @@ void v2RDMSolver::MullikenPopulations() {
         C_DGEMM('N','N',nsol,nsor,nmol,1.0,Clp[0],nmol,temp,nsor,0.0,Dsop[0],nsor);
     }
 
-    // compute mulliken charges:
-    //boost::shared_ptr<MyOEProp> oe(new MyOEProp());
-    //oe->compute_mulliken_charges_custom(Da_,Db_);
-    
     free(temp);    
 }
 
