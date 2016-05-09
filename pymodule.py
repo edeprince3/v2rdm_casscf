@@ -28,14 +28,10 @@ import os
 import inputparser
 import math
 import warnings
-from driver import *
-#from wrappers import *
+import driver
 from molutil import *
 import p4util
-from p4xcpt import *
-
-plugdir = os.path.split(os.path.abspath(__file__))[0]
-sofile = plugdir + "/v2rdm_casscf.so"
+from p4util.exceptions import *
 
 def run_v2rdm_casscf(name, **kwargs):
     r"""Function encoding sequence of PSI module and plugin calls so that
@@ -56,7 +52,7 @@ def run_v2rdm_casscf(name, **kwargs):
     # Your plugin's psi4 run sequence goes here
     ref_wfn = kwargs.get('ref_wfn', None)
     if ref_wfn is None:
-        ref_wfn = scf_helper(name, **kwargs)
+        ref_wfn = driver.scf_helper(name, **kwargs)
 
     # if restarting from a checkpoint file, this file
     # needs to be in scratch with the correct name
@@ -67,7 +63,7 @@ def run_v2rdm_casscf(name, **kwargs):
         molname = psi4.wavefunction().molecule().name()
         p4util.copy_file_to_scratch(filename,'psi',molname,269,False)
 
-    returnvalue = psi4.plugin(sofile, ref_wfn)
+    returnvalue = psi4.plugin('v2rdm_casscf.so', ref_wfn)
 
     #psi4.set_variable('CURRENT ENERGY', returnvalue)
 
@@ -76,8 +72,8 @@ def run_v2rdm_casscf(name, **kwargs):
 
 
 # Integration with driver routines
-procedures['energy']['v2rdm_casscf'] = run_v2rdm_casscf
-procedures['energy']['v2rdm-casscf'] = run_v2rdm_casscf
+driver.procedures['energy']['v2rdm_casscf'] = run_v2rdm_casscf
+driver.procedures['energy']['v2rdm-casscf'] = run_v2rdm_casscf
 
 def exampleFN():
     # Your Python code goes here
