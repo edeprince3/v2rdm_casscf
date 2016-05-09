@@ -18,8 +18,8 @@ set {
   cholesky_tolerance 1e-12
   d_convergence      1e-10
   maxiter 500
-  restricted_docc  [ 2, 0, 0, 0, 0, 2, 0, 0 ]
-  restricted_uocc  [ 4, 1, 2, 2, 1, 4, 2, 2 ]
+  restricted_docc [ 2, 0, 0, 0, 0, 2, 0, 0 ]
+  active          [ 1, 0, 1, 1, 0, 1, 1, 1 ]
 }
 set v2rdm_casscf {
   positivity dqg
