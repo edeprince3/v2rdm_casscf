@@ -205,5 +205,5 @@ F90_FLAGS := ${F90_FLAGS}
 ${MAKEFILE_CONTENTS}
 EOF
 echo "Writing Makefile"
-mkdir -p obj
+#mkdir -p obj
 

@@ -32,7 +32,7 @@
 #include <libmints/sieve.h>
 #include <psifiles.h>
 
-#include <../bin/fnocc/blas.h>
+#include <libfnocc/blas.h>
 
 #include <libtrans/integraltransform.h>
 
