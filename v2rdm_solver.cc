@@ -48,7 +48,7 @@
 #include<libmints/mints.h>
 #include<libmints/vector.h>
 #include<libmints/matrix.h>
-#include<libfnocc/blas.h>
+#include<fnocc/blas.h>
 #include<time.h>
 #include <../bin/fnocc/blas.h>
 

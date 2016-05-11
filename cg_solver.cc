@@ -35,7 +35,7 @@
 #include <liboptions/liboptions.h>
 #include <libmints/mints.h>
 #include <libpsio/psio.hpp>
-#include <libfnocc/blas.h>
+#include <fnocc/blas.h>
 #include <libqt/qt.h>
 #include "cg_solver.h"
 

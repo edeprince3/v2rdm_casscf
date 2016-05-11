@@ -26,7 +26,7 @@
  */
 
 #include"v2rdm_solver.h"
-#include<libfnocc/blas.h>
+#include<fnocc/blas.h>
 #include<libqt/qt.h>
 
 #include<psifiles.h>
