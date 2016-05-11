@@ -50,7 +50,7 @@
 #include<libmints/matrix.h>
 #include<fnocc/blas.h>
 #include<time.h>
-#include <../bin/fnocc/blas.h>
+#include <fnocc/blas.h>
 
 #include <libiwl/iwl.h>
 

@@ -21,7 +21,7 @@ fi
 
 PSI4CONFIG=$(which psi4-config)
 if [[ "$PSI4CONFIG" = "" ]]; then
-    echo "Error: psi4-config: command not found"
+    echo "Warning: psi4-config: command not found"
     echo "All values must be passed in as arguments."
     #exit 1
 fi
