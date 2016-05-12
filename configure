@@ -14,7 +14,7 @@ Usage ./configure <OPTIONS>
     --python=<PATH>           : Interpreter to which plugin installed
     --fc=<PATH>               : Fortran compiler
     --flibs=<PATHS>           : Libraries to compile Fortran
-    #--fflags=<FLAGS>          : Flags to compile Fortran
+    --fflags=<FLAGS>          : Flags to compile Fortran
 EOF
     exit 0
 fi
@@ -33,9 +33,11 @@ CXXFLAGS="$(psi4-config --flags 2>&1 >/dev/null)"
 LDFLAGS="$(psi4-config --ldflags 2>&1 >/dev/null)" 
 INCLUDES="$(psi4-config --includes 2>&1 >/dev/null)" 
 PYTHON="$(psi4-config --python 2>&1 >/dev/null)" 
+echo $PYTHON
 F90="$(psi4-config --fc 2>&1 >/dev/null)" 
-F90_LIB=-lifcore
-F90_FLAGS="-heap-arrays -openmp -O2 -fPIC -DOMP"
+
+#F90_LIB=-lifcore
+#F90_FLAGS="-heap-arrays -openmp -O2 -fPIC -DOMP"
 
 # for ifort:
 #F90_LIB=-lifcore
