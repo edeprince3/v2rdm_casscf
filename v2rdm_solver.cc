@@ -194,7 +194,7 @@ void  v2RDMSolver::common_init(){
         is_df_ = true;
     }
 
-    enuc_     = Process::environment.molecule()->nuclear_repulsion_energy();
+    enuc_     = reference_wavefunction_->molecule()->nuclear_repulsion_energy();
     escf_     = reference_wavefunction_->reference_energy();
     nalpha_   = reference_wavefunction_->nalpha();
     nbeta_    = reference_wavefunction_->nbeta();
@@ -224,7 +224,7 @@ void  v2RDMSolver::common_init(){
     memset((void*)amopi_,'\0',nirrep_*sizeof(int));
 
     // multiplicity:
-    multiplicity_ = Process::environment.molecule()->multiplicity();
+    multiplicity_ = reference_wavefunction_->molecule()->multiplicity();
 
     if (options_["FROZEN_DOCC"].has_changed()) {
         throw PsiException("FROZEN_DOCC is currently disabled.",__FILE__,__LINE__);

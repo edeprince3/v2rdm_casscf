@@ -33,6 +33,7 @@ from molutil import *
 import p4util
 from p4util.exceptions import *
 
+
 def run_v2rdm_casscf(name, **kwargs):
     r"""Function encoding sequence of PSI module and plugin calls so that
     v2rdm_casscf can be called via :py:func:`~driver.energy`. For post-scf plugins.
@@ -60,7 +61,7 @@ def run_v2rdm_casscf(name, **kwargs):
 
     # todo PSIF_V2RDM_CHECKPOINT should be definied in psifiles.h
     if ( filename != "" ):
-        molname = psi4.wavefunction().molecule().name()
+        molname = ref_wfn.molecule().name()
         p4util.copy_file_to_scratch(filename,'psi',molname,269,False)
 
     returnvalue = psi4.plugin('v2rdm_casscf.so', ref_wfn)
@@ -72,7 +73,6 @@ def run_v2rdm_casscf(name, **kwargs):
 
 
 # Integration with driver routines
-driver.procedures['energy']['v2rdm_casscf'] = run_v2rdm_casscf
 driver.procedures['energy']['v2rdm-casscf'] = run_v2rdm_casscf
 
 def exampleFN():
