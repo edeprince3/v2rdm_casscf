@@ -189,6 +189,8 @@ v2RDMSolver::~v2RDMSolver()
 
 void  v2RDMSolver::common_init(){
 
+    shallow_copy(reference_wavefunction_);
+
     is_df_ = false;
     if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD" ) {
         is_df_ = true;
@@ -1566,6 +1568,7 @@ double v2RDMSolver::compute_energy() {
 
         // update primal and dual solutions
         Update_xz();
+        //Update_xz_nonsymmetric();
 
         end = omp_get_wtime();
 
@@ -2835,21 +2838,21 @@ void v2RDMSolver::Update_xz_nonsymmetric() {
 
         }
         // symmetrize
-        //for (int p = 0; p < dimensions_[i]; p++) {
-        //    for (int q = p; q < dimensions_[i]; q++) {
-        //        double dumx = x_p[myoffset+p*dimensions_[i]+q];
-        //        double dumz = z_p[myoffset+p*dimensions_[i]+q];
+        for (int p = 0; p < dimensions_[i]; p++) {
+            for (int q = p; q < dimensions_[i]; q++) {
+                double dumx = x_p[myoffset+p*dimensions_[i]+q];
+                double dumz = z_p[myoffset+p*dimensions_[i]+q];
 
-        //        dumx += x_p[myoffset+q*dimensions_[i]+p];
-        //        dumz += z_p[myoffset+q*dimensions_[i]+p];
+                dumx += x_p[myoffset+q*dimensions_[i]+p];
+                dumz += z_p[myoffset+q*dimensions_[i]+p];
 
-        //        x_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumx;
-        //        z_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumz;
+                x_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumx;
+                z_p[myoffset+q*dimensions_[i]+p] = 0.5 * dumz;
 
-        //        x_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumx;
-        //        z_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumz;
-        //    }
-        //}
+                x_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumx;
+                z_p[myoffset+p*dimensions_[i]+q] = 0.5 * dumz;
+            }
+        }
 
         free(VL);
         free(VR);

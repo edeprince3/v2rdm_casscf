@@ -157,7 +157,7 @@ SharedWavefunction v2rdm_casscf(SharedWavefunction ref_wfn, Options& options)
 
     tstop();
 
-    return ref_wfn;
+    return (SharedWavefunction)v2rdm;
 }
 
 }} // End namespaces
