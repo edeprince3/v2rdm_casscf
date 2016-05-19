@@ -196,7 +196,6 @@ void  v2RDMSolver::common_init(){
         is_df_ = true;
     }
 
-    enuc_     = reference_wavefunction_->molecule()->nuclear_repulsion_energy();
     escf_     = reference_wavefunction_->reference_energy();
     nalpha_   = reference_wavefunction_->nalpha();
     nbeta_    = reference_wavefunction_->nbeta();
@@ -212,6 +211,7 @@ void  v2RDMSolver::common_init(){
     nmo_      = reference_wavefunction_->nmo();
     nsopi_    = reference_wavefunction_->nsopi();
     molecule_ = reference_wavefunction_->molecule();
+    enuc_     = molecule_->nuclear_repulsion_energy();
 
     // restricted doubly occupied orbitals per irrep (optimized)
     rstcpi_   = (int*)malloc(nirrep_*sizeof(int));
