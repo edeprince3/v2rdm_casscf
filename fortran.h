@@ -61,7 +61,8 @@ extern "C" {
                                    int &nfrzv,
                                    int &nirrep_,
                                    double*jacobi_data,
-                                   char*jacobi_file);
+                                   char*jacobi_file,
+                                   double*X_);
 };
 inline void OrbOpt(double*jacobi_transformation_matrix,
                    double*oei_full_sym_,
@@ -81,9 +82,10 @@ inline void OrbOpt(double*jacobi_transformation_matrix,
                    int &nirrep_,
                    double*jacobi_data,
 //gg -- added frzcpi_ to argument list
-                   char*jacobi_file){
+                   char*jacobi_file,
+                   double*X_){
     //F77NAME(focas_interface)(jacobi_transformation_matrix,oei_full_sym_,oei_full_sym_dim,tei_full_sym_,tei_full_sym_dim,d1_full_sym,d1_full_sym_dim,d2_full_sym,d2_full_sym_dim,symmetry_energy_order,frzcpi_,nfrzc,amo_,nfrzv,nirrep_,jacobi_data,jacobi_file);
-    F77NAME(focas_interface)(jacobi_transformation_matrix,oei_full_sym_,oei_full_sym_dim,tei_full_sym_,tei_full_sym_dim,d1_full_sym,d1_full_sym_dim,d2_full_sym,d2_full_sym_dim,symmetry_energy_order,nfrzc,amo_,nfrzv,nirrep_,jacobi_data,jacobi_file);
+    F77NAME(focas_interface)(jacobi_transformation_matrix,oei_full_sym_,oei_full_sym_dim,tei_full_sym_,tei_full_sym_dim,d1_full_sym,d1_full_sym_dim,d2_full_sym,d2_full_sym_dim,symmetry_energy_order,nfrzc,amo_,nfrzv,nirrep_,jacobi_data,jacobi_file,X_);
 };
 
 #endif

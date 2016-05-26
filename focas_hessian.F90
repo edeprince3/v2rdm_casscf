@@ -47,7 +47,7 @@ module focas_hessian
 
       ! active-active pairs
 
-      if ( rot_pair_%n_aa > 0 ) error=diagonal_hessian_aa(fock_i_%occ,q,z,int2,den1,den2)
+      if ( rot_pair_%n_aa > 0 ) error=diagonal_hessian_aa(fock_i_%occ,fock_a_%occ,q,z,int2,den1,den2)
 
       ! external-doubly occupied pairs
 
@@ -117,6 +117,8 @@ module focas_hessian
               endif
 
             endif
+
+            if ( h_val < 0.0_wp ) h_val = - h_val
 
             if ( h_val < min_diag_hessian_ ) h_val = min_diag_hessian_
 
@@ -361,7 +363,7 @@ module focas_hessian
 
     end function te_terms_ad_df
 
-    integer function diagonal_hessian_aa(f_i,q,z,int2,den1,den2)
+    integer function diagonal_hessian_aa(f_i,f_a,q,z,int2,den1,den2)
       implicit none
       ! subroutine to compute the exact diagonal Hessian matrix element H(tu|tu)
       ! according to Eq. A.3 in Jensen, Chem. Phys. 104, 229, (1982)
@@ -370,7 +372,7 @@ module focas_hessian
       ! some 2-e contributions are neglected
       real(wp), intent(in) :: den1(:),int2(:),den2(:)
       real(wp), intent(in) :: z(:,:),q(:,:)
-      type(matrix_block), intent(in) :: f_i(:)
+      type(matrix_block), intent(in) :: f_i(:),f_a(:)
       integer :: t_sym,t,u,grad_ind
       integer :: t_i,u_i
       integer :: tt_den,uu_den,ut_den
@@ -400,13 +402,13 @@ module focas_hessian
             uu_den = dens_%gemind(u,u)
             ut_den = dens_%gemind(u,t)
 
-            h_val    = 2.0_wp * ( den1(tt_den) * f_i(t_sym)%val(u_i,u_i) +            &
-                               &  den1(uu_den) * f_i(t_sym)%val(t_i,t_i)              &
-                               & - (  2.0_wp * den1(ut_den) * f_i(t_sym)%val(t_i,u_i) &
-                               &    + q(t-ndoc_tot_,t) + q(u-ndoc_tot_,u)             &
-                               &    + z(t-ndoc_tot_,t) + z(u-ndoc_tot_,u) ) )
-
             if ( use_exact_hessian_diagonal_ == 1 ) then
+
+              h_val    = 2.0_wp * ( den1(tt_den) * f_i(t_sym)%val(u_i,u_i) +            &
+                                 &  den1(uu_den) * f_i(t_sym)%val(t_i,t_i)              &
+                                 & - (  2.0_wp * den1(ut_den) * f_i(t_sym)%val(t_i,u_i) &
+                                 &    + q(t-ndoc_tot_,t) + q(u-ndoc_tot_,u)             &
+                                 &    + z(t-ndoc_tot_,t) + z(u-ndoc_tot_,u) ) )
 
               if ( df_vars_%use_df_teints == 1 ) then
 
@@ -418,7 +420,19 @@ module focas_hessian
 
               endif
 
+            else
+
+              h_val = 2.0_wp * (                                                             &
+                    &   den1(tt_den) * ( f_i(t_sym)%val(u_i,u_i) + f_i(t_sym)%val(u_i,u_i) ) &
+                    & + den1(uu_den) * ( f_i(t_sym)%val(t_i,t_i) + f_i(t_sym)%val(t_i,t_i) ) &                      
+                    & - ( q(t-ndoc_tot_,t) + z(t-ndoc_tot_,t) )                              &
+                    & - ( q(u-ndoc_tot_,u) + z(u-ndoc_tot_,u) )                              &
+                    & - 2.0_wp * den1(ut_den) * f_i(t_sym)%val(u_i,t_i)                      &
+                    & )
+
             end if
+
+            if ( h_val < 0.0_wp ) h_val = - h_val
 
             if ( h_val < min_diag_hessian_ ) h_val = min_diag_hessian_
 
@@ -796,6 +810,8 @@ module focas_hessian
 
             endif
 
+            if ( h_val < 0.0_wp ) h_val = - h_val
+
             if ( h_val < min_diag_hessian_ ) h_val = min_diag_hessian_
 
             orbital_hessian_(grad_ind) = h_val
@@ -933,6 +949,8 @@ module focas_hessian
               endif
 
             endif
+
+            if ( h_val < 0.0_wp ) h_val = - h_val
 
             if ( h_val < min_diag_hessian_ ) h_val = min_diag_hessian_
 

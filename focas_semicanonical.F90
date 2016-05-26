@@ -63,6 +63,8 @@ module focas_semicanonical
       logical :: fexist 
       integer :: error
 
+      integer :: h,m,n,offset
+
       nthread_use_ = int(orbopt_data(1))
       log_print_   = int(orbopt_data(6)) 
       df_vars_%use_df_teints      = int(orbopt_data(10))
@@ -81,18 +83,28 @@ module focas_semicanonical
 
         endif
 
-        write(fid_,'(a)')'omputing semicanonical orbitals'
+        write(fid_,'(a)')'computing semicanonical orbitals'
 
       endif
 
       ! allocate variables and set up mapping arrays
       call allocate_semicanonical_initial(ndocpi,nactpi,nextpi,nirrep,int2_nnz)
 
+      ! *** DEBUG STUFF
+
+      call compute_energy(int1,int2,den1,den2)
+
+      ! *** END DEBUG STUFF
+
       ! compute the fock matrices
       call compute_gen_fock(int1,int2,den1)
 
       ! compute semicanonical orbitals and orbital energies
       error=diagonalize_gen_fock()
+
+      ! adjust phase of each transformation vecto so that the element
+      ! with the largest magnitude if positive
+      ! error=adjust_phase()
 
       ! copy MO coefficients into U
       error=copy_semicanonical_mos()
@@ -101,12 +113,88 @@ module focas_semicanonical
       error = transform_mocoeff(mo_coeff)
       if ( error /= 0 ) call abort_print(50)
 
+      ! *** DEBUG STUFF 
+
+      ! 1-e integrals
+      error = transform_oeints(int1)
+      if ( error /= 0 ) call abort_print(30)
+
+      ! 2-e integrals
+      if ( df_vars_%use_df_teints == 0 ) then
+        error = transform_teints(int2)
+      else
+        error = transform_teints_df(int2)
+      end if
+      if ( error /= 0 ) call abort_print(31)
+
+      call compute_energy(int1,int2,den1,den2)
+      
+      ! *** END DEBUG STUFF
+
       ! deallocate variables
       call deallocate_semicanonical_final()
 
       return
 
     end subroutine compute_semicanonical_mos
+
+    integer function adjust_phase()
+
+      implicit none
+ 
+      adjust_phase = adjust_phase_block(gen_f_%doc,ndocpi_)
+
+      adjust_phase = adjust_phase_block(gen_f_%act,nactpi_)
+
+      adjust_phase = adjust_phase_block(gen_f_%ext,nextpi_)
+
+      adjust_phase = 0
+
+      return
+
+    end function adjust_phase
+
+    integer function adjust_phase_block(f_block,dims)
+
+      implicit none
+
+      type(matrix_block)  :: f_block(nirrep_)
+      integer, intent(in) :: dims(nirrep_)
+
+      integer :: nmo,p_sym,p,q
+      real(wp) :: max_val
+
+      do p_sym = 1 , nirrep_
+
+        nmo = dims(p_sym)
+
+        if ( nmo == 0 ) cycle
+
+        do p = 1 , nmo
+
+          max_val = 0.0_wp
+
+          do q = 1 , nmo
+
+            if ( abs(max_val) > abs(f_block(p_sym)%val(q,p)) ) cycle
+
+            max_val = f_block(p_sym)%val(q,p)
+
+          end do
+
+          if ( max_val > 0.0_wp ) cycle
+
+          f_block(p_sym)%val(:,p) = - f_block(p_sym)%val(:,p)
+
+        end do
+
+      end do
+        
+      adjust_phase_block = 0 
+ 
+      return
+
+    end function adjust_phase_block
 
     subroutine compute_gen_fock(int1,int2,den1)
 
@@ -131,17 +219,17 @@ module focas_semicanonical
 
         ! inactive-inactive block
         offset = 0
-        error=compute_gen_fock_block_df(1,gen_f_%doc)
+        if ( sum(ndocpi_) > 0 ) error=compute_gen_fock_block_df(1,gen_f_%doc,ndocpi_)
         if ( error /= 0 ) call abort_print(511)
 
         ! active-active block
         offset = ndocpi_
-        error=compute_gen_fock_block_df(2,gen_f_%act)
+        if ( sum(nactpi_) > 0 ) error=compute_gen_fock_block_df(2,gen_f_%act,nactpi_)
         if ( error /= 0 ) call abort_print(512)
       
         ! external-external block
         offset = ndocpi_ + nactpi_
-        error=compute_gen_fock_block_df(3,gen_f_%ext)
+        if ( sum(nextpi_) > 0 ) error=compute_gen_fock_block_df(3,gen_f_%ext,nextpi_)
         if ( error /= 0 ) call abort_print(513)
 
         deallocate(coulomb)
@@ -150,17 +238,17 @@ module focas_semicanonical
 
         ! inactive-inactive block
         offset = 0
-        error=compute_gen_fock_block(1,gen_f_%doc)
+        if ( sum(ndocpi_) > 0 ) error=compute_gen_fock_block(1,gen_f_%doc,ndocpi_)
         if ( error /= 0 ) call abort_print(521)
 
         ! active-active block
         offset = ndocpi_
-        error=compute_gen_fock_block(2,gen_f_%act)
+        if ( sum(nactpi_) > 0 ) error=compute_gen_fock_block(2,gen_f_%act,nactpi_)
         if ( error /= 0 ) call abort_print(522)
 
         ! external-external block
         offset = ndocpi_ + nactpi_
-        error=compute_gen_fock_block(3,gen_f_%ext)     
+        if ( sum(nextpi_) > 0 ) error=compute_gen_fock_block(3,gen_f_%ext,nextpi_)     
         if ( error /= 0 ) call abort_print(523)
 
       end if
@@ -169,11 +257,12 @@ module focas_semicanonical
 
       contains
 
-        integer function compute_gen_fock_block(p_class,f_block)
+        integer function compute_gen_fock_block(p_class,f_block,dims)
 
           implicit none
    
           integer, intent(in) :: p_class
+          integer, intent(in) :: dims(nirrep_)
  
           type(matrix_block)  :: f_block(nirrep_)
 
@@ -189,6 +278,8 @@ module focas_semicanonical
           compute_gen_fock_block = 1 
 
           do p_sym = 1 , nirrep_
+
+            if ( dims(p_sym) == 0 ) cycle
 
             if ( allocated(f_block(p_sym)%val) ) f_block(p_sym)%val = 0.0_wp
 
@@ -351,11 +442,12 @@ module focas_semicanonical
 
         end function precompute_coulomb
 
-        integer function compute_gen_fock_block_df(p_class,f_block)
+        integer function compute_gen_fock_block_df(p_class,f_block,dims)
 
           implicit none
 
           integer, intent(in)  :: p_class
+          integer, intent(in)  :: dims(nirrep_)
 
           type(matrix_block)  :: f_block(nirrep_)
 
@@ -374,6 +466,8 @@ module focas_semicanonical
           nQ = df_vars_%nQ
 
           do p_sym = 1 , nirrep_
+
+            if ( dims(p_sym) == 0 ) cycle
 
             if ( allocated(f_block(p_sym)%val) ) f_block(p_sym)%val = 0.0_wp
 
@@ -468,7 +562,9 @@ module focas_semicanonical
       implicit none
 
       integer :: offset(nirrep_),dims(nirrep_)
-      integer :: error,i_sym
+      integer :: error,i_sym,i,j
+
+!      real(wp), allocatable :: tmp(:,:)
 
       copy_semicanonical_mos = 1
 
@@ -480,18 +576,39 @@ module focas_semicanonical
 
       offset = 0
       dims   = ndocpi_
-      error=copy_semicanonical_mos_block(gen_f_%doc)
+      if (sum(dims) > 0 ) error=copy_semicanonical_mos_block(gen_f_%doc)
       if ( error /= 0 ) call abort_print(531)
 
       offset = ndocpi_
       dims   = nactpi_
-      error=copy_semicanonical_mos_block(gen_f_%act)
+      if ( sum(dims) > 0 ) error=copy_semicanonical_mos_block(gen_f_%act)
       if ( error /= 0 ) call abort_print(532)
 
       offset = ndocpi_ + nactpi_
       dims   = nextpi_
-      error=copy_semicanonical_mos_block(gen_f_%ext)
+      if ( sum(dims) > 0 ) error=copy_semicanonical_mos_block(gen_f_%ext)
       if ( error /= 0 ) call abort_print(533)
+
+!      do i_sym = 1 , nirrep_
+!
+!        allocate(tmp(trans_%nmopi(i_sym),trans_%nmopi(i_sym)))
+!        tmp = matmul(trans_%u_irrep_block(i_sym)%val,transpose(trans_%u_irrep_block(i_sym)%val))
+!
+!        write(*,*)'new symmetry'
+!
+!        do i=1,trans_%nmopi(i_sym)
+!
+!          do j=1,trans_%nmopi(i_sym)
+!
+!            write(*,*)i,j,trans_%u_irrep_block(i_sym)%val(i,j)
+!
+!          end do
+!
+!        end do
+!
+!        deallocate(tmp)
+!
+!      end do
 
       copy_semicanonical_mos = 0
 
@@ -531,6 +648,8 @@ module focas_semicanonical
     end function copy_semicanonical_mos
 
     integer function diagonalize_gen_fock()
+
+      ! the diagonalblocks of the Fock matrix are destroyed // replaced with eigenvectors
 
       implicit none
 
@@ -599,6 +718,8 @@ module focas_semicanonical
           write(fid_,*)
 
           do p_sym = 1 , nirrep_
+
+            if ( trans_%nmopi(p_sym) == 0 ) cycle
 
             if ( .not. allocated( e_block(p_sym)%val ) ) cycle
  

@@ -25,11 +25,12 @@
 
 subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,density_1,nnz_d1,&
            &density_2,nnz_d2,syms,ncore_in,nact_in,nvirt_in,nirrep_in,orbopt_data_io, &
-           &orbopt_log_file)
+           &orbopt_log_file,Xcc)
 
   
   use focas_driver, only        : focas_optimize
   use focas_semicanonical, only : compute_semicanonical_mos
+  use focas_genfock, only       : compute_genfock
 
   implicit none
   integer, parameter :: fid=99
@@ -48,6 +49,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer :: nirrep_in,ncore_in,nact_in,nvirt_in
   integer :: nnz_d1,nnz_d2,nnz_i1
   integer(ip) :: nnz_i2
+  real(wp) :: Xcc((ncore_in+nact_in+nvirt_in)*(ncore_in+nact_in+nvirt_in))
   real(wp) :: integrals_1(nnz_i1),integrals_2(nnz_i2),density_1(nnz_d1),density_2(nnz_d2)
   real(wp) :: mo_coeff_out(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   real(wp) :: orbopt_data_io(14) 
@@ -57,7 +59,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   real(wp) :: mo_coeff(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: nactpi(nirrep_in),ndocpi(nirrep_in),nextpi(nirrep_in)
   integer :: ndoc,nact,next,nmo,nirrep
-  integer :: nnz_int1,nnz_den1,nnz_den2,df_ints
+  integer :: nnz_int1,nnz_den1,nnz_den2,df_ints,Xdim
   integer(ip) :: nnz_int2
   integer :: gemind_int(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
   integer :: gemind_den_new(ncore_in+nact_in+nvirt_in,ncore_in+nact_in+nvirt_in)
@@ -77,7 +79,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
   integer(ip) :: offset_int(nirrep_in)
   integer :: offset_irrep_int1(nirrep_in)
   integer :: offset_irrep_den1(nirrep_in)
- 
+
   ndoc=ncore_in 
   nact=nact_in
   next=nvirt_in
@@ -112,11 +114,30 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
                       & density_1(1:nnz_den1),nnz_den1,density_2(1:nnz_den2),nnz_den2,&
                       & ndocpi,nactpi,nextpi,nirrep,orbopt_data_io,orbopt_log_file)
 
-  else
+  elseif ( int(orbopt_data_io(9)) == -1 ) then
 
+    Xdim=(ncore_in+nact_in+nvirt_in)*(ncore_in+nact_in+nvirt_in)
+
+    call compute_genfock(density_1(1:nnz_den1),density_2(1:nnz_den2),integrals_1,&
+                      & integrals_2,nnz_den1,nnz_den2,nnz_int1,nnz_int2,ndocpi,   &
+                      & nactpi,nextpi,nirrep,orbopt_data_io,orbopt_log_file, &
+                      & Xcc,Xdim)
+
+  elseif ( int(orbopt_data_io(9)) == -2 ) then
+   
     call compute_semicanonical_mos(density_1(1:nnz_den1),density_2(1:nnz_den2),integrals_1,&
                       & integrals_2,nnz_den1,nnz_den2,nnz_int1,nnz_int2,mo_coeff,ndocpi,   &
                       & nactpi,nextpi,nirrep,orbopt_data_io,orbopt_log_file)
+
+!  else    
+!
+!    Xdim=(ncore_in+nact_in+nvirt_in)*(ncore_in+nact_in+nvirt_in)
+! 
+!    call compute_genfock(density_1(1:nnz_den1),density_2(1:nnz_den2),integrals_1,&
+!                      & integrals_2,nnz_den1,nnz_den2,nnz_int1,nnz_int2,ndocpi,   &
+!                      & nactpi,nextpi,nirrep,orbopt_data_io,orbopt_log_file, &
+!                      & Xcc,Xdim)
+!
 
   end if
 
@@ -165,7 +186,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       ! copy mo coefficient matrix
       mo_coeff_out=0.0_wp
 
-      do p = 1 ,nmo
+      do p = 1 , nmo
         p_sym=syms(p)
         p_i=energy_to_irrep_map(p) + offset_irrep(p_sym)
         do q = 1,nmo
@@ -291,6 +312,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
         end do
       end do
       p_sym = gemind_den_new(last_index(nirrep,2),last_index(nirrep,2))
+
       density_1(1:p_sym) = block(1:p_sym)
 
       ! copy mo coefficient matrix
@@ -455,6 +477,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       do pq_sym = 1 , nirrep
         nnz_int(pq_sym) = dims(pq_sym)*(dims(pq_sym)+1)/2
       end do
+
       offset_int = 0
       do pq_sym = 2 , nirrep
         offset_int(pq_sym) = nnz_int(pq_sym-1) + offset_int(pq_sym-1)
@@ -483,6 +506,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
           dims(pq_sym)=dims(pq_sym)+1
         end do
       end do
+
       nnz_den_psi4 = 0
       do pq_sym = 1 , nirrep
         nnz_den_psi4(pq_sym) = dims(pq_sym)*(dims(pq_sym)+1)/2
@@ -543,6 +567,7 @@ subroutine focas_interface(mo_coeff_out,integrals_1,nnz_i1,integrals_2,nnz_i2,de
       ! set up geminal addressing arrays for the densities
 
       dims=0
+      gemind_den_new = 0
       do p = ndoc + 1 , ndoc + nact
         p_sym = sym_class(p)
         do q = ndoc + 1 , p

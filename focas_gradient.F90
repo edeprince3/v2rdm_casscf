@@ -46,6 +46,8 @@ module focas_gradient
       call compute_f_i_df_coulomb(int1,int2)
       call compute_f_i_df_exchange(int1,int2)
     endif
+    call transpose_matrix(fock_i_)
+
 
     ! calculate active Fock matrix
     if ( df_vars_%use_df_teints == 0 ) then
@@ -54,6 +56,7 @@ module focas_gradient
       call compute_f_a_df_coulomb(den1,int2)
       call compute_f_a_df_exchange(den1,int2)
     endif
+    call transpose_matrix(fock_a_)
 
     ! calculate auxiliary q matrix
     if ( df_vars_%use_df_teints == 0 ) then
@@ -77,15 +80,15 @@ module focas_gradient
 
     ! calculate auxiliary z matrix
     call compute_z(den1)
- 
+
     ! compute gradient
     call compute_orbital_gradient()
 
     ! determine value,type, and orbital indices for largest gradient element
     call check_max_gradient()
 
-!    ! print the gradient 
-!    if ( log_print_ == 1 ) call print_orbital_gradient()
+    ! print the gradient 
+    !if ( log_print_ == 1 ) call print_vector(orbital_gradient_)
 
     return
   end subroutine orbital_gradient
@@ -105,6 +108,178 @@ module focas_gradient
    end do
 
   end subroutine 
+
+  subroutine print_vector(vector)
+
+    implicit none
+
+    real(wp), intent(in) :: vector(:)
+
+    integer :: a_sym,t_sym,i,a,t,u,grad_ind,newline
+    character(1) :: a_typ,i_typ,t_typ,u_typ
+
+    newline = 0
+
+    ! ******************************
+    ! doubly occupied - active pairs
+    ! ******************************
+
+    i_typ='d'
+    t_typ='a'
+
+    do t_sym = 1 , nirrep_
+
+      grad_ind = rot_pair_%pair_offset(t_sym,rot_pair_%act_doc_type)
+
+      do i = first_index_(t_sym,1) , last_index_(t_sym,1)
+
+        do t = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+          grad_ind = grad_ind + 1
+
+          write(fid_,'(a,a,a,a,i3,a,i3,a,1x,es10.3,4x)',advance='no')t_typ,'-',i_typ,&
+               & ' (',t,',',i,')',vector(grad_ind)
+
+          newline = newline + 1
+
+          if ( mod(newline,4) == 0 ) write(fid_,*)
+
+        end do
+
+      end do
+
+    end do
+ 
+    ! ********************************
+    ! doubly occupied - external pairs
+    ! ********************************
+
+    i_typ='d'
+    a_typ='e'
+    
+    do a_sym = 1 , nirrep_
+
+      grad_ind = rot_pair_%pair_offset(a_sym,rot_pair_%ext_doc_type)
+
+      do i = first_index_(a_sym,1) , last_index_(a_sym,1)
+
+        do a = first_index_(a_sym,3) , last_index_(a_sym,3)
+
+          grad_ind = grad_ind + 1
+
+          write(fid_,'(a,a,a,a,i3,a,i3,a,1x,es10.3,4x)',advance='no')a_typ,'-',i_typ,&
+               & ' (',a,',',i,')',vector(grad_ind)
+
+          newline = newline + 1
+
+          if ( mod(newline,4) == 0 ) write(fid_,*)
+
+        end do
+
+      end do
+
+    end do
+
+    ! *********************
+    ! active - active pairs
+    ! *********************
+
+    t_typ='a'
+    u_typ='a'
+
+    if ( include_aa_rot_ == 1 ) then
+
+      do t_sym = 1 , nirrep_
+
+        grad_ind = rot_pair_%pair_offset(t_sym,rot_pair_%act_act_type)
+
+        do u = first_index_(t_sym,2) , last_index_(t_sym,2)
+
+          do t = u + 1 , last_index_(t_sym,2)
+
+            grad_ind = grad_ind + 1
+
+            write(fid_,'(a,a,a,a,i3,a,i3,a,1x,es10.3,4x)',advance='no')t_typ,'-',u_typ,&
+                 & ' (',t,',',u,')',vector(grad_ind)
+
+            newline = newline + 1
+
+            if ( mod(newline,4) == 0 ) write(fid_,*)
+
+          end do
+
+        end do
+
+      end do
+
+    end if
+
+    ! ***********************
+    ! active - external pairs
+    ! ***********************
+
+    t_typ='a'
+    a_typ='e'
+
+    do a_sym = 1 , nirrep_
+
+      grad_ind = rot_pair_%pair_offset(a_sym,rot_pair_%ext_act_type)
+
+      do t = first_index_(a_sym,2) , last_index_(a_sym,2)
+
+        do a = first_index_(a_sym,3) , last_index_(a_sym,3)
+
+          grad_ind = grad_ind + 1
+
+          write(fid_,'(a,a,a,a,i3,a,i3,a,1x,es10.3,4x)',advance='no')a_typ,'-',t_typ,&
+               & ' (',a,',',t,')',vector(grad_ind)
+
+          newline = newline + 1
+
+          if ( mod(newline,4) == 0 ) write(fid_,*)
+
+        end do
+
+      end do
+
+    end do
+
+    if ( mod(newline,4) /= 0 ) write(fid_,*)
+
+    return
+
+  end subroutine print_vector
+
+  subroutine transpose_matrix(fock)
+
+    implicit none
+    
+    type(fock_info) :: fock
+
+    integer :: num_p,p,q,p_sym
+
+    ! subroutine to symmetrize the inactive-inactive and active-active 
+    ! blocks of the Fock matrix
+        
+    do p_sym = 1 , nirrep_
+
+      num_p = ndocpi_(p_sym) + nactpi_(p_sym)
+
+      if ( num_p == 0 ) cycle
+
+      do p = 1 , num_p
+
+        do q = p+1 , num_p
+
+          fock%occ(p_sym)%val(p,q) = fock%occ(p_sym)%val(q,p)
+
+        end do
+
+      end do
+
+    end do
+
+  end subroutine transpose_matrix
 
   subroutine print_orbital_gradient()
     implicit none
@@ -574,7 +749,7 @@ module focas_gradient
 
             grad_ind = grad_ind + 1
 
-            orbital_gradient_(grad_ind) = 2.0_wp * ( q_(u - ndoc_tot_,t) + &
+            orbital_gradient_(grad_ind) = 2.0_wp * ( q_(u - ndoc_tot_,t) +         &
                  & z_(u - ndoc_tot_,t) - q_(t - ndoc_tot_,u) - z_(t - ndoc_tot_,u))
 
           end do
@@ -613,109 +788,153 @@ module focas_gradient
  
         ! m_class < u_class ==> m < u
 
-        m_class = 1 
+        ! loop over m orbital classes
 
-        ! loop over m indeces
+        do m_class = 1 , 3
+ 
+          do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
 
-        do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
+            m_i = trans_%class_to_irrep_map(m)
 
-          m_i = trans_%class_to_irrep_map(m)
+            ! initialize contraction value
 
-          ! initialize contraction value
+            val = 0.0_wp
 
-          val = 0.0_wp
+            do u = first_index_(t_sym,2) , last_index_(t_sym,2) 
 
-          do u = first_index_(t_sym,2) , last_index_(t_sym,2)
+              ! integral/density addressing
 
-            ! integral/density addressing
+              tu_den = dens_%gemind(t,u)
+              u_i    = trans_%class_to_irrep_map(u)
 
-            tu_den = dens_%gemind(t,u)
-            u_i    = trans_%class_to_irrep_map(u)
+              val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,u_i)
 
-            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(u_i,m_i)
+            end do ! end u loop
 
-          end do ! end u loop
+            z_( t - ndoc_tot_ , m ) = val
 
-          z_( t - ndoc_tot_ , m ) = val
+          end do ! end m loop
 
-        end do ! end m loop
-
-        ! m_class = u_class ==> u <= m
-
-        m_class = 2
-
-        ! loop over m indeces
-
-        do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
-
-          m_i = trans_%class_to_irrep_map(m)
-
-          ! initialize contraction value
-
-          val = 0.0_wp
-
-          do u = first_index_(t_sym,2) , m - 1
-
-            ! integral/density addressing
-
-            tu_den = dens_%gemind(t,u)
-            u_i    = trans_%class_to_irrep_map(u)
-
-            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,u_i)
-
-          end do ! end u loop
-          
-          tu_den = dens_%gemind(t,t)
-          
-          val    = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,m_i)
-
-          do u = m + 1 , last_index_(t_sym,2)
-
-            ! integral/density addressing
-
-            tu_den = dens_%gemind(t,u)
-            u_i    = trans_%class_to_irrep_map(u)
-
-            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(u_i,m_i)
-
-          end do ! end u loop
-
-          z_( t - ndoc_tot_ , m ) = val
-
-        end do ! end m loop
-
-        ! m_class > u_class ==> u < m
-
-        m_class = 3
-
-        ! loop over m indeces
-
-        do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
-
-          m_i = trans_%class_to_irrep_map(m)
-
-          ! initialize contraction value
-
-          val = 0.0_wp
-
-          do u = first_index_(t_sym,2) , last_index_(t_sym,2)
-
-            ! integral/density addressing
-
-            tu_den = dens_%gemind(t,u)
-            u_i    = trans_%class_to_irrep_map(u)
-
-            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,u_i)
-
-          end do ! end u loop
-
-          z_( t - ndoc_tot_ , m ) = val
-
-        end do ! end m loop
+        end do ! end m_class loop 
 
       end do ! end t loop
 
     end do ! end t_sym loop
+
+!
+!    ! loop over symmetries for t
+!
+!    do t_sym = 1 , nirrep_
+!
+!      ! loop over u indeces
+!
+!      do t = first_index_(t_sym,2) , last_index_(t_sym,2)
+!
+!        ! m_class < u_class ==> m < u
+!
+!        m_class = 1 
+!
+!        ! loop over m indeces
+!
+!        do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
+!
+!          m_i = trans_%class_to_irrep_map(m)
+!
+!          ! initialize contraction value
+!
+!          val = 0.0_wp
+!
+!          do u = first_index_(t_sym,2) , last_index_(t_sym,2)
+!
+!            ! integral/density addressing
+!
+!            tu_den = dens_%gemind(t,u)
+!            u_i    = trans_%class_to_irrep_map(u)
+!
+!            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(u_i,m_i)
+!
+!          end do ! end u loop
+!
+!          z_( t - ndoc_tot_ , m ) = val
+!
+!        end do ! end m loop
+!
+!        ! m_class = u_class ==> u <= m
+!
+!        m_class = 2
+!
+!        ! loop over m indeces
+!
+!        do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
+!
+!          m_i = trans_%class_to_irrep_map(m)
+!
+!          ! initialize contraction value
+!
+!          val = 0.0_wp
+!
+!          do u = first_index_(t_sym,2) , m - 1
+!
+!            ! integral/density addressing
+!
+!            tu_den = dens_%gemind(t,u)
+!            u_i    = trans_%class_to_irrep_map(u)
+!
+!            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,u_i)
+!
+!          end do ! end u loop
+!          
+!          tu_den = dens_%gemind(t,t)
+!          
+!          val    = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,m_i)
+!
+!          do u = m + 1 , last_index_(t_sym,2)
+!
+!            ! integral/density addressing
+!
+!            tu_den = dens_%gemind(t,u)
+!            u_i    = trans_%class_to_irrep_map(u)
+!
+!            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(u_i,m_i)
+!
+!          end do ! end u loop
+!
+!          z_( t - ndoc_tot_ , m ) = val
+!
+!        end do ! end m loop
+!
+!        ! m_class > u_class ==> u < m
+!
+!        m_class = 3
+!
+!        ! loop over m indeces
+!
+!        do m = first_index_(t_sym,m_class) , last_index_(t_sym,m_class)
+!
+!          m_i = trans_%class_to_irrep_map(m)
+!
+!          ! initialize contraction value
+!
+!          val = 0.0_wp
+!
+!          do u = first_index_(t_sym,2) , last_index_(t_sym,2)
+!
+!            ! integral/density addressing
+!
+!            tu_den = dens_%gemind(t,u)
+!            u_i    = trans_%class_to_irrep_map(u)
+!
+!            val = val + den1(tu_den) * fock_i_%occ(t_sym)%val(m_i,u_i)
+!
+!          end do ! end u loop
+!
+!          z_( t - ndoc_tot_ , m ) = val
+!
+!        end do ! end m loop
+!
+!      end do ! end t loop
+!
+!    end do ! end t_sym loop
 
     return
 
@@ -1606,6 +1825,10 @@ module focas_gradient
 
             do w_sym = 1 , nirrep_
   
+              mw_sym     = group_mult_tab_(m_sym,w_sym)
+              sym_offset = ints_%offset(mw_sym)
+
+
               ! loop over w indeces
 
               do w = first_index_(w_sym,2) , last_index_(w_sym,2)
@@ -1626,8 +1849,6 @@ module focas_gradient
                   ! 2-e exchange contribution - g(mw|vn)
                   mw         = ints_%gemind(m,w)
                   vn         = ints_%gemind(v,n)
-                  mw_sym     = group_mult_tab_(m_sym,w_sym)
-                  sym_offset = ints_%offset(mw_sym)
                   int_ind    = sym_offset + pq_index(mw,vn)
                   ival       = ival - 0.5_wp * int2(int_ind)
 
@@ -1644,13 +1865,14 @@ module focas_gradient
 
             if ( m_class == 3 ) then
 
-              m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
+              m_i                         = trans_%class_to_irrep_map(m)-&
+                                          & ndocpi_(m_sym)-nactpi_(m_sym)
               fock_a_%ext(m_sym)%val(m_i) = val
 
             else
 
-              m_i = trans_%class_to_irrep_map(m)
-              n_i = trans_%class_to_irrep_map(n)
+              m_i                             = trans_%class_to_irrep_map(m)
+              n_i                             = trans_%class_to_irrep_map(n)
               fock_a_%occ(m_sym)%val(m_i,n_i) = val
 
             endif
@@ -1675,6 +1897,9 @@ module focas_gradient
 
               do w_sym = 1 , nirrep_
   
+                mw_sym     = group_mult_tab_(m_sym,w_sym)
+                sym_offset = ints_%offset(mw_sym)
+
                 ! loop over w indeces
 
                 do w = first_index_(w_sym,2) , last_index_(w_sym,2)
@@ -1695,8 +1920,6 @@ module focas_gradient
                     ! 2-e exchange contribution - g(mw|vn)
                     mw         = ints_%gemind(m,w)
                     vn         = ints_%gemind(v,n)
-                    mw_sym     = group_mult_tab_(m_sym,w_sym)
-                    sym_offset = ints_%offset(mw_sym)
                     int_ind    = sym_offset + pq_index(mw,vn)
                     ival       = ival - 0.5_wp * int2(int_ind)
 
@@ -2035,7 +2258,7 @@ module focas_gradient
 
           if ( m_class == 3 ) n_first = m
 
-          do n = first_index_(m_sym,m_class) , m
+          do n = n_first , m
 
             ! mn-geminal index
             mn = ints_%gemind(m,n)
@@ -2045,6 +2268,9 @@ module focas_gradient
             ! loop over irreps for i
 
             do i_sym = 1 , nirrep_
+
+              mi_sym     = group_mult_tab_(m_sym,i_sym)
+              sym_offset = ints_%offset(mi_sym)
 
               ! loop over i indeces
 
@@ -2058,8 +2284,6 @@ module focas_gradient
                 ! 2-e exchange contribution - g(mi|in)
                 mi         = ints_%gemind(m,i)
                 in         = ints_%gemind(i,n)
-                mi_sym     = group_mult_tab_(m_sym,i_sym)
-                sym_offset = ints_%offset(mi_sym)
                 int_ind    = sym_offset + pq_index(mi,in)
                 val        = val - int2(int_ind) 
 
@@ -2071,13 +2295,13 @@ module focas_gradient
 
             if ( m_class == 3 ) then
 
-              m_i = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
-              fock_i_%ext(m_sym)%val(m_i) = val
+              m_i                             = trans_%class_to_irrep_map(m)-ndocpi_(m_sym)-nactpi_(m_sym)
+              fock_i_%ext(m_sym)%val(m_i)     = val
 
             else
 
-              m_i              = trans_%class_to_irrep_map(m)
-              n_i              = trans_%class_to_irrep_map(n)
+              m_i                             = trans_%class_to_irrep_map(m)
+              n_i                             = trans_%class_to_irrep_map(n)
               fock_i_%occ(m_sym)%val(m_i,n_i) = val
 
             endif
@@ -2100,6 +2324,9 @@ module focas_gradient
 
               do i_sym = 1 , nirrep_
 
+                mi_sym     = group_mult_tab_(m_sym,i_sym)
+                sym_offset = ints_%offset(mi_sym)
+
                 ! loop over i indeces
 
                 do i = first_index_(i_sym,1) , last_index_(i_sym,1)
@@ -2112,8 +2339,6 @@ module focas_gradient
                   ! 2-e exchange contribution - g(mi|in)
                   mi         = ints_%gemind(m,i)
                   in         = ints_%gemind(i,n)
-                  mi_sym     = group_mult_tab_(m_sym,i_sym)
-                  sym_offset = ints_%offset(mi_sym)
                   int_ind    = sym_offset + pq_index(mi,in)
                   val        = val - int2(int_ind)
 

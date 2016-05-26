@@ -88,12 +88,12 @@ module focas_redundant
 
     end subroutine analyze_block_nos
 
-    integer function diagonalize_opdm_block(nos,opdm_block,nmo)
+    integer function diagonalize_opdm_block(ons,opdm_block,nmo)
 
       implicit none
 
       integer  :: nmo
-      real(wp) :: nos(nmo),opdm_block(nmo,nmo)
+      real(wp) :: ons(nmo),opdm_block(nmo,nmo)
 
       integer  :: il,liwork,lwork
       real(wp) :: vl,vu,diag_tol
@@ -113,7 +113,7 @@ module focas_redundant
 !      allocate(isuppz(2*nmo))
 !
 !      ! figure out optimal dimensions for iwork and work
-!      call dsyevr('v','a','u',nmo,opdm_block,nmo,vl,vu,il,nmo,diag_tol,neig_found,nos,vecs,&
+!      call dsyevr('v','a','u',nmo,opdm_block,nmo,vl,vu,il,nmo,diag_tol,neig_found,ons,vecs,&
 !                 & nmo,isuppz,work_tmp,-1,iwork_tmp,-1,diagonalize_opdm_block)
 !
 !      ! something did not go right so return without diagonalization
@@ -130,7 +130,7 @@ module focas_redundant
 !      allocate(work(lwork),iwork(liwork),vecs(nmo,nmo))
 ! 
 !      ! diagonalize
-!      call dsyevr('v','a','u',nmo,opdm_block,nmo,vl,vu,il,nmo,diag_tol,neig_found,nos,vecs,&
+!      call dsyevr('v','a','u',nmo,opdm_block,nmo,vl,vu,il,nmo,diag_tol,neig_found,ons,vecs,&
 !                 & nmo,isuppz,work,lwork,iwork,liwork,diagonalize_opdm_block)
 !
 !      ! save eigenvectors
@@ -139,13 +139,13 @@ module focas_redundant
 !      ! deallocate temporary matrices
 !      deallocate(isuppz,work,iwork,vecs)
 
-      call dsyev('v','u',nmo,opdm_block,nmo,nos,work_tmp,-1,diagonalize_opdm_block)
+      call dsyev('v','u',nmo,opdm_block,nmo,ons,work_tmp,-1,diagonalize_opdm_block)
       lwork=int(work_tmp(1,1))
       if ( diagonalize_opdm_block /= 0 ) then
         return
       endif
       allocate(work(lwork))
-      call dsyev('v','u',nmo,opdm_block,nmo,nos,work,lwork,diagonalize_opdm_block)
+      call dsyev('v','u',nmo,opdm_block,nmo,ons,work,lwork,diagonalize_opdm_block)
       if ( diagonalize_opdm_block /= 0 ) then 
         deallocate(work)
         return

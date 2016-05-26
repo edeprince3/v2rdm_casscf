@@ -79,8 +79,6 @@ module focas_driver
     ! other variables
     logical :: fexist
 
-!    real(wp), allocatable :: P(:)
-
     ! set up variables based on input orbopt_data
     nthread_use_                = int(orbopt_data(1))
     include_aa_rot_             = int(orbopt_data(2))
@@ -193,9 +191,13 @@ module focas_driver
 
         ! construct gradient (temporary Fock matrices allocated/deallocated within routine)
         call orbital_gradient(int1,int2,den1,den2)
-      
+     
+!        call print_vector(orbital_gradient_)
+ 
         ! calculate diagonal Hessian elements
         call diagonal_hessian(q_,z_,int2,den1,den2)
+
+!        call print_vector(orbital_hessian_)
 
         ! calculate approximate energy change
         delta_energy_approximate = compute_approximate_de()
@@ -317,6 +319,8 @@ module focas_driver
     orbopt_data(12) = grad_norm_
     orbopt_data(13) = last_energy - initial_energy
     orbopt_data(14) = real(converged,kind=wp)
+
+!    stop
 
     ! debug
     !call compute_energy(int1,int2,den1,den2)

@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
@@ -66,13 +66,13 @@ namespace boost {
 namespace psi{ namespace v2rdm_casscf{
 
 class v2RDMSolver: public Wavefunction{
-  public: 
+  public:
     v2RDMSolver(boost::shared_ptr<psi::Wavefunction> reference_wavefunction,Options & options);
     ~v2RDMSolver();
     void common_init();
     double compute_energy();
-    virtual bool same_a_b_orbs() const { return false; }
-    virtual bool same_a_b_dens() const { return false; } 
+    virtual bool same_a_b_orbs() const { return same_a_b_orbs_; }
+    virtual bool same_a_b_dens() const { return same_a_b_dens_; }
 
     // public methods
     void cg_Ax(long int n,SharedVector A, SharedVector u);
@@ -152,13 +152,13 @@ class v2RDMSolver: public Wavefunction{
     long int nconstraints_;
 
     /// total number of variables (dimension of primal solution vector)
-    long int dimx_;  
+    long int dimx_;
 
     /// number of auxilliary basis functions
     int nQ_;
 
     /// read three-index integrals and transform them to MO basis
-    void ThreeIndexIntegrals(); 
+    void ThreeIndexIntegrals();
 
     /// three-index integral buffer
     double * Qmo_;
@@ -179,20 +179,20 @@ class v2RDMSolver: public Wavefunction{
     long int dimdiis_;
 
     /// offsets
-    int * d1aoff;  
-    int * d1boff;  
-    int * q1aoff;  
-    int * q1boff;  
-    int * d2aboff; 
-    int * d2aaoff; 
-    int * d2bboff; 
-    int * d200off; 
-    int * q2aboff; 
-    int * q2aaoff; 
-    int * q2bboff; 
-    int * g2aboff; 
-    int * g2baoff; 
-    int * g2aaoff; 
+    int * d1aoff;
+    int * d1boff;
+    int * q1aoff;
+    int * q1boff;
+    int * d2aboff;
+    int * d2aaoff;
+    int * d2bboff;
+    int * d200off;
+    int * q2aboff;
+    int * q2aaoff;
+    int * q2bboff;
+    int * g2aboff;
+    int * g2baoff;
+    int * g2aaoff;
     int * g2soff;
     int * g2toff;
     int * g2toff_p1;
@@ -216,7 +216,7 @@ class v2RDMSolver: public Wavefunction{
     int * d3aaboff;
     int * d3bbaoff;
 
-    /// convergence in primal energy 
+    /// convergence in primal energy
     double e_convergence_;
 
     /// convergence in primal and dual error
@@ -316,10 +316,10 @@ class v2RDMSolver: public Wavefunction{
     void D3_constraints_ATu(SharedVector A,SharedVector u);
 
     /// SCF energy
-    double escf_; 
+    double escf_;
 
     /// nuclear repulsion energy
-    double enuc_; 
+    double enuc_;
 
     double tau, mu, ed, ep;
 
@@ -335,13 +335,12 @@ class v2RDMSolver: public Wavefunction{
     SharedVector rz;       // square root of z (for diis)
     SharedVector rx_error; // error vector for x (for diis)
     SharedVector rz_error; // error vector for z (for diis)
-    
+
     void Update_xz();
     void Update_xz_nonsymmetric();
 
     void NaturalOrbitals();
     void MullikenPopulations();
-    void FinalTransformationMatrix();
 
     // read teis from disk:
     void ReadIntegrals(double * tei,long int nmo);
@@ -352,7 +351,7 @@ class v2RDMSolver: public Wavefunction{
     /// full space of integrals for MO gradient / Hessian, blocked by symmetry
     double * tei_full_sym_;
     double * oei_full_sym_;
-    // gidofalvi -- modified the type of tei_full_dim_ so that it is correct for large bases 
+    // gidofalvi -- modified the type of tei_full_dim_ so that it is correct for large bases
     long int tei_full_dim_;
     int oei_full_dim_;
 
@@ -367,7 +366,7 @@ class v2RDMSolver: public Wavefunction{
     /// unpack active-space density into full-space density
     void UnpackDensityPlusCore();
 
-    /// repack rotated full-space integrals into active-space integrals 
+    /// repack rotated full-space integrals into active-space integrals
     void RepackIntegrals();
     void RepackIntegralsDF();
 
@@ -415,6 +414,9 @@ class v2RDMSolver: public Wavefunction{
     /// write full 2RDM to disk
     void WriteTPDM();
 
+    /// write full 2RDM to disk in IWL format
+    void WriteTPDM_IWL();
+
     /// write active-active-active-active 2RDM to disk
     void WriteActiveTPDM();
 
@@ -429,8 +431,29 @@ class v2RDMSolver: public Wavefunction{
 
     /// check spin structure of 1- and 2-RDM
     void CheckSpinStructure();
+
+    /// orbital lagrangian
+    double * X_;
+
+    void OrbitalLagrangian();
+    void DualD1Q1();
+
+    /// memory available beyond what is allocated for v2RDM-CASSCF
+    long int available_memory_;
+
+    /// update primal solution after semicanonicalization
+    void UpdatePrimal();
+
+    /// transform a four-index quantity from one basis to another
+    void TransformFourIndex(double * inout, double * tmp, boost::shared_ptr<Matrix>trans);
+
+    /// update ao/mo transformation matrix after orbital optimization
+    void UpdateTransformationMatrix();
+
+    /// mo-mo transformation matrix
+    boost::shared_ptr<Matrix> newMO_;
 };
 
 }}
-#endif	
-      
+#endif
+
