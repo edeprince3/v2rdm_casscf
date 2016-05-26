@@ -169,7 +169,10 @@ focas_driver.o: focas_driver.F90 focas_redundant.o focas_exponential.o focas_tra
 focas_semicanonical.o: focas_semicanonical.F90 focas_redundant.o focas_driver.o focas_data.o focas_energy.o focas_transform_driver.o 
 	$(F90) $(F90_FLAGS) -c $<
 
-focas_interface.o: focas_interface.F90 focas_semicanonical.o focas_driver.o 
+focas_genfock.o: focas_genfock.F90 focas_data.o focas_driver.o focas_gradient.o
+	$(F90) $(F90_FLAGS) -c $<
+
+focas_interface.o: focas_interface.F90 focas_semicanonical.o focas_driver.o focas_genfock.o
 	$(F90) $(F90_FLAGS) -c $<
 	rm *mod
 
