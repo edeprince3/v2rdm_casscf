@@ -1719,17 +1719,14 @@ double v2RDMSolver::compute_energy() {
 
     if ( options_.get_bool("SEMICANONICALIZE_ORBITALS") ) {
 
-        printf("primal energy before semicanonicalization: %20.12lf\n",energy_primal+efzc_);
         orbopt_data_[8] = -2.0;
         RotateOrbitals();
-        printf("primal energy after semicanonicalization:  %20.12lf\n",energy_primal+efzc_);
 
         // push final transformation matrix onto Ca_ and Cb_
         UpdateTransformationMatrix();
 
         // transform D1, D2, D3 to semicanonical basis
         UpdatePrimal();
-        printf("primal energy after transformation:        %20.12lf\n",C_DDOT(dimx_,c->pointer(),1,x->pointer(),1)+efzc_);
     
     }
 
@@ -2239,9 +2236,13 @@ void v2RDMSolver::BuildConstraints(){
         if ( !spin_adapt_q2_ ) {
             // map d2ab to q2ab
             for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_ab[h]; i++){
-                    for(int j = 0; j < gems_ab[h]; j++){
-                        b_p[offset + INDEX(i,j)] = 0.0;
+                for(int ij = 0; ij < gems_ab[h]; ij++){
+                    int i = bas_ab_sym[h][ij][0];
+                    int j = bas_ab_sym[h][ij][1];
+                    for(int kl = 0; kl < gems_ab[h]; kl++){
+                        int k = bas_ab_sym[h][kl][0];
+                        int l = bas_ab_sym[h][kl][1];
+                        b_p[offset + ij*gems_ab[h]+kl] = -(i==k)*(j==l);
                     }
                 }
                 offset += gems_ab[h]*gems_ab[h];
@@ -2249,9 +2250,13 @@ void v2RDMSolver::BuildConstraints(){
 
             // map d2aa to q2aa
             for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_aa[h]; i++){
-                    for(int j = 0; j < gems_aa[h]; j++){
-                        b_p[offset + INDEX(i,j)] = 0.0;
+                for(int ij = 0; ij < gems_aa[h]; ij++){
+                    int i = bas_aa_sym[h][ij][0];
+                    int j = bas_aa_sym[h][ij][1];
+                    for(int kl = 0; kl < gems_aa[h]; kl++){
+                        int k = bas_aa_sym[h][kl][0];
+                        int l = bas_aa_sym[h][kl][1];
+                        b_p[offset + ij*gems_aa[h]+kl] = -(i==k)*(j==l) + (i==l)*(j==k);
                     }
                 }
                 offset += gems_aa[h]*gems_aa[h];
@@ -2259,9 +2264,13 @@ void v2RDMSolver::BuildConstraints(){
 
             // map d2bb to q2bb
             for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_aa[h]; i++){
-                    for(int j = 0; j < gems_aa[h]; j++){
-                        b_p[offset + INDEX(i,j)] = 0.0;
+                for(int ij = 0; ij < gems_aa[h]; ij++){
+                    int i = bas_aa_sym[h][ij][0];
+                    int j = bas_aa_sym[h][ij][1];
+                    for(int kl = 0; kl < gems_aa[h]; kl++){
+                        int k = bas_aa_sym[h][kl][0];
+                        int l = bas_aa_sym[h][kl][1];
+                        b_p[offset + ij*gems_aa[h]+kl] = -(i==k)*(j==l) + (i==l)*(j==k);
                     }
                 }
                 offset += gems_aa[h]*gems_aa[h];
