@@ -22,8 +22,8 @@ set {
 }
 set v2rdm_casscf {
   positivity dqg
-  r_convergence  1e-4
-  e_convergence  1e-4
+  r_convergence  1e-5
+  e_convergence  1e-6
   maxiter 20000
 }
 
@@ -31,10 +31,10 @@ activate(n2)
 
 n2.r     = 1.1
 refscf   = -108.95348837831371 # TEST
-refv2rdm = -109.094473284022   # TEST
+refv2rdm = -109.094404909477   # TEST
 
 energy('v2rdm-casscf')
 
 compare_values(refscf, get_variable("SCF TOTAL ENERGY"), 8, "SCF total energy") # TEST
-compare_values(refv2rdm, get_variable("CURRENT ENERGY"), 4, "v2RDM-CASSCF total energy") # TEST
+compare_values(refv2rdm, get_variable("CURRENT ENERGY"), 5, "v2RDM-CASSCF total energy") # TEST
 

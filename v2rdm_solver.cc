@@ -1508,7 +1508,7 @@ double v2RDMSolver::compute_energy() {
     // Ax   = AATy and b=A(c-z)+tu(b-Ax)
     SharedVector B   = SharedVector(new Vector("compound B",nconstraints_));
 
-    tau = 1.6;
+    tau = options_.get_double("TAU_PARAMETER");
     mu  = 1.0;
 
     // congugate gradient solver

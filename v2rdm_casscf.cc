@@ -94,6 +94,8 @@ int read_options(std::string name, Options& options)
         options.add_int("DIIS_MAX_VECS", 8);
         /*- Frequency of DIIS extrapolation steps -*/
         options.add_int("DIIS_UPDATE_FREQUENCY",50);
+        /*- Extra convergence parameter. Default 1.0.  recommendation: tau = 1.0:1.6 !expert -*/
+        options.add_double("TAU_PARAMETER",1.0);
 
         /*- Auxiliary basis set for SCF density fitting computations.
         :ref:`Defaults <apdx:basisFamily>` to a JKFIT basis. -*/
