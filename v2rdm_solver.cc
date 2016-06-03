@@ -1139,7 +1139,7 @@ void  v2RDMSolver::common_init(){
     outfile->Printf("            URL: http://dx.doi.org/10.1080/00268976.2015.1078008\n");
     outfile->Printf("\n");
     outfile->Printf("        J. Fosso-Tande, T.-S. Nguyen, G. Gidofalvi, and\n");
-    outfile->Printf("        A. E. DePrince III, J. Chem. Theory Comput. accepted (2016).\n");
+    outfile->Printf("        A. E. DePrince III, J. Chem. Theory Comput. 12, 2260-2271 (2016).\n");
     outfile->Printf("\n");
     outfile->Printf("            URL: http://dx.doi.org/10.1021/acs.jctc.6b00190\n");
     outfile->Printf("\n");

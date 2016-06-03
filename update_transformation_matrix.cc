@@ -113,7 +113,7 @@ void v2RDMSolver::UpdateTransformationMatrix() {
             free(temp);
         }
     }
-    newMO_->print();
+    //newMO_->print();
 
 }
 
