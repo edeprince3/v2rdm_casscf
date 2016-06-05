@@ -74,6 +74,8 @@ int read_options(std::string name, Options& options)
         options.add_str("POSITIVITY", "DQG", "DQG D DQ DG DQGT1 DQGT2 DQGT1T2");
         /*- Do constrain D3 to D2 mapping? -*/
         options.add_bool("CONSTRAIN_D3",false);
+        /*- Do constrain D4 to D3 mapping? -*/
+        options.add_bool("CONSTRAIN_D4",false);
         /*- Do spin adapt G2 condition? -*/
         options.add_bool("SPIN_ADAPT_G2", false);
         /*- Do spin adapt Q2 condition? -*/

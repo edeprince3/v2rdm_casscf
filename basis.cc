@@ -715,6 +715,154 @@ void v2RDMSolver::BuildBasis() {
             trip_aba[h] = count_aba;
         }
     }
+    if ( constrain_d4_ ) {
+        // make all quartets
+        for (int h = 0; h < nirrep_; h++) {
+            std::vector < boost::tuple<int,int,int,int> > myquartet;
+            for (int i = 0; i < amo_; i++) {
+                for (int j = 0; j < amo_; j++) {
+                    int s1 = SymmetryPair(symmetry[i],symmetry[j]);
+                    for (int k = 0; k < amo_; k++) {
+                        int s2 = SymmetryPair(s1,symmetry[k]);
+                        for (int l = 0; l < amo_; l++) {
+                            int s3 = SymmetryPair(s2,symmetry[l]);
+                            if (h==s3) {
+                                myquartet.push_back(boost::make_tuple(i,j,k,l));
+                            }
+                        }
+                    }
+                }
+            }
+            quartets.push_back(myquartet);
+        }
+        bas_aaaa_sym  = (int***)malloc(nirrep_*sizeof(int**));
+        bas_aaab_sym  = (int***)malloc(nirrep_*sizeof(int**));
+        bas_aabb_sym  = (int***)malloc(nirrep_*sizeof(int**));
+        ibas_aaaa_sym = (int*****)malloc(nirrep_*sizeof(int****));
+        ibas_aaab_sym = (int*****)malloc(nirrep_*sizeof(int****));
+        ibas_aabb_sym = (int*****)malloc(nirrep_*sizeof(int****));
+        quartet_aaaa  = (int*)malloc(nirrep_*sizeof(int));
+        quartet_aaab  = (int*)malloc(nirrep_*sizeof(int));
+        quartet_aabb  = (int*)malloc(nirrep_*sizeof(int));
+        for (int h = 0; h < nirrep_; h++) {
+            ibas_aaaa_sym[h] = (int****)malloc(amo_*sizeof(int***));
+            ibas_aaab_sym[h] = (int****)malloc(amo_*sizeof(int***));
+            ibas_aabb_sym[h] = (int****)malloc(amo_*sizeof(int***));
+            bas_aaaa_sym[h]  = (int**)malloc(amo_*amo_*amo_*amo_*sizeof(int*));
+            bas_aaab_sym[h]  = (int**)malloc(amo_*amo_*amo_*amo_*sizeof(int*));
+            bas_aabb_sym[h]  = (int**)malloc(amo_*amo_*amo_*amo_*sizeof(int*));
+            for (int i = 0; i < amo_; i++) {
+                ibas_aaaa_sym[h][i] = (int***)malloc(amo_*sizeof(int**));
+                ibas_aaab_sym[h][i] = (int***)malloc(amo_*sizeof(int**));
+                ibas_aabb_sym[h][i] = (int***)malloc(amo_*sizeof(int**));
+                for (int j = 0; j < amo_; j++) {
+                    ibas_aaaa_sym[h][i][j] = (int**)malloc(amo_*sizeof(int*));
+                    ibas_aaab_sym[h][i][j] = (int**)malloc(amo_*sizeof(int*));
+                    ibas_aabb_sym[h][i][j] = (int**)malloc(amo_*sizeof(int*));
+                    for (int k = 0; k < amo_; k++) {
+                        ibas_aaaa_sym[h][i][j][k] = (int*)malloc(amo_*sizeof(int));
+                        ibas_aaab_sym[h][i][j][k] = (int*)malloc(amo_*sizeof(int));
+                        ibas_aabb_sym[h][i][j][k] = (int*)malloc(amo_*sizeof(int));
+                        for (int l = 0; l < amo_; l++) {
+                            ibas_aaaa_sym[h][i][j][k][l] = -999;
+                            ibas_aaab_sym[h][i][j][k][l] = -999;
+                            ibas_aabb_sym[h][i][j][k][l] = -999;
+                        }
+                    }
+                }
+            }
+            for (int i = 0; i < amo_*amo_*amo_*amo_; i++) {
+                bas_aaaa_sym[h][i] = (int*)malloc(4*sizeof(int));
+                bas_aaab_sym[h][i] = (int*)malloc(4*sizeof(int));
+                bas_aabb_sym[h][i] = (int*)malloc(4*sizeof(int));
+                for (int j = 0; j < 4; j++) {
+                    bas_aaaa_sym[h][i][j] = -999;
+                    bas_aaab_sym[h][i][j] = -999;
+                    bas_aabb_sym[h][i][j] = -999;
+                    bas_aabb_sym[h][i][j] = -999;
+                }
+            }
+
+            // mappings:
+            int count_aaaa = 0;
+            int count_aaab = 0;
+            int count_aabb = 0;
+            for (int n = 0; n < quartets[h].size(); n++) {
+                int i = get<0>(quartets[h][n]);
+                int j = get<1>(quartets[h][n]);
+                int k = get<2>(quartets[h][n]);
+                int l = get<3>(quartets[h][n]);
+
+                if ( i < j && k < l ) {
+
+                    ibas_aabb_sym[h][i][j][k][l] = count_aabb;
+                    ibas_aabb_sym[h][j][i][k][l] = count_aabb;
+                    ibas_aabb_sym[h][i][j][l][k] = count_aabb;
+                    ibas_aabb_sym[h][j][i][l][k] = count_aabb;
+
+                    bas_aabb_sym[h][count_aabb][0]  = i;
+                    bas_aabb_sym[h][count_aabb][1]  = j;
+                    bas_aabb_sym[h][count_aabb][2]  = k;
+                    bas_aabb_sym[h][count_aabb][3]  = l;
+                    count_aabb++;
+                }
+                if ( i < j && j < k ) {
+
+                    ibas_aaab_sym[h][i][j][k][l] = count_aaab;
+                    ibas_aaab_sym[h][i][k][j][l] = count_aaab;
+                    ibas_aaab_sym[h][j][i][k][l] = count_aaab;
+                    ibas_aaab_sym[h][j][k][i][l] = count_aaab;
+                    ibas_aaab_sym[h][k][i][j][l] = count_aaab;
+                    ibas_aaab_sym[h][k][j][i][l] = count_aaab;
+
+                    bas_aaab_sym[h][count_aaab][0]  = i;
+                    bas_aaab_sym[h][count_aaab][1]  = j;
+                    bas_aaab_sym[h][count_aaab][2]  = k;
+                    bas_aaab_sym[h][count_aaab][3]  = l;
+                    count_aaab++;
+                }
+                if ( i < j && j < k  && k < l) {
+
+                    ibas_aaaa_sym[h][i][j][k][l] = count_aaaa;
+                    ibas_aaaa_sym[h][i][k][j][l] = count_aaaa;
+                    ibas_aaaa_sym[h][j][i][k][l] = count_aaaa;
+                    ibas_aaaa_sym[h][j][k][i][l] = count_aaaa;
+                    ibas_aaaa_sym[h][k][i][j][l] = count_aaaa;
+                    ibas_aaaa_sym[h][k][j][i][l] = count_aaaa;
+
+                    ibas_aaaa_sym[h][i][j][l][k] = count_aaaa;
+                    ibas_aaaa_sym[h][i][k][l][j] = count_aaaa;
+                    ibas_aaaa_sym[h][j][i][l][k] = count_aaaa;
+                    ibas_aaaa_sym[h][j][k][l][i] = count_aaaa;
+                    ibas_aaaa_sym[h][k][i][l][j] = count_aaaa;
+                    ibas_aaaa_sym[h][k][j][l][i] = count_aaaa;
+
+                    ibas_aaaa_sym[h][i][l][j][k] = count_aaaa;
+                    ibas_aaaa_sym[h][i][l][k][j] = count_aaaa;
+                    ibas_aaaa_sym[h][j][l][i][k] = count_aaaa;
+                    ibas_aaaa_sym[h][j][l][k][i] = count_aaaa;
+                    ibas_aaaa_sym[h][k][l][i][j] = count_aaaa;
+                    ibas_aaaa_sym[h][k][l][j][i] = count_aaaa;
+
+                    ibas_aaaa_sym[h][l][i][j][k] = count_aaaa;
+                    ibas_aaaa_sym[h][l][i][k][j] = count_aaaa;
+                    ibas_aaaa_sym[h][l][j][i][k] = count_aaaa;
+                    ibas_aaaa_sym[h][l][j][k][i] = count_aaaa;
+                    ibas_aaaa_sym[h][l][k][i][j] = count_aaaa;
+                    ibas_aaaa_sym[h][l][k][j][i] = count_aaaa;
+
+                    bas_aaaa_sym[h][count_aaaa][0]  = i;
+                    bas_aaaa_sym[h][count_aaaa][1]  = j;
+                    bas_aaaa_sym[h][count_aaaa][2]  = k;
+                    bas_aaaa_sym[h][count_aaaa][3]  = l;
+                    count_aaaa++;
+                }
+            }
+            quartet_aaaa[h] = count_aaaa;
+            quartet_aaab[h] = count_aaab;
+            quartet_aabb[h] = count_aabb;
+        }
+    }
 
     free(gems_really_full);
 }
