@@ -32,7 +32,7 @@ import driver
 from molutil import *
 import p4util
 from p4util.exceptions import *
-
+from procedures import *
 
 def run_v2rdm_casscf(name, **kwargs):
     r"""Function encoding sequence of PSI module and plugin calls so that
@@ -63,6 +63,11 @@ def run_v2rdm_casscf(name, **kwargs):
     if ( filename != "" ):
         molname = ref_wfn.molecule().name()
         p4util.copy_file_to_scratch(filename,'psi',molname,269,False)
+
+    # Ensure IWL files have been written when not using DF/CD
+    scf_type = psi4.get_option('SCF', 'SCF_TYPE')
+    if ( scf_type == 'PK' or scf_type == 'DIRECT' ):
+        proc_util.check_iwl_file_from_scf_type(psi4.get_option('SCF', 'SCF_TYPE'), ref_wfn)
 
     returnvalue = psi4.plugin('v2rdm_casscf.so', ref_wfn)
 

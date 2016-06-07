@@ -105,7 +105,7 @@ int read_options(std::string name, Options& options)
         /*- What algorithm to use for the SCF computation. See Table :ref:`SCF
         Convergence & Algorithm <table:conv_scf>` for default algorithm for
         different calculation types. -*/
-        options.add_str("SCF_TYPE", "DF", "DF CD PK OUT_OF_CORE");
+        options.add_str("SCF_TYPE", "DF", "DF CD PK OUT_OF_CORE DIRECT");
         /*- Tolerance for Cholesky decomposition of the ERI tensor -*/
         options.add_double("CHOLESKY_TOLERANCE",1e-4);
 
