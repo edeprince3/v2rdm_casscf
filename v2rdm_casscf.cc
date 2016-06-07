@@ -3,7 +3,7 @@
  *
  * v2RDM-CASSCF, a plugin to:
  *
- * PSI4: an ab initio quantum chemistry software package
+ * Psi4: an open-source quantum chemistry software package
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
