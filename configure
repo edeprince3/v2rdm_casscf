@@ -36,7 +36,7 @@ PYTHON="$(psi4-config --python 2>&1 >/dev/null)"
 F90="$(psi4-config --fc 2>&1 >/dev/null)" 
 
 #F90_LIB=-lifcore
-#F90_FLAGS="-heap-arrays -openmp -O2 -fPIC -DOMP"
+#F90_FLAGS="-heap-arrays -qopenmp -O2 -fPIC -DOMP"
 
 # for ifort:
 #F90_LIB=-lifcore
