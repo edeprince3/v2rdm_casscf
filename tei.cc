@@ -300,7 +300,9 @@ double v2RDMSolver::TEI(int i, int j, int k, int l, int h) {
 
     if ( is_df_ ) {
 
-        dum = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(i,j),1,Qmo_+nQ_*INDEX(k,l),1);
+        throw PsiException("DF/CD is broken until GG updates the orbital optimization",__FILE__,__LINE__);
+        //dum = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(i,j),1,Qmo_+nQ_*INDEX(k,l),1);
+        dum = C_DDOT(nQ_,Qmo_ + INDEX(i,j),(nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2,Qmo_+INDEX(k,l),(nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2);
 
     }else {
 
