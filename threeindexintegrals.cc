@@ -248,12 +248,12 @@ void v2RDMSolver::ThreeIndexIntegrals() {
 
     Qmo_ = (double*)malloc(nn1fv*nQ_*sizeof(double));
     memset((void*)Qmo_,'\0',nn1fv*nQ_*sizeof(double));
-    psio->open(PSIF_DCC_QMO,PSIO_OPEN_OLD);
-    psio->read_entry(PSIF_DCC_QMO,"(Q|mn) Integrals",(char*)Qmo_,sizeof(double)*nQ_ * nn1fv);
-    psio->close(PSIF_DCC_QMO,1);
+    //psio->open(PSIF_DCC_QMO,PSIO_OPEN_OLD);
+    //psio->read_entry(PSIF_DCC_QMO,"(Q|mn) Integrals",(char*)Qmo_,sizeof(double)*nQ_ * nn1fv);
+    //psio->close(PSIF_DCC_QMO,1);
 
     // the following code would transpose the three-index integrals (Q|mn) -> (mn|Q)
-/*
+
     // with 3-index integrals in memory, how much else can we hold?
     ndoubles -= nn1fv*nQ_;
 
@@ -290,7 +290,6 @@ void v2RDMSolver::ThreeIndexIntegrals() {
 
     delete rowdims2;
     free(tmp3);
-*/
 
 }
 
