@@ -20,25 +20,21 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libqt/qt.h>
-
-#include<libtrans/integraltransform.h>
-#include<libtrans/mospace.h>
-
-#include<libmints/wavefunction.h>
-#include<libmints/mints.h>
-#include<libmints/vector.h>
-#include<libmints/matrix.h>
-#include<../bin/fnocc/blas.h>
-#include<time.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/libparallel/parallel.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libqt/qt.h>
+#include <psi4/libtrans/integraltransform.h>
+#include <psi4/libtrans/mospace.h>
+#include <psi4/libmints/wavefunction.h>
+#include <psi4/libmints/vector.h>
+#include <psi4/libmints/matrix.h>
+#include <time.h>
 
 #include"v2rdm_solver.h"
 
@@ -51,11 +47,10 @@
 
 using namespace boost;
 using namespace psi;
-using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
-// D3 portion of A.u 
+// D3 portion of A.u
 void v2RDMSolver::D3_constraints_Au(SharedVector A,SharedVector u){
 
     double * A_p = A->pointer();
@@ -299,7 +294,7 @@ void v2RDMSolver::D3_constraints_Au(SharedVector A,SharedVector u){
 
 }
 
-// D3 portion of A^T.y 
+// D3 portion of A^T.y
 void v2RDMSolver::D3_constraints_ATu(SharedVector A,SharedVector u){
 
     double * A_p = A->pointer();
@@ -489,11 +484,11 @@ void v2RDMSolver::D3_constraints_ATu(SharedVector A,SharedVector u){
                     A_p[d3aaboff[h] + pqr_b * trip_aab[h] + stu_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3aaboff[h] + pqr_b * trip_aab[h] + sut_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3aaboff[h] + pqr_b * trip_aab[h] + tus_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
-                                                                                                                   
+
                     A_p[d3aaboff[h] + prq_b * trip_aab[h] + stu_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3aaboff[h] + prq_b * trip_aab[h] + sut_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3aaboff[h] + prq_b * trip_aab[h] + tus_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
-                                                                                                                   
+
                     A_p[d3aaboff[h] + qrp_b * trip_aab[h] + stu_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3aaboff[h] + qrp_b * trip_aab[h] + sut_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3aaboff[h] + qrp_b * trip_aab[h] + tus_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
@@ -521,11 +516,11 @@ void v2RDMSolver::D3_constraints_ATu(SharedVector A,SharedVector u){
                     A_p[d3bbaoff[h] + pqr_b * trip_aab[h] + stu_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3bbaoff[h] + pqr_b * trip_aab[h] + sut_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3bbaoff[h] + pqr_b * trip_aab[h] + tus_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
-                                                                                                                   
+
                     A_p[d3bbaoff[h] + prq_b * trip_aab[h] + stu_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3bbaoff[h] + prq_b * trip_aab[h] + sut_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3bbaoff[h] + prq_b * trip_aab[h] + tus_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
-                                                                                                                   
+
                     A_p[d3bbaoff[h] + qrp_b * trip_aab[h] + stu_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3bbaoff[h] + qrp_b * trip_aab[h] + sut_b] += 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];
                     A_p[d3bbaoff[h] + qrp_b * trip_aab[h] + tus_b] -= 1.0/3.0 * u_p[offset + pqr*trip_aaa[h] + stu];

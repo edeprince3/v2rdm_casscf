@@ -29,33 +29,30 @@
 #include<stdlib.h>
 #include<math.h>
 
-#include <libmints/writer.h>
-#include <libmints/writer_file_prefix.h>
-
-#include<libtrans/integraltransform.h>
-#include<libtrans/mospace.h>
-
-#include <libplugin/plugin.h>
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libqt/qt.h>
-
-#include<libpsio/psio.hpp>
-#include<libmints/wavefunction.h>
-#include<psifiles.h>
-#include<libpsio/psio.hpp>
-#include<libmints/mints.h>
-#include<libmints/vector.h>
-#include<libmints/matrix.h>
+#include <psi4/libmints/basisset.h>
+#include <psi4/libmints/factory.h>
+#include <psi4/libmints/writer.h>
+#include <psi4/libmints/writer_file_prefix.h>
+#include <psi4/libtrans/integraltransform.h>
+#include <psi4/libtrans/mospace.h>
+#include <psi4/libplugin/plugin.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/libparallel/parallel.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libqt/qt.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libmints/wavefunction.h>
+#include <psi4/psifiles.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libmints/vector.h>
+#include <psi4/libmints/matrix.h>
 #include<time.h>
 
-#include <../bin/fnocc/blas.h>
-
-#include <libiwl/iwl.h>
+#include <psi4/libiwl/iwl.h>
 
 #include"cg_solver.h"
 #include"v2rdm_solver.h"
+#include "blas.h"
 
 // greg
 #include "fortran.h"
@@ -70,7 +67,6 @@
 
 using namespace boost;
 using namespace psi;
-using namespace fnocc;
 
 
 extern "C" {
@@ -1216,7 +1212,7 @@ void  v2RDMSolver::common_init(){
             dimensions_.push_back(quartet_aaaa[h]); // D4bbbb
         }
     }
-       
+
 
     // v2rdm sdp convergence thresholds:
     r_convergence_  = options_.get_double("R_CONVERGENCE");
@@ -1846,7 +1842,7 @@ double v2RDMSolver::compute_energy() {
 
         // transform D1, D2, D3 to semicanonical basis
         UpdatePrimal();
-    
+
     }
 
     // write tpdm to disk?

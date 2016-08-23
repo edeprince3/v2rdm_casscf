@@ -20,24 +20,20 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
 #include"v2rdm_solver.h"
-
-#include <libmints/mints.h>
-#include <libpsio/psio.hpp>
-#include <libmints/sieve.h>
-#include <psifiles.h>
-
-#include <../bin/fnocc/blas.h>
-
-#include <libtrans/integraltransform.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libmints/basisset.h>
+#include <psi4/libmints/sieve.h>
+#include <psi4/psifiles.h>
+#include <psi4/libtrans/integraltransform.h>
+#include "blas.h"
 
 using namespace psi;
-using namespace fnocc;
 
 namespace psi { namespace v2rdm_casscf {
 
@@ -64,13 +60,13 @@ void v2RDMSolver::ThreeIndexIntegrals() {
         Process::environment.globals["NAUX (SCF)"] = nQ_;
     }
 
-    // 100 mb extra to account for all mapping arrays already 
+    // 100 mb extra to account for all mapping arrays already
     // allocated. this should be WAY more than necessary.
-    long int extra = 100 * 1024 * 1024;  
+    long int extra = 100 * 1024 * 1024;
     long int ndoubles = (memory_-extra) / 8;
 
-    // orbitals will end up in energy order.  
-    // we will want them in pitzer.  for sorting: 
+    // orbitals will end up in energy order.
+    // we will want them in pitzer.  for sorting:
     long int * reorder  = (long int*)malloc(nmo_*sizeof(long int));
     long int * sym      = (long int*)malloc(nmo_*sizeof(long int));
     bool * skip    = (bool*)malloc(nmo_*sizeof(bool));

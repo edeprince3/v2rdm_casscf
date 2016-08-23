@@ -20,16 +20,17 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
-#include "psi4-dec.h"
-#include <psifiles.h>
-#include <libiwl/iwl.h>
-#include <libpsio/psio.hpp>
-#include <libtrans/integraltransform.h>
+#include "psi4/psi4-dec.h"
+#include <psi4/psifiles.h>
+#include <psi4/libiwl/iwl.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libtrans/integraltransform.h>
+#include <psi4/libmints/mintshelper.h>
 
 #include "v2rdm_solver.h"
 
@@ -174,7 +175,7 @@ void v2RDMSolver::WriteTPDM(){
 
             int ifull      = i + pitzer_offset_full[hi];
 
-            // D2(ij; il) 
+            // D2(ij; il)
             for (int hj = 0; hj < nirrep_; hj++) {
 
                 for (int j = 0; j < amopi_[hj]; j++) {
@@ -499,7 +500,7 @@ void v2RDMSolver::ReadTPDM(){
                 for (int l = 0; l < nmo_; l++) {
 
                     double eri = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(i,k),1,Qmo_+nQ_*INDEX(j,l),1);
-                    
+
                     en2 +=       eri * D2ab[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
                     en2 += 0.5 * eri * D2aa[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
                     en2 += 0.5 * eri * D2bb[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];

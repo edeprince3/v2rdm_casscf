@@ -20,19 +20,17 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
 #include"v2rdm_solver.h"
-#include<../bin/fnocc/blas.h>
-#include<libqt/qt.h>
-
-#include<psifiles.h>
+#include<psi4/libqt/qt.h>
+#include<psi4/psifiles.h>
+#include "blas.h"
 
 using namespace psi;
-using namespace fnocc;
 
 /*================================================================
 
@@ -119,7 +117,7 @@ void v2RDMSolver::DIIS(double*c,long int nvec,int replace_diis_iter){
     nrhs = 1;
     lda = ldb = nvar;
     info = 0;
-    DGESV(nvar,nrhs,A,lda,ipiv,B,ldb,info);
+    DGESV(nvar,nrhs,A,lda,ipiv,B,ldb, info);
     C_DCOPY(nvec,B,1,c,1);
 
     free(A);

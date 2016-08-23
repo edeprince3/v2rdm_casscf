@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
@@ -29,19 +29,17 @@
 #include<stdlib.h>
 #include<math.h>
 
-#include <libplugin/plugin.h>
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libmints/mints.h>
-#include <libpsio/psio.hpp>
-#include <../bin/fnocc/blas.h>
-#include <libqt/qt.h>
+#include <psi4/libplugin/plugin.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/libparallel/parallel.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libqt/qt.h>
 #include "cg_solver.h"
 
 using namespace boost;
 
-namespace psi{ 
+namespace psi{
 
 CGSolver::CGSolver(long int n) {
     n_              = n;
@@ -62,10 +60,10 @@ void CGSolver::set_convergence(double conv) {
 }
 
 void CGSolver::preconditioned_solve(long int n,
-                    boost::shared_ptr<Vector> Ap, 
-                    boost::shared_ptr<Vector>  x, 
-                    boost::shared_ptr<Vector>  b, 
-                    boost::shared_ptr<Vector>  precon, 
+                    boost::shared_ptr<Vector> Ap,
+                    boost::shared_ptr<Vector>  x,
+                    boost::shared_ptr<Vector>  b,
+                    boost::shared_ptr<Vector>  precon,
                     CallbackType function, void * data) {
 
     if ( n != n_ ) {
@@ -125,9 +123,9 @@ void CGSolver::preconditioned_solve(long int n,
 }
 
 void CGSolver::solve(long int n,
-                    boost::shared_ptr<Vector> Ap, 
-                    boost::shared_ptr<Vector>  x, 
-                    boost::shared_ptr<Vector>  b, 
+                    boost::shared_ptr<Vector> Ap,
+                    boost::shared_ptr<Vector>  x,
+                    boost::shared_ptr<Vector>  b,
                     CallbackType function, void * data) {
 
     if ( n != n_ ) {

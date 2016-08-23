@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
@@ -28,13 +28,13 @@
 #ifndef CG_SOLVER_H
 #define CG_SOLVER_H
 
-#include<libmints/vector.h>
+#include<psi4/libmints/vector.h>
 
 using namespace boost;
 
-namespace psi{ 
+namespace psi{
 
-typedef void (*CallbackType)(long int,SharedVector,SharedVector,void *);  
+typedef void (*CallbackType)(long int,SharedVector,SharedVector,void *);
 
 class CGSolver {
 public:

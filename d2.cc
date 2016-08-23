@@ -20,24 +20,22 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libqt/qt.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/libparallel/parallel.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libqt/qt.h>
 
-#include<libtrans/integraltransform.h>
-#include<libtrans/mospace.h>
+#include<psi4/libtrans/integraltransform.h>
+#include<psi4/libtrans/mospace.h>
 
-#include<libmints/wavefunction.h>
-#include<libmints/mints.h>
-#include<libmints/vector.h>
-#include<libmints/matrix.h>
-#include<../bin/fnocc/blas.h>
+#include<psi4/libmints/wavefunction.h>
+#include<psi4/libmints/vector.h>
+#include<psi4/libmints/matrix.h>
 #include<time.h>
 
 #include"v2rdm_solver.h"
@@ -51,7 +49,6 @@
 
 using namespace boost;
 using namespace psi;
-using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
@@ -244,12 +241,12 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
         for ( int h = 0; h < nirrep_; h++) {
             C_DAXPY(gems_aa[h]*gems_aa[h],1.0,u_p + offset,1,A_p + d2aaoff[h],1);
             for (int ij = 0; ij < gems_aa[h]; ij++) {
-                int i = bas_aa_sym[h][ij][0]; 
+                int i = bas_aa_sym[h][ij][0];
                 int j = bas_aa_sym[h][ij][1];
                 int ijb = ibas_ab_sym[h][i][j];
                 int jib = ibas_ab_sym[h][j][i];
                 for (int kl = 0; kl < gems_aa[h]; kl++) {
-                    int k = bas_aa_sym[h][kl][0]; 
+                    int k = bas_aa_sym[h][kl][0];
                     int l = bas_aa_sym[h][kl][1];
                     int klb = ibas_ab_sym[h][k][l];
                     int lkb = ibas_ab_sym[h][l][k];
@@ -257,10 +254,10 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
                     A_p[d2aboff[h] + jib*gems_ab[h] + klb] += 0.5 * u_p[offset + ij*gems_aa[h] + kl];
                     A_p[d2aboff[h] + ijb*gems_ab[h] + lkb] += 0.5 * u_p[offset + ij*gems_aa[h] + kl];
                     A_p[d2aboff[h] + jib*gems_ab[h] + lkb] -= 0.5 * u_p[offset + ij*gems_aa[h] + kl];
-                }   
-            }   
+                }
+            }
             offset += gems_aa[h]*gems_aa[h];
-        }   
+        }
         // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr])
         for ( int h = 0; h < nirrep_; h++) {
             C_DAXPY(gems_aa[h]*gems_aa[h],1.0,u_p + offset,1,A_p + d2bboff[h],1);
@@ -569,7 +566,7 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
         for ( int h = 0; h < nirrep_; h++) {
             C_DCOPY(amopi_[h]*amopi_[h],     u_p + d1aoff[h],1,A_p + offset,1);
             C_DAXPY(amopi_[h]*amopi_[h],-1.0,u_p + d1boff[h],1,A_p + offset,1);
-            offset += amopi_[h]*amopi_[h]; 
+            offset += amopi_[h]*amopi_[h];
         }
         // D2aa = D2bb
         for ( int h = 0; h < nirrep_; h++) {

@@ -32,18 +32,16 @@
 #include<stdlib.h>
 #include<math.h>
 
-#include <libplugin/plugin.h>
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libmints/mints.h>
-#include <libpsio/psio.hpp>
-#include <../bin/fnocc/blas.h>
-#include <libqt/qt.h>
+#include <psi4/libplugin/plugin.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/libparallel/parallel.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libqt/qt.h>
 
-#include<libmints/wavefunction.h>
-#include<libmints/matrix.h>
-#include<libmints/vector.h>
+#include <psi4/libmints/wavefunction.h>
+#include <psi4/libmints/matrix.h>
+#include <psi4/libmints/vector.h>
 
 
 // greg
