@@ -112,7 +112,7 @@ int read_options(std::string name, Options& options)
         /*- SUBSECTION ORBITAL OPTIMIZATION -*/
 
         /*- flag to optimize orbitals using a one-step type approach -*/
-        options.add_int("ORBOPT_ONE_STEP",1);
+        options.add_bool("ORBOPT_ONE_STEP",true);
         /*- do rotate active/active orbital pairs? -*/
         options.add_bool("ORBOPT_ACTIVE_ACTIVE_ROTATIONS",false);
         /*- convergence in gradient norm -*/
@@ -120,7 +120,7 @@ int read_options(std::string name, Options& options)
         /*- convergence in energy for rotations -*/
         options.add_double("ORBOPT_ENERGY_CONVERGENCE",1.0e-8);
         /*- flag for using exact expresions for diagonal Hessian element -*/
-        options.add_int("ORBOPT_EXACT_DIAGONAL_HESSIAN",0);
+        options.add_bool("ORBOPT_EXACT_DIAGONAL_HESSIAN",false);
         /*- number of DIIS vectors to keep in orbital optimization -*/ 
         options.add_int("ORBOPT_NUM_DIIS_VECTORS",0);
         /*- frequency of orbital optimization.  optimization occurs every 
