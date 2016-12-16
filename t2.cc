@@ -45,7 +45,6 @@
     #define omp_get_max_threads() 1
 #endif
 
-using namespace boost;
 using namespace psi;
 
 namespace psi{ namespace v2rdm_casscf{

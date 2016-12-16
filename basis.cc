@@ -47,7 +47,6 @@
     #define omp_get_max_threads() 1
 #endif
 
-using namespace boost;
 using namespace psi;
 
 namespace psi{ namespace v2rdm_casscf{
@@ -551,7 +550,7 @@ void v2RDMSolver::BuildBasis() {
 
     // if restarting a job, need to read a few energy-order arrays from disk...
     if ( options_["RESTART_FROM_CHECKPOINT_FILE"].has_changed() ) {
-        boost::shared_ptr<PSIO> psio (new PSIO() );
+        std::shared_ptr<PSIO> psio (new PSIO() );
         psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
 
         // energy order to pitzer order mapping array
@@ -612,14 +611,14 @@ void v2RDMSolver::BuildBasis() {
     if ( constrain_t1_ || constrain_t2_ || constrain_d3_ ) {
         // make all triplets
         for (int h = 0; h < nirrep_; h++) {
-            std::vector < boost::tuple<int,int,int> > mytrip;
+            std::vector < std::tuple<int,int,int> > mytrip;
             for (int i = 0; i < amo_; i++) {
                 for (int j = 0; j < amo_; j++) {
                     int s1 = SymmetryPair(symmetry[i],symmetry[j]);
                     for (int k = 0; k < amo_; k++) {
                         int s2 = SymmetryPair(s1,symmetry[k]);
                         if (h==s2) {
-                            mytrip.push_back(boost::make_tuple(i,j,k));
+                            mytrip.push_back(std::make_tuple(i,j,k));
                         }
                     }
 
@@ -674,9 +673,9 @@ void v2RDMSolver::BuildBasis() {
             int count_aab = 0;
             int count_aba = 0;
             for (int n = 0; n < triplets[h].size(); n++) {
-                int i = get<0>(triplets[h][n]);
-                int j = get<1>(triplets[h][n]);
-                int k = get<2>(triplets[h][n]);
+                int i = std::get<0>(triplets[h][n]);
+                int j = std::get<1>(triplets[h][n]);
+                int k = std::get<2>(triplets[h][n]);
 
                 ibas_aba_sym[h][i][j][k] = count_aba;
                 bas_aba_sym[h][count_aba][0]  = i;
@@ -715,7 +714,7 @@ void v2RDMSolver::BuildBasis() {
     if ( constrain_d4_ ) {
         // make all quartets
         for (int h = 0; h < nirrep_; h++) {
-            std::vector < boost::tuple<int,int,int,int> > myquartet;
+            std::vector < std::tuple<int,int,int,int> > myquartet;
             for (int i = 0; i < amo_; i++) {
                 for (int j = 0; j < amo_; j++) {
                     int s1 = SymmetryPair(symmetry[i],symmetry[j]);
@@ -724,7 +723,7 @@ void v2RDMSolver::BuildBasis() {
                         for (int l = 0; l < amo_; l++) {
                             int s3 = SymmetryPair(s2,symmetry[l]);
                             if (h==s3) {
-                                myquartet.push_back(boost::make_tuple(i,j,k,l));
+                                myquartet.push_back(std::make_tuple(i,j,k,l));
                             }
                         }
                     }
@@ -785,10 +784,10 @@ void v2RDMSolver::BuildBasis() {
             int count_aaab = 0;
             int count_aabb = 0;
             for (int n = 0; n < quartets[h].size(); n++) {
-                int i = get<0>(quartets[h][n]);
-                int j = get<1>(quartets[h][n]);
-                int k = get<2>(quartets[h][n]);
-                int l = get<3>(quartets[h][n]);
+                int i = std::get<0>(quartets[h][n]);
+                int j = std::get<1>(quartets[h][n]);
+                int k = std::get<2>(quartets[h][n]);
+                int l = std::get<3>(quartets[h][n]);
 
                 if ( i < j && k < l ) {
 

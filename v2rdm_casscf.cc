@@ -27,16 +27,13 @@
 
 #include "v2rdm_solver.h"
 
-#include <psi4/libplugin/plugin.h>
 #include <psi4/psi4-dec.h>
-#include <psi4/libparallel/parallel.h>
-#include <psi4/liboptions/liboptions.h>
-#include <psi4/libpsio/psio.hpp>
 #include <psi4/libciomr/libciomr.h>
 
-INIT_PLUGIN
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
-using namespace boost;
 using namespace psi;
 
 namespace psi{ namespace v2rdm_casscf {
@@ -151,7 +148,7 @@ SharedWavefunction v2rdm_casscf(SharedWavefunction ref_wfn, Options& options)
 
     tstart();
 
-    boost::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(ref_wfn,options));
+    std::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(ref_wfn,options));
 
     double energy = v2rdm->compute_energy();
 

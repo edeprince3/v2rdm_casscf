@@ -37,8 +37,6 @@
 #include <psi4/libqt/qt.h>
 #include "cg_solver.h"
 
-using namespace boost;
-
 namespace psi{
 
 CGSolver::CGSolver(long int n) {
@@ -46,9 +44,9 @@ CGSolver::CGSolver(long int n) {
     iter_           = 0;
     cg_max_iter_    = 10000;
     cg_convergence_ = 1e-6;
-    p = boost::shared_ptr<Vector>(new Vector(n));
-    r = boost::shared_ptr<Vector>(new Vector(n));
-    //z = boost::shared_ptr<Vector>(new Vector(n));
+    p = std::shared_ptr<Vector>(new Vector(n));
+    r = std::shared_ptr<Vector>(new Vector(n));
+    //z = std::shared_ptr<Vector>(new Vector(n));
 }
 CGSolver::~CGSolver(){
 }
@@ -60,10 +58,10 @@ void CGSolver::set_convergence(double conv) {
 }
 
 void CGSolver::preconditioned_solve(long int n,
-                    boost::shared_ptr<Vector> Ap,
-                    boost::shared_ptr<Vector>  x,
-                    boost::shared_ptr<Vector>  b,
-                    boost::shared_ptr<Vector>  precon,
+                    std::shared_ptr<Vector> Ap,
+                    std::shared_ptr<Vector>  x,
+                    std::shared_ptr<Vector>  b,
+                    std::shared_ptr<Vector>  precon,
                     CallbackType function, void * data) {
 
     if ( n != n_ ) {
@@ -123,9 +121,9 @@ void CGSolver::preconditioned_solve(long int n,
 }
 
 void CGSolver::solve(long int n,
-                    boost::shared_ptr<Vector> Ap,
-                    boost::shared_ptr<Vector>  x,
-                    boost::shared_ptr<Vector>  b,
+                    std::shared_ptr<Vector> Ap,
+                    std::shared_ptr<Vector>  x,
+                    std::shared_ptr<Vector>  b,
                     CallbackType function, void * data) {
 
     if ( n != n_ ) {

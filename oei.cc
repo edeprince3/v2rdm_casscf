@@ -48,14 +48,13 @@
     #define omp_get_max_threads() 1
 #endif
 
-using namespace boost;
 using namespace psi;
 
 namespace psi{ namespace v2rdm_casscf{
 
-boost::shared_ptr<Matrix> v2RDMSolver::GetOEI() {
-    boost::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
-    boost::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
+std::shared_ptr<Matrix> v2RDMSolver::GetOEI() {
+    std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
+    std::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
     K1->add(mints->so_kinetic());
     K1->transform(Ca_);
     return K1;

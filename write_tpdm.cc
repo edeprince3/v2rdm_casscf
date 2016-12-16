@@ -51,7 +51,7 @@ void v2RDMSolver::WriteTPDM(){
 
     double * x_p = x->pointer();
 
-    boost::shared_ptr<PSIO> psio (new PSIO());
+    std::shared_ptr<PSIO> psio (new PSIO());
 
     psio->open(PSIF_V2RDM_D2AA,PSIO_OPEN_NEW);
     psio->open(PSIF_V2RDM_D2BB,PSIO_OPEN_NEW);
@@ -286,7 +286,7 @@ void v2RDMSolver::WriteActiveTPDM(){
 
     double * x_p = x->pointer();
 
-    boost::shared_ptr<PSIO> psio (new PSIO());
+    std::shared_ptr<PSIO> psio (new PSIO());
 
     psio->open(PSIF_V2RDM_D2AA,PSIO_OPEN_NEW);
     psio->open(PSIF_V2RDM_D2BB,PSIO_OPEN_NEW);
@@ -367,7 +367,7 @@ void v2RDMSolver::WriteActiveTPDM(){
 
 void v2RDMSolver::ReadTPDM(){
 
-    boost::shared_ptr<PSIO> psio (new PSIO());
+    std::shared_ptr<PSIO> psio (new PSIO());
 
     if ( !psio->exists(PSIF_V2RDM_D2AB) ) return;
     if ( !psio->exists(PSIF_V2RDM_D2AA) ) return;
@@ -510,8 +510,8 @@ void v2RDMSolver::ReadTPDM(){
         }
     }
 
-    boost::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
-    boost::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
+    std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
+    std::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
     K1->add(mints->so_kinetic());
     K1->transform(Ca_);
 

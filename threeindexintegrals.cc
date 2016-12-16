@@ -42,19 +42,15 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     basisset_ = reference_wavefunction_->basisset();
 
     // get ntri from sieve
-    boost::shared_ptr<ERISieve> sieve (new ERISieve(basisset_, options_.get_double("INTS_TOLERANCE")));
+    std::shared_ptr<ERISieve> sieve (new ERISieve(basisset_, options_.get_double("INTS_TOLERANCE")));
     const std::vector<std::pair<int, int> >& function_pairs = sieve->function_pairs();
     long int ntri = function_pairs.size();
 
     // read integrals that were written to disk in the scf
     nQ_ = Process::environment.globals["NAUX (SCF)"];
     if ( options_.get_str("SCF_TYPE") == "DF" ) {
-        boost::shared_ptr<BasisSet> primary = BasisSet::pyconstruct_orbital(molecule_,
-            "BASIS", options_.get_str("BASIS"));
-
-        boost::shared_ptr<BasisSet> auxiliary = BasisSet::pyconstruct_auxiliary(molecule_,
-            "DF_BASIS_SCF", options_.get_str("DF_BASIS_SCF"), "JKFIT",
-            options_.get_str("BASIS"), primary->has_puream());
+        std::shared_ptr<BasisSet> primary = reference_wavefunction_->basisset();
+        std::shared_ptr<BasisSet> auxiliary = reference_wavefunction_->get_basisset("DF_BASIS_SCF");
 
         nQ_ = auxiliary->nbf();
         Process::environment.globals["NAUX (SCF)"] = nQ_;
@@ -121,7 +117,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     long int nn1mo = nmo_*(nmo_+1)/2;
     long int nn1fv = (nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2;
 
-    boost::shared_ptr<PSIO> psio(new PSIO());
+    std::shared_ptr<PSIO> psio(new PSIO());
 
     psio->open(PSIF_DCC_QSO,PSIO_OPEN_NEW);
     psio->open(PSIF_DCC_QMO,PSIO_OPEN_NEW);
@@ -165,7 +161,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->close(PSIF_DFSCF_BJ,1);
 
     // AO->MO transformation matrix:
-    boost::shared_ptr<Matrix> myCa (new Matrix(reference_wavefunction_->Ca_subset("AO","ALL")));
+    std::shared_ptr<Matrix> myCa (new Matrix(reference_wavefunction_->Ca_subset("AO","ALL")));
 
     // transform first index:
     addr  = PSIO_ZERO;

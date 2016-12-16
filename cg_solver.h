@@ -30,8 +30,6 @@
 
 #include<psi4/libmints/vector.h>
 
-using namespace boost;
-
 namespace psi{
 
 typedef void (*CallbackType)(long int,SharedVector,SharedVector,void *);
@@ -42,15 +40,15 @@ public:
     CGSolver(long int n);
     ~CGSolver();
     void preconditioned_solve(long int n,
-               boost::shared_ptr<Vector> Ap,
-               boost::shared_ptr<Vector>  x,
-               boost::shared_ptr<Vector>  b,
-               boost::shared_ptr<Vector>  precon,
+               std::shared_ptr<Vector> Ap,
+               std::shared_ptr<Vector>  x,
+               std::shared_ptr<Vector>  b,
+               std::shared_ptr<Vector>  precon,
                CallbackType function, void * data);
     void solve(long int n,
-               boost::shared_ptr<Vector> Ap,
-               boost::shared_ptr<Vector>  x,
-               boost::shared_ptr<Vector>  b,
+               std::shared_ptr<Vector> Ap,
+               std::shared_ptr<Vector>  x,
+               std::shared_ptr<Vector>  b,
                CallbackType function, void * data);
 
     int total_iterations();
@@ -63,9 +61,9 @@ private:
     int    iter_;
     int    cg_max_iter_;
     double cg_convergence_;
-    boost::shared_ptr<Vector> p;
-    boost::shared_ptr<Vector> r;
-    boost::shared_ptr<Vector> z;
+    std::shared_ptr<Vector> p;
+    std::shared_ptr<Vector> r;
+    std::shared_ptr<Vector> z;
 
 };
 

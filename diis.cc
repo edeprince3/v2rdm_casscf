@@ -53,7 +53,7 @@ void v2RDMSolver::DIIS(double*c,long int nvec,int replace_diis_iter){
 
     char*evector=(char*)malloc(1000*sizeof(char));
 
-    boost::shared_ptr<PSIO> psio(new PSIO());
+    std::shared_ptr<PSIO> psio(new PSIO());
     psio->open(PSIF_DCC_EVEC,PSIO_OPEN_OLD);
 
     // add row to matrix, don't build the whole thing.
@@ -137,7 +137,7 @@ void v2RDMSolver::DIIS_WriteOldVector(long int iter,int diis_iter,int replace_di
        sprintf(oldvector,"oldvector%i",replace_diis_iter);
     }
 
-    boost::shared_ptr<PSIO> psio(new PSIO());
+    std::shared_ptr<PSIO> psio(new PSIO());
     if (diis_iter==0) {
        psio->open(PSIF_DCC_OVEC,PSIO_OPEN_NEW);
     }else {
@@ -164,7 +164,7 @@ void v2RDMSolver::DIIS_WriteErrorVector(int diis_iter,int replace_diis_iter,int 
        sprintf(evector,"evector%i",replace_diis_iter);
     }
 
-    boost::shared_ptr<PSIO> psio(new PSIO());
+    std::shared_ptr<PSIO> psio(new PSIO());
     if (diis_iter==0) {
        psio->open(PSIF_DCC_EVEC,PSIO_OPEN_NEW);
        double * temp = (double*)malloc(maxdiis_*maxdiis_*sizeof(double));
@@ -192,7 +192,7 @@ void v2RDMSolver::DIIS_Extrapolate(int diis_iter,int&replace_diis_iter){
     char*oldvector;
     oldvector=(char*)malloc(1000*sizeof(char));
 
-    boost::shared_ptr<PSIO> psio(new PSIO());
+    std::shared_ptr<PSIO> psio(new PSIO());
     psio->open(PSIF_DCC_OVEC,PSIO_OPEN_OLD);
 
     psio_address addr;

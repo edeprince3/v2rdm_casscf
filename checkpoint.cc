@@ -47,7 +47,6 @@
     #define omp_get_max_threads() 1
 #endif
 
-using namespace boost;
 using namespace psi;
 
 namespace psi{ namespace v2rdm_casscf{
@@ -55,7 +54,7 @@ namespace psi{ namespace v2rdm_casscf{
 
 void v2RDMSolver::InitializeCheckpointFile() {
 
-    boost::shared_ptr<PSIO> psio ( new PSIO() );
+    std::shared_ptr<PSIO> psio ( new PSIO() );
     psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_NEW);
 
     // scf energy
@@ -105,7 +104,7 @@ void v2RDMSolver::InitializeCheckpointFile() {
 }
 void v2RDMSolver::WriteCheckpointFile() {
 
-    boost::shared_ptr<PSIO> psio ( new PSIO() );
+    std::shared_ptr<PSIO> psio ( new PSIO() );
     psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
 
     // mu
@@ -134,7 +133,7 @@ void v2RDMSolver::WriteCheckpointFile() {
 }
 void v2RDMSolver::ReadFromCheckpointFile() {
 
-    boost::shared_ptr<PSIO> psio ( new PSIO() );
+    std::shared_ptr<PSIO> psio ( new PSIO() );
     psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
 
     double dume;

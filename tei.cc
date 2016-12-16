@@ -45,7 +45,6 @@
     #define omp_get_max_threads() 1
 #endif
 
-using namespace boost;
 using namespace psi;
 
 namespace psi{ namespace v2rdm_casscf{
@@ -54,7 +53,7 @@ void v2RDMSolver::GetIntegrals() {
 
 
     // one-electron integrals:
-    boost::shared_ptr<Matrix> K1 = GetOEI();
+    std::shared_ptr<Matrix> K1 = GetOEI();
 
     // size of the tei buffer
     if ( is_df_ ) {

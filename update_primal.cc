@@ -45,7 +45,6 @@
     #define omp_get_max_threads() 1
 #endif
 
-using namespace boost;
 using namespace psi;
 
 namespace psi{ namespace v2rdm_casscf{
@@ -175,7 +174,7 @@ void v2RDMSolver::UpdatePrimal() {
 
 }
 
-void v2RDMSolver::TransformFourIndex(double * inout, double * tmp, boost::shared_ptr<Matrix>trans) {
+void v2RDMSolver::TransformFourIndex(double * inout, double * tmp, std::shared_ptr<Matrix>trans) {
 
     // transform fourth index
     for (int h = 0; h < nirrep_; h++) {

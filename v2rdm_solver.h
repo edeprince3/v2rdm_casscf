@@ -58,14 +58,11 @@
 #define PSIF_V2RDM_D3BBA      275
 #define PSIF_V2RDM_D3BBB      276
 
-namespace boost {
-  template<class T> class shared_ptr;
-}
 namespace psi{ namespace v2rdm_casscf{
 
 class v2RDMSolver: public Wavefunction{
   public:
-    v2RDMSolver(boost::shared_ptr<psi::Wavefunction> reference_wavefunction,Options & options);
+    v2RDMSolver(std::shared_ptr<psi::Wavefunction> reference_wavefunction,Options & options);
     ~v2RDMSolver();
     void common_init();
     double compute_energy();
@@ -165,7 +162,7 @@ class v2RDMSolver: public Wavefunction{
     double * Qmo_;
 
     /// grab one-electron integrals (T+V) in MO basis
-    boost::shared_ptr<Matrix> GetOEI();
+    std::shared_ptr<Matrix> GetOEI();
 
     /// DIIS stuff
     void DIIS(double*c,long int nvec,int replace_diis_iter);
@@ -263,7 +260,7 @@ class v2RDMSolver: public Wavefunction{
     int *** ibas_full_sym;
 
     /// triplets for each irrep:
-    std::vector < std::vector < boost::tuple<int,int,int> > > triplets;
+    std::vector < std::vector < std::tuple<int,int,int> > > triplets;
     int * trip_aaa;
     int * trip_aab;
     int * trip_aba;
@@ -275,7 +272,7 @@ class v2RDMSolver: public Wavefunction{
     int **** ibas_aba_sym;
 
     /// quartets for each irrep:
-    std::vector < std::vector < boost::tuple<int,int,int,int> > > quartets;
+    std::vector < std::vector < std::tuple<int,int,int,int> > > quartets;
     int * quartet_aaaa;
     int * quartet_aaab;
     int * quartet_aabb;
@@ -465,13 +462,13 @@ class v2RDMSolver: public Wavefunction{
     void UpdatePrimal();
 
     /// transform a four-index quantity from one basis to another
-    void TransformFourIndex(double * inout, double * tmp, boost::shared_ptr<Matrix>trans);
+    void TransformFourIndex(double * inout, double * tmp, std::shared_ptr<Matrix>trans);
 
     /// update ao/mo transformation matrix after orbital optimization
     void UpdateTransformationMatrix();
 
     /// mo-mo transformation matrix
-    boost::shared_ptr<Matrix> newMO_;
+    std::shared_ptr<Matrix> newMO_;
 };
 
 }}
