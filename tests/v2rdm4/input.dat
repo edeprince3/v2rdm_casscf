@@ -2,7 +2,7 @@ sys.path.insert(0, '../../..')
 import v2rdm_casscf
 
 # job description
-print '        1,4-phenylenedinitrene/(10,10)/cc-pVDZ'
+print('        1,4-phenylenedinitrene/(10,10)/cc-pVDZ')
 
 molecule singlet {
 0 1
