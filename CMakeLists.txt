@@ -1,7 +1,7 @@
 #
 # @BEGIN LICENSE
 #
-# . by Psi4 Developer, a plugin to:
+# v2rdm_casscf by A. Eugene DePrince III, a plugin to:
 #
 # Psi4: an open-source quantum chemistry software package
 #
@@ -27,10 +27,43 @@
 # @END LICENSE
 #
 
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(v2rdm_casscf CXX Fortran)
+cmake_policy(SET CMP0048 NEW)  # project_VERSION* variables populated from project(... VERSION x.x.x) string
+project(v2rdm_casscf
+        VERSION 0.1
+        LANGUAGES CXX Fortran)
+set(v2rdm_casscf_AUTHORS      "A. Eugene DePrince III")
+set(v2rdm_casscf_DESCRIPTION  "Variational 2-RDM-driven CASSCF plugin to Psi4")
+set(v2rdm_casscf_URL          "github.com/edeprince3/v2rdm_casscf")
+set(v2rdm_casscf_LICENSE      "GPL 3.0")
 
-find_package(Psi4Plugins 1.0 REQUIRED)
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+
+find_package(psi4 1.0 REQUIRED)
+
+# <<<  Options  >>>
+
+include(psi4OptionsTools)
+
+option_with_print(ENABLE_GENERIC "Enable mostly static linking in shared library" OFF)
+option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" ON
+                  "-xHost" "-march=native")
+
+#   install alongside psi4 Py module by default, but overrideable
+get_filename_component(_tmp ${psi4_LIBRARY} DIRECTORY)
+get_filename_component(psi4_PYMOD_INSTALL_FULL_LIBDIR ${_tmp} DIRECTORY)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX ${psi4_PYMOD_INSTALL_FULL_LIBDIR} CACHE PATH "Install path" FORCE)
+endif()
+message(STATUS "Plugin install: ${CMAKE_INSTALL_PREFIX}")
+
+include(custom_cxxstandard)
+include(autocmake_static_library)
+
+# <<<  Build  >>>
+
+if (CMAKE_Fortran_COMPILER_ID MATCHES Intel)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -heap-arrays")
+endif()
 
 add_psi4_plugin(v2rdm_casscf
     basis.cc
@@ -64,3 +97,17 @@ add_psi4_plugin(v2rdm_casscf
     focas_gradient.F90         focas_transform_teints.F90
 )
 
+target_link_libraries(v2rdm_casscf PRIVATE ${LIBC_INTERJECT})
+
+# <<<  Install  >>>
+
+install(TARGETS v2rdm_casscf
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
+
+install(FILES __init__.py pymodule.py LICENSE README.md
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
+
+install(DIRECTORY tests/
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/tests
+        FILES_MATCHING PATTERN "v2rdm*/input.dat"
+        PATTERN "old-tests" EXCLUDE)
