@@ -8,6 +8,7 @@ set(v2rdm_casscf_URL          "github.com/edeprince3/v2rdm_casscf")
 set(v2rdm_casscf_LICENSE      "GPL 3.0")
 
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(psi4 1.0 REQUIRED)
 
@@ -15,6 +16,7 @@ find_package(psi4 1.0 REQUIRED)
 
 include(psi4OptionsTools)
 
+option_with_print(ENABLE_OPENMP "Enable threadsafe linking to OpenMP parallelized programs." ON)
 option_with_print(ENABLE_GENERIC "Enable mostly static linking in shared library" OFF)
 option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" ON
                   "-xHost" "-march=native")
@@ -28,7 +30,8 @@ endif()
 message(STATUS "Plugin install: ${CMAKE_INSTALL_PREFIX}")
 
 include(custom_cxxstandard)
-include(autocmake_static_library)
+include(autocmake_omp)
+include(custom_static_library)
 
 # <<<  Build  >>>
 
@@ -59,13 +62,20 @@ add_psi4_plugin(v2rdm_casscf
     v2rdm_solver.cc
     write_3pdm.cc
     write_tpdm.cc
-    focas_data.F90             focas_hessian.F90
-    focas_diis.F90             focas_interface.F90
-    focas_driver.F90           focas_redundant.F90
-    focas_energy.F90           focas_semicanonical.F90
-    focas_exponential.F90      focas_transform_driver.F90
-    focas_genfock.F90          focas_transform_oeints.F90
-    focas_gradient.F90         focas_transform_teints.F90
+    focas_data.F90
+    focas_diis.F90
+    focas_driver.F90
+    focas_energy.F90
+    focas_exponential.F90
+    focas_genfock.F90
+    focas_gradient.F90
+    focas_hessian.F90
+    focas_interface.F90
+    focas_redundant.F90
+    focas_semicanonical.F90
+    focas_transform_driver.F90
+    focas_transform_oeints.F90
+    focas_transform_teints.F90
 )
 
 target_link_libraries(v2rdm_casscf PRIVATE ${LIBC_INTERJECT})
