@@ -33,6 +33,8 @@ include(custom_cxxstandard)
 include(autocmake_omp)
 include(custom_static_library)
 
+set(PN ${PROJECT_NAME})
+
 # <<<  Build  >>>
 
 if (CMAKE_Fortran_COMPILER_ID MATCHES Intel)
@@ -83,12 +85,12 @@ target_link_libraries(v2rdm_casscf PRIVATE ${LIBC_INTERJECT})
 # <<<  Install  >>>
 
 install(TARGETS v2rdm_casscf
-        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${PYMOD_INSTALL_LIBDIR}/${PN})
 
 install(FILES __init__.py pymodule.py LICENSE README.md
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${PYMOD_INSTALL_LIBDIR}/${PN})
 
 install(DIRECTORY tests/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/tests
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${PYMOD_INSTALL_LIBDIR}/${PN}/tests
         FILES_MATCHING PATTERN "v2rdm*/input.dat"
         PATTERN "old-tests" EXCLUDE)
