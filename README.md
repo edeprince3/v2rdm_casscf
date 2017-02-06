@@ -9,11 +9,11 @@ This plugin to Psi4[1] performs variational two-electron reduced-density-matrix 
 
 To run the Psi4 plugin v2rdm_casscf:
 
-* Download Psi4 (1.1b1 or later) from github.com: https://github.com/psi4/psi4, and follow the installation instructions given here: http://psicode.org/psi4manual/master/external.html#compiling-and-installing-from-source .  Make sure to keep the name of the plugin directory v2rdm_casscf.
+* Download Psi4 (1.1a1 or later) from github.com: https://github.com/psi4/psi4, and follow the installation instructions given here: http://psicode.org/psi4manual/master/build_planning.html . Make sure to keep the name of the plugin directory v2rdm_casscf.
 
 *  Configure with CMake to generate a Makefile. Run `psi4 --plugin-compile` to get a CMake command. Modify it as needed with `-D` for compiler, libraries, and options.
 
-* Note that, if you configured psi4 with a fortran compiler, you shouldn't have to specify these things here. If the configure shows no errors, compile the plugin:
+* Note that, if you configured Psi4 with a fortran compiler, you shouldn't have to specify these things here. If the configure shows no errors, compile the plugin:
 
   > make
 
