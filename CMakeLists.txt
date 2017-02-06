@@ -5,7 +5,7 @@ project(v2rdm_casscf
 set(v2rdm_casscf_AUTHORS      "A. Eugene DePrince III")
 set(v2rdm_casscf_DESCRIPTION  "Variational 2-RDM-driven CASSCF plugin to Psi4")
 set(v2rdm_casscf_URL          "github.com/edeprince3/v2rdm_casscf")
-set(v2rdm_casscf_LICENSE      "GPL 3.0")
+set(v2rdm_casscf_LICENSE      "GPL 2+")
 
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -18,8 +18,12 @@ include(psi4OptionsTools)
 
 option_with_print(ENABLE_OPENMP "Enable threadsafe linking to OpenMP parallelized programs." ON)
 option_with_print(ENABLE_GENERIC "Enable mostly static linking in shared library" OFF)
-option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" ON
-                  "-xHost" "-march=native")
+if (APPLE AND (CMAKE_CXX_COMPILER_ID MATCHES GNU))
+    option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" OFF)
+else ()
+    option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" ON
+                      "-xHost" "-march=native")
+endif()
 
 #   install alongside psi4 Py module by default, but overrideable
 get_filename_component(_tmp ${psi4_LIBRARY} DIRECTORY)

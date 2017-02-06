@@ -21,6 +21,6 @@ quick: $(quick-tests)
 	@echo ""
 	@echo "    $(basename $@):"
 	@echo ""
-	@cd $(basename $@); psi4 -d
+	@cd $(basename $@); psi4
 	@echo ""
 
