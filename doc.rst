@@ -1,7 +1,7 @@
 .. comment 
 .. comment @BEGIN LICENSE
 .. comment 
-.. comment  v2rdm_casscf by Psi4 Developer, a plugin to:
+.. comment  v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
 .. comment 
 .. comment  Psi4: an open-source quantum chemistry software package
 .. comment 

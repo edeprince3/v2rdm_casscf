@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF, a plugin to:
+ * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,16 +20,16 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
-#include "psi4-dec.h"
-#include <psifiles.h>
-#include <libiwl/iwl.h>
-#include <libpsio/psio.hpp>
-#include <libtrans/integraltransform.h>
+#include "psi4/psi4-dec.h"
+#include <psi4/psifiles.h>
+#include <psi4/libiwl/iwl.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libtrans/integraltransform.h>
 
 #include "v2rdm_solver.h"
 
@@ -52,7 +52,7 @@ void v2RDMSolver::WriteActive3PDM(){
 
     double * x_p = x->pointer();
 
-    boost::shared_ptr<PSIO> psio (new PSIO());
+    std::shared_ptr<PSIO> psio (new PSIO());
 
     psio->open(PSIF_V2RDM_D3AAA,PSIO_OPEN_NEW);
     psio->open(PSIF_V2RDM_D3AAB,PSIO_OPEN_NEW);
@@ -105,7 +105,7 @@ void v2RDMSolver::WriteActive3PDM(){
                 double valbba = x_p[d3bbaoff[h] + ijk_aab*trip_aab[h] + lmn_aab];
 
                 dm3 d3;
-                
+
                 int sijk = 1;
                 if ( i > j ) sijk = -sijk;
                 int slmn = 1;
@@ -163,7 +163,7 @@ void v2RDMSolver::WriteActive3PDM(){
                 double valbbb = x_p[d3bbboff[h] + ijk_aaa*trip_aaa[h] + lmn_aaa];
 
                 dm3 d3;
-                
+
                 int sijk = 1;
                 if ( i > j ) sijk = -sijk;
                 if ( i > k ) sijk = -sijk;
@@ -208,7 +208,7 @@ void v2RDMSolver::WriteActive3PDM(){
 
 void v2RDMSolver::Read3PDM(){
 
-    boost::shared_ptr<PSIO> psio (new PSIO());
+    std::shared_ptr<PSIO> psio (new PSIO());
 
     if ( !psio->exists(PSIF_V2RDM_D3AAA) ) return;
     if ( !psio->exists(PSIF_V2RDM_D3AAB) ) return;

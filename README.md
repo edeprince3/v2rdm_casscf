@@ -7,24 +7,20 @@ This plugin to Psi4[1] performs variational two-electron reduced-density-matrix 
 
 ##INSTALLATION
 
-To run the psi4 plugin v2rdm_casscf:
+To run the Psi4 plugin v2rdm_casscf:
 
-* Download psi4 from github.com: https://github.com/psi4/psi4, and follow the installation instructions given here: http://www.psicode.org/.  Make sure to keep the name of the plugin directory v2rdm_casscf.
+* Download Psi4 (1.1a1 or later) from github.com: https://github.com/psi4/psi4, and follow the installation instructions given here: http://psicode.org/psi4manual/master/build_planning.html . Make sure to keep the name of the plugin directory v2rdm_casscf.
 
-*  Create a new Makefile.  Configure with your fortran compiler, libraries, and options.  The following examples work on my macbook with gfortran and a linux box with intel compilers and MLK:
+*  Configure with CMake to generate a Makefile. Run `psi4 --plugin-compile` to get a CMake command. Modify it as needed with `-D` for compiler, libraries, and options.
 
-  > ./configure --fc=gfortran-mp-4.8 --flibs="-L/opt/local/lib/gcc48/ -lgfortran" --fflags='-O2'
-  
-  > ./configure --fc=ifort --flibs=-lifcore --fflags='-O2 -fPIC -heap-arrays'
-
-* Note that, if you configured psi4 with a fortran compiler, you shouldn't have to specify these things here.  I would, however, recommend including --fflags='-O2 -fPIC -heap-arrays' if you're using intel compilers (see issue #9).  If the configure shows no errors, compile the plugin:
+* Note that, if you configured Psi4 with a fortran compiler, you shouldn't have to specify these things here. If the configure shows no errors, compile the plugin:
 
   > make
-  
+
 * If the plugin compiles without any errors, you can run a few tests:
 
   > cd tests
-  
+
   > make
 
 * The test directories (tests/v2rdm1, etc.) contain input files that can help you get started using v2rdm-casscf.

@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF, a plugin to:
+ * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,16 +20,16 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
-#include "psi4-dec.h"
-#include <psifiles.h>
-#include <libiwl/iwl.h>
-#include <libpsio/psio.hpp>
-#include <libtrans/integraltransform.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/psifiles.h>
+#include <psi4/libiwl/iwl.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libtrans/integraltransform.h>
 
 #include "v2rdm_solver.h"
 
@@ -101,7 +101,7 @@ void ReadAllIntegrals(iwlbuf *Buf,double*tei,long int nmo) {
           tei[p*nmo*nmo*nmo+q*nmo*nmo+s*nmo+r] = val;
           tei[q*nmo*nmo*nmo+p*nmo*nmo+r*nmo+s] = val;
           tei[q*nmo*nmo*nmo+p*nmo*nmo+s*nmo+r] = val;
-    
+
           tei[r*nmo*nmo*nmo+s*nmo*nmo+p*nmo+q] = val;
           tei[s*nmo*nmo*nmo+r*nmo*nmo+p*nmo+q] = val;
           tei[r*nmo*nmo*nmo+s*nmo*nmo+q*nmo+p] = val;

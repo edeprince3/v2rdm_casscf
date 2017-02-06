@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF, a plugin to:
+ * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,30 +20,25 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
 #include "v2rdm_solver.h"
 
-#include <libplugin/plugin.h>
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libmints/mints.h>
-#include <libpsio/psio.hpp>
-#include<libciomr/libciomr.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/libciomr/libciomr.h>
 
-INIT_PLUGIN
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
-using namespace boost;
 using namespace psi;
-using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf {
 
-extern "C" 
+extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
@@ -61,7 +56,7 @@ int read_options(std::string name, Options& options)
         options.add_bool("3PDM_WRITE",false);
         /*- Do save progress in a checkpoint file? -*/
         options.add_bool("WRITE_CHECKPOINT_FILE",false);
-        /*- Frequency of checkpoint file generation.  The checkpoint file is 
+        /*- Frequency of checkpoint file generation.  The checkpoint file is
         updated every CHECKPOINT_FREQUENCY iterations.  The default frequency
         will be ORBOPT_FREQUENCY. -*/
         options.add_int("CHECKPOINT_FREQUENCY",500);
@@ -123,7 +118,7 @@ int read_options(std::string name, Options& options)
         options.add_bool("ORBOPT_EXACT_DIAGONAL_HESSIAN",false);
         /*- number of DIIS vectors to keep in orbital optimization -*/ 
         options.add_int("ORBOPT_NUM_DIIS_VECTORS",0);
-        /*- frequency of orbital optimization.  optimization occurs every 
+        /*- frequency of orbital optimization.  optimization occurs every
         orbopt_frequency iterations -*/
         options.add_int("ORBOPT_FREQUENCY",500);
         /*- maximum number of iterations for orbital optimization -*/
@@ -147,13 +142,13 @@ int read_options(std::string name, Options& options)
     return true;
 }
 
-extern "C" 
+extern "C"
 SharedWavefunction v2rdm_casscf(SharedWavefunction ref_wfn, Options& options)
 {
 
     tstart();
 
-    boost::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(ref_wfn,options));
+    std::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(ref_wfn,options));
 
     double energy = v2rdm->compute_energy();
 

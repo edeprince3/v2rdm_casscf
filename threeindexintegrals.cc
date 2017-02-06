@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF, a plugin to:
+ * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,24 +20,20 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
 #include"v2rdm_solver.h"
-
-#include <libmints/mints.h>
-#include <libpsio/psio.hpp>
-#include <libmints/sieve.h>
-#include <psifiles.h>
-
-#include <../bin/fnocc/blas.h>
-
-#include <libtrans/integraltransform.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libmints/basisset.h>
+#include <psi4/libmints/sieve.h>
+#include <psi4/psifiles.h>
+#include <psi4/libtrans/integraltransform.h>
+#include "blas.h"
 
 using namespace psi;
-using namespace fnocc;
 
 namespace psi { namespace v2rdm_casscf {
 
@@ -46,31 +42,27 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     basisset_ = reference_wavefunction_->basisset();
 
     // get ntri from sieve
-    boost::shared_ptr<ERISieve> sieve (new ERISieve(basisset_, options_.get_double("INTS_TOLERANCE")));
+    std::shared_ptr<ERISieve> sieve (new ERISieve(basisset_, options_.get_double("INTS_TOLERANCE")));
     const std::vector<std::pair<int, int> >& function_pairs = sieve->function_pairs();
     long int ntri = function_pairs.size();
 
     // read integrals that were written to disk in the scf
     nQ_ = Process::environment.globals["NAUX (SCF)"];
     if ( options_.get_str("SCF_TYPE") == "DF" ) {
-        boost::shared_ptr<BasisSet> primary = BasisSet::pyconstruct_orbital(molecule_,
-            "BASIS", options_.get_str("BASIS"));
-
-        boost::shared_ptr<BasisSet> auxiliary = BasisSet::pyconstruct_auxiliary(molecule_,
-            "DF_BASIS_SCF", options_.get_str("DF_BASIS_SCF"), "JKFIT",
-            options_.get_str("BASIS"), primary->has_puream());
+        std::shared_ptr<BasisSet> primary = reference_wavefunction_->basisset();
+        std::shared_ptr<BasisSet> auxiliary = reference_wavefunction_->get_basisset("DF_BASIS_SCF");
 
         nQ_ = auxiliary->nbf();
         Process::environment.globals["NAUX (SCF)"] = nQ_;
     }
 
-    // 100 mb extra to account for all mapping arrays already 
+    // 100 mb extra to account for all mapping arrays already
     // allocated. this should be WAY more than necessary.
-    long int extra = 100 * 1024 * 1024;  
+    long int extra = 100 * 1024 * 1024;
     long int ndoubles = (memory_-extra) / 8;
 
-    // orbitals will end up in energy order.  
-    // we will want them in pitzer.  for sorting: 
+    // orbitals will end up in energy order.
+    // we will want them in pitzer.  for sorting:
     long int * reorder  = (long int*)malloc(nmo_*sizeof(long int));
     long int * sym      = (long int*)malloc(nmo_*sizeof(long int));
     bool * skip    = (bool*)malloc(nmo_*sizeof(bool));
@@ -125,7 +117,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     long int nn1mo = nmo_*(nmo_+1)/2;
     long int nn1fv = (nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2;
 
-    boost::shared_ptr<PSIO> psio(new PSIO());
+    std::shared_ptr<PSIO> psio(new PSIO());
 
     psio->open(PSIF_DCC_QSO,PSIO_OPEN_NEW);
     psio->open(PSIF_DCC_QMO,PSIO_OPEN_NEW);
@@ -169,7 +161,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->close(PSIF_DFSCF_BJ,1);
 
     // AO->MO transformation matrix:
-    boost::shared_ptr<Matrix> myCa (new Matrix(reference_wavefunction_->Ca_subset("AO","ALL")));
+    std::shared_ptr<Matrix> myCa (new Matrix(reference_wavefunction_->Ca_subset("AO","ALL")));
 
     // transform first index:
     addr  = PSIO_ZERO;

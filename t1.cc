@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF, a plugin to:
+ * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,25 +20,21 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libqt/qt.h>
-
-#include<libtrans/integraltransform.h>
-#include<libtrans/mospace.h>
-
-#include<libmints/wavefunction.h>
-#include<libmints/mints.h>
-#include<libmints/vector.h>
-#include<libmints/matrix.h>
-#include<../bin/fnocc/blas.h>
-#include<time.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/libparallel/parallel.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libqt/qt.h>
+#include <psi4/libtrans/integraltransform.h>
+#include <psi4/libtrans/mospace.h>
+#include <psi4/libmints/wavefunction.h>
+#include <psi4/libmints/vector.h>
+#include <psi4/libmints/matrix.h>
+#include <time.h>
 
 #include"v2rdm_solver.h"
 
@@ -49,13 +45,11 @@
     #define omp_get_max_threads() 1
 #endif
 
-using namespace boost;
 using namespace psi;
-using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
-// T1 portion of A.u 
+// T1 portion of A.u
 void v2RDMSolver::T1_constraints_guess(SharedVector u){
 
     double * u_p = u->pointer();
@@ -105,7 +99,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     dum -= u_p[g2baoff[hni] + ni*gems_ab[hni] + kl];  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -113,7 +107,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     dum += u_p[g2baoff[hkl] + nj*gems_ab[hkl] + kl];  // G2(nj,kl) dim
-                    
+
                 }
 
                 u_p[t1aaboff[h] + ijk*trip_aab[h]+lmn] = dum;
@@ -167,7 +161,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     dum -= u_p[g2aboff[hni] + ni*gems_ab[hni] + kl];  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -175,7 +169,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     dum += u_p[g2aboff[hkl] + nj*gems_ab[hkl] + kl];  // G2(nj,kl) dim
-                    
+
                 }
 
 
@@ -267,7 +261,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int jl = ibas_ab_sym[hni][j][l];
                     dum += u_p[g2aaoff[hni] + ni*2*gems_ab[hni] + jl];  // G2(ni,jl) dkm
-                    
+
                 }
 
                 if ( j == m ) {
@@ -281,7 +275,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     dum -= u_p[g2aaoff[hni] + ni*2*gems_ab[hni] + kl];  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -295,7 +289,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     dum += u_p[g2aaoff[hkl] + nj*2*gems_ab[hkl] + kl];  // G2(nj,kl) dim
-                    
+
                 }
 
 
@@ -388,7 +382,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int jl = ibas_ab_sym[hni][j][l];
                     dum += u_p[g2aaoff[hni] + (ni+gems_ab[hni])*2*gems_ab[hni] + (jl+gems_ab[hni])];  // G2(ni,jl) dkm
-                    
+
                 }
 
                 if ( j == m ) {
@@ -402,7 +396,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     dum -= u_p[g2aaoff[hni] + (ni+gems_ab[hni])*2*gems_ab[hni] + (kl+gems_ab[hni])];  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -416,7 +410,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     dum += u_p[g2aaoff[hkl] + (nj+gems_ab[hkl])*2*gems_ab[hkl] + (kl+gems_ab[hkl])];  // G2(nj,kl) dim
-                    
+
                 }
 
 
@@ -431,7 +425,7 @@ void v2RDMSolver::T1_constraints_guess(SharedVector u){
 
 }
 
-// T1 portion of A.u 
+// T1 portion of A.u
 void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
 
     double * A_p = A->pointer();
@@ -481,7 +475,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     dum -= u_p[g2baoff[hni] + ni*gems_ab[hni] + kl];  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -489,7 +483,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     dum += u_p[g2baoff[hkl] + nj*gems_ab[hkl] + kl];  // G2(nj,kl) dim
-                    
+
                 }
 
 
@@ -545,7 +539,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     dum -= u_p[g2aboff[hni] + ni*gems_ab[hni] + kl];  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -553,7 +547,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     dum += u_p[g2aboff[hkl] + nj*gems_ab[hkl] + kl];  // G2(nj,kl) dim
-                    
+
                 }
 
 
@@ -646,7 +640,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int jl = ibas_ab_sym[hni][j][l];
                     dum += u_p[g2aaoff[hni] + ni*2*gems_ab[hni] + jl];  // G2(ni,jl) dkm
-                    
+
                 }
 
                 if ( j == m ) {
@@ -660,7 +654,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     dum -= u_p[g2aaoff[hni] + ni*2*gems_ab[hni] + kl];  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -674,7 +668,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     dum += u_p[g2aaoff[hkl] + nj*2*gems_ab[hkl] + kl];  // G2(nj,kl) dim
-                    
+
                 }
 
 
@@ -767,7 +761,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int jl = ibas_ab_sym[hni][j][l];
                     dum += u_p[g2aaoff[hni] + (ni+gems_ab[hni])*2*gems_ab[hni] + (jl+gems_ab[hni])];  // G2(ni,jl) dkm
-                    
+
                 }
 
                 if ( j == m ) {
@@ -781,7 +775,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     dum -= u_p[g2aaoff[hni] + (ni+gems_ab[hni])*2*gems_ab[hni] + (kl+gems_ab[hni])];  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -795,7 +789,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     dum += u_p[g2aaoff[hkl] + (nj+gems_ab[hkl])*2*gems_ab[hkl] + (kl+gems_ab[hkl])];  // G2(nj,kl) dim
-                    
+
                 }
 
 
@@ -810,7 +804,7 @@ void v2RDMSolver::T1_constraints_Au(SharedVector A,SharedVector u){
 
 }
 
-// T1 portion of A^T.y 
+// T1 portion of A^T.y
 void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
 
     double * A_p = A->pointer();
@@ -831,7 +825,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                 int m = bas_aab_sym[h][lmn][1];
                 int n = bas_aab_sym[h][lmn][2];
 
-                double dum = u_p[offset + ijk*trip_aab[h]+lmn]; 
+                double dum = u_p[offset + ijk*trip_aab[h]+lmn];
 
                 A_p[t1aaboff[h] + ijk*trip_aab[h]+lmn] -= dum; // - T1(ijk,lmn)
 
@@ -861,7 +855,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     A_p[g2baoff[hni] + ni*gems_ab[hni] + kl] -= dum;  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -869,7 +863,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     A_p[g2baoff[hkl] + nj*gems_ab[hkl] + kl] += dum;  // G2(nj,kl) dim
-                    
+
                 }
             }
         }
@@ -891,7 +885,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                 int m = bas_aab_sym[h][lmn][1];
                 int n = bas_aab_sym[h][lmn][2];
 
-                double dum = u_p[offset + ijk*trip_aab[h]+lmn]; 
+                double dum = u_p[offset + ijk*trip_aab[h]+lmn];
 
                 A_p[t1bbaoff[h] + ijk*trip_aab[h]+lmn] -= dum; // - T1(ijk,lmn)
 
@@ -921,7 +915,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     A_p[g2aboff[hni] + ni*gems_ab[hni] + kl] -= dum;  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -929,7 +923,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     A_p[g2aboff[hkl] + nj*gems_ab[hkl] + kl] += dum;  // G2(nj,kl) dim
-                    
+
                 }
             }
         }
@@ -1018,7 +1012,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int jl = ibas_ab_sym[hni][j][l];
                     A_p[g2aaoff[hni] + ni*2*gems_ab[hni] + jl] += dum;  // G2(ni,jl) dkm
-                    
+
                 }
 
                 if ( j == m ) {
@@ -1032,7 +1026,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     A_p[g2aaoff[hni] + ni*2*gems_ab[hni] + kl] -= dum;  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -1046,7 +1040,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     A_p[g2aaoff[hkl] + nj*2*gems_ab[hkl] + kl] += dum;  // G2(nj,kl) dim
-                    
+
                 }
 
             }
@@ -1136,7 +1130,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int jl = ibas_ab_sym[hni][j][l];
                     A_p[g2aaoff[hni] + (ni+gems_ab[hni])*2*gems_ab[hni] + (jl+gems_ab[hni])] += dum;  // G2(ni,jl) dkm
-                    
+
                 }
 
                 if ( j == m ) {
@@ -1150,7 +1144,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int ni = ibas_ab_sym[hni][n][i];
                     int kl = ibas_ab_sym[hni][k][l];
                     A_p[g2aaoff[hni] + (ni+gems_ab[hni])*2*gems_ab[hni] + (kl+gems_ab[hni])] -= dum;  // -G2(ni,kl) djm
-                    
+
                 }
 
                 if ( i == m ) {
@@ -1164,7 +1158,7 @@ void v2RDMSolver::T1_constraints_ATu(SharedVector A,SharedVector u){
                     int nj = ibas_ab_sym[hkl][n][j];
                     int kl = ibas_ab_sym[hkl][k][l];
                     A_p[g2aaoff[hkl] + (nj+gems_ab[hkl])*2*gems_ab[hkl] + (kl+gems_ab[hkl])] += dum;  // G2(nj,kl) dim
-                    
+
                 }
 
             }

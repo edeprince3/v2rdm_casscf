@@ -1,7 +1,7 @@
 #! H3 / cc-pvdz / D+D3 vs full CI, scf_type = PK
 
 # job description
-print '        H3 / cc-pvdz / D+D3 vs full CI, scf_type = PK'
+print('        H3 / cc-pvdz / D+D3 vs full CI, scf_type = PK')
 
 sys.path.insert(0, '../../..')
 import v2rdm_casscf

@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF, a plugin to:
+ * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -29,33 +29,30 @@
 #include<stdlib.h>
 #include<math.h>
 
-#include <libmints/writer.h>
-#include <libmints/writer_file_prefix.h>
-
-#include<libtrans/integraltransform.h>
-#include<libtrans/mospace.h>
-
-#include <libplugin/plugin.h>
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libqt/qt.h>
-
-#include<libpsio/psio.hpp>
-#include<libmints/wavefunction.h>
-#include<psifiles.h>
-#include<libpsio/psio.hpp>
-#include<libmints/mints.h>
-#include<libmints/vector.h>
-#include<libmints/matrix.h>
+#include <psi4/libmints/basisset.h>
+#include <psi4/libmints/factory.h>
+#include <psi4/libmints/writer.h>
+#include <psi4/libmints/writer_file_prefix.h>
+#include <psi4/libtrans/integraltransform.h>
+#include <psi4/libtrans/mospace.h>
+#include <psi4/libplugin/plugin.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/libparallel/parallel.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libqt/qt.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libmints/wavefunction.h>
+#include <psi4/psifiles.h>
+#include <psi4/libpsio/psio.hpp>
+#include <psi4/libmints/vector.h>
+#include <psi4/libmints/matrix.h>
 #include<time.h>
 
-#include <../bin/fnocc/blas.h>
-
-#include <libiwl/iwl.h>
+#include <psi4/libiwl/iwl.h>
 
 #include"cg_solver.h"
 #include"v2rdm_solver.h"
+#include "blas.h"
 
 // greg
 #include "fortran.h"
@@ -68,9 +65,7 @@
     #define omp_get_max_threads() 1
 #endif
 
-using namespace boost;
 using namespace psi;
-using namespace fnocc;
 
 
 extern "C" {
@@ -118,7 +113,7 @@ static void evaluate_Ap(long int n, SharedVector Ax, SharedVector x, void * data
 }
 namespace psi{ namespace v2rdm_casscf{
 
-v2RDMSolver::v2RDMSolver(boost::shared_ptr<Wavefunction> reference_wavefunction,Options & options):
+v2RDMSolver::v2RDMSolver(std::shared_ptr<Wavefunction> reference_wavefunction,Options & options):
     Wavefunction(options){
     reference_wavefunction_ = reference_wavefunction;
     common_init();
@@ -365,9 +360,9 @@ void  v2RDMSolver::common_init(){
     // Lagrangian matrix
     Lagrangian_ = SharedMatrix(reference_wavefunction_->Lagrangian());
 
-    epsilon_a_= boost::shared_ptr<Vector>(new Vector(nirrep_, nmopi_));
+    epsilon_a_= std::shared_ptr<Vector>(new Vector(nirrep_, nmopi_));
     epsilon_a_->copy(reference_wavefunction_->epsilon_a().get());
-    epsilon_b_= boost::shared_ptr<Vector>(new Vector(nirrep_, nmopi_));
+    epsilon_b_= std::shared_ptr<Vector>(new Vector(nirrep_, nmopi_));
     epsilon_b_->copy(reference_wavefunction_->epsilon_b().get());
 
     amo_      = 0;
@@ -1216,7 +1211,7 @@ void  v2RDMSolver::common_init(){
             dimensions_.push_back(quartet_aaaa[h]); // D4bbbb
         }
     }
-       
+
 
     // v2rdm sdp convergence thresholds:
     r_convergence_  = options_.get_double("R_CONVERGENCE");
@@ -1443,12 +1438,8 @@ void  v2RDMSolver::common_init(){
         // storage requirements for df integrals
         nQ_ = Process::environment.globals["NAUX (SCF)"];
         if ( options_.get_str("SCF_TYPE") == "DF" ) {
-            boost::shared_ptr<BasisSet> primary = BasisSet::pyconstruct_orbital(molecule_,
-                "BASIS", options_.get_str("BASIS"));
-
-            boost::shared_ptr<BasisSet> auxiliary = BasisSet::pyconstruct_auxiliary(molecule_,
-                "DF_BASIS_SCF", options_.get_str("DF_BASIS_SCF"), "JKFIT",
-                options_.get_str("BASIS"), primary->has_puream());
+            std::shared_ptr<BasisSet> primary = reference_wavefunction_->basisset();
+            std::shared_ptr<BasisSet> auxiliary = reference_wavefunction_->get_basisset("DF_BASIS_SCF");
 
             nQ_ = auxiliary->nbf();
             Process::environment.globals["NAUX (SCF)"] = nQ_;
@@ -1504,9 +1495,9 @@ void  v2RDMSolver::common_init(){
         outfile->Printf("\n");
 
         double start = omp_get_wtime();
-        std::vector<shared_ptr<MOSpace> > spaces;
+        std::vector<std::shared_ptr<MOSpace> > spaces;
         spaces.push_back(MOSpace::all);
-        boost::shared_ptr<IntegralTransform> ints(new IntegralTransform(reference_wavefunction_, spaces, IntegralTransform::Restricted,
+        std::shared_ptr<IntegralTransform> ints(new IntegralTransform(reference_wavefunction_, spaces, IntegralTransform::Restricted,
             				      IntegralTransform::IWLOnly, IntegralTransform::PitzerOrder, IntegralTransform::None, false));
         ints->set_dpd_id(0);
         ints->set_keep_iwl_so_ints(true);
@@ -1566,7 +1557,7 @@ void  v2RDMSolver::common_init(){
     orbopt_converged_ = false;
 
     // mo-mo transformation matrix
-    newMO_ = (boost::shared_ptr<Matrix>)(new Matrix(reference_wavefunction_->Ca()));
+    newMO_ = (std::shared_ptr<Matrix>)(new Matrix(reference_wavefunction_->Ca()));
 
     orbopt_transformation_matrix_ = (double*)malloc((nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
     memset((void*)orbopt_transformation_matrix_,'\0',(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
@@ -1632,7 +1623,7 @@ double v2RDMSolver::compute_energy() {
 
     // congugate gradient solver
     long int N = nconstraints_;
-    shared_ptr<CGSolver> cg (new CGSolver(N));
+    std::shared_ptr<CGSolver> cg (new CGSolver(N));
     cg->set_max_iter(cg_maxiter_);
     cg->set_convergence(cg_convergence_);
 
@@ -1846,7 +1837,7 @@ double v2RDMSolver::compute_energy() {
 
         // transform D1, D2, D3 to semicanonical basis
         UpdatePrimal();
-    
+
     }
 
     // write tpdm to disk?
@@ -1951,9 +1942,9 @@ void v2RDMSolver::CheckSpinStructure() {
 }
 
 void v2RDMSolver::NaturalOrbitals() {
-    boost::shared_ptr<Matrix> Da (new Matrix(nirrep_,nmopi_,nmopi_));
-    boost::shared_ptr<Matrix> eigveca (new Matrix(nirrep_,nmopi_,nmopi_));
-    boost::shared_ptr<Vector> eigvala (new Vector("Natural Orbital Occupation Numbers (alpha)",nirrep_,nmopi_));
+    std::shared_ptr<Matrix> Da (new Matrix(nirrep_,nmopi_,nmopi_));
+    std::shared_ptr<Matrix> eigveca (new Matrix(nirrep_,nmopi_,nmopi_));
+    std::shared_ptr<Vector> eigvala (new Vector("Natural Orbital Occupation Numbers (alpha)",nirrep_,nmopi_));
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < frzcpi_[h] + rstcpi_[h]; i++) {
             Da->pointer(h)[i][i] = 1.0;
@@ -1964,7 +1955,7 @@ void v2RDMSolver::NaturalOrbitals() {
             }
         }
     }
-    boost::shared_ptr<Matrix> saveda ( new Matrix(Da) );
+    std::shared_ptr<Matrix> saveda ( new Matrix(Da) );
     Da->diagonalize(eigveca,eigvala,descending);
     eigvala->print();
 
@@ -1990,9 +1981,9 @@ void v2RDMSolver::NaturalOrbitals() {
     }*/
     //Ca_->print();
 
-    boost::shared_ptr<Matrix> Db (new Matrix(nirrep_,nmopi_,nmopi_));
-    boost::shared_ptr<Matrix> eigvecb (new Matrix(nirrep_,nmopi_,nmopi_));
-    boost::shared_ptr<Vector> eigvalb (new Vector("Natural Orbital Occupation Numbers (beta)",nirrep_,nmopi_));
+    std::shared_ptr<Matrix> Db (new Matrix(nirrep_,nmopi_,nmopi_));
+    std::shared_ptr<Matrix> eigvecb (new Matrix(nirrep_,nmopi_,nmopi_));
+    std::shared_ptr<Vector> eigvalb (new Vector("Natural Orbital Occupation Numbers (beta)",nirrep_,nmopi_));
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
             Db->pointer(h)[i][i] = 1.0;
@@ -2030,12 +2021,12 @@ void v2RDMSolver::NaturalOrbitals() {
         if ( options_["RESTART_FROM_CHECKPOINT_FILE"].has_changed() ) {
             throw PsiException("printing orbitals is currently disabled when restarting v2rdm jobs.  sorry!",__FILE__,__LINE__);
         }
-        //boost::shared_ptr<MoldenWriter> molden(new MoldenWriter((boost::shared_ptr<Wavefunction>)this));
-        boost::shared_ptr<MoldenWriter> molden(new MoldenWriter(reference_wavefunction_));
-        boost::shared_ptr<Vector> zero (new Vector("",nirrep_,nmopi_));
+        //std::shared_ptr<MoldenWriter> molden(new MoldenWriter((std::shared_ptr<Wavefunction>)this));
+        std::shared_ptr<MoldenWriter> molden(new MoldenWriter(reference_wavefunction_));
+        std::shared_ptr<Vector> zero (new Vector("",nirrep_,nmopi_));
         zero->zero();
         std::string filename = get_writer_file_prefix(reference_wavefunction_->molecule()->name()) + ".molden";
-        molden->write(filename,Ca_,Cb_,zero, zero,eigvala,eigvalb);
+        molden->write(filename,Ca_,Cb_,zero, zero,eigvala,eigvalb,true);
     }
 }
 
@@ -2048,8 +2039,8 @@ void v2RDMSolver::MullikenPopulations() {
     std::stringstream ss_b;
     ss_a << ss.str() << " alpha";
     ss_b << ss.str() << " beta";
-    boost::shared_ptr<Matrix> opdm_a(new Matrix(ss_a.str(), Ca_->colspi(), Ca_->colspi()));
-    boost::shared_ptr<Matrix> opdm_b(new Matrix(ss_b.str(), Ca_->colspi(), Ca_->colspi()));
+    std::shared_ptr<Matrix> opdm_a(new Matrix(ss_a.str(), Ca_->colspi(), Ca_->colspi()));
+    std::shared_ptr<Matrix> opdm_b(new Matrix(ss_b.str(), Ca_->colspi(), Ca_->colspi()));
 
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < rstcpi_[h]+frzcpi_[h]; i++) {
@@ -2934,10 +2925,10 @@ void v2RDMSolver::Update_xz() {
             myoffset += dimensions_[j] * dimensions_[j];
         }
 
-        boost::shared_ptr<Matrix> mat     (new Matrix(dimensions_[i],dimensions_[i]));
-        boost::shared_ptr<Matrix> eigvec  (new Matrix(dimensions_[i],dimensions_[i]));
-        boost::shared_ptr<Matrix> eigvec2 (new Matrix(dimensions_[i],dimensions_[i]));
-        boost::shared_ptr<Vector> eigval  (new Vector(dimensions_[i]));
+        std::shared_ptr<Matrix> mat     (new Matrix(dimensions_[i],dimensions_[i]));
+        std::shared_ptr<Matrix> eigvec  (new Matrix(dimensions_[i],dimensions_[i]));
+        std::shared_ptr<Matrix> eigvec2 (new Matrix(dimensions_[i],dimensions_[i]));
+        std::shared_ptr<Vector> eigval  (new Vector(dimensions_[i]));
 
         double ** mat_p = mat->pointer();
         double * A_p    = ATy->pointer();
@@ -3012,8 +3003,8 @@ void v2RDMSolver::Update_xz_nonsymmetric() {
             myoffset += dimensions_[j] * dimensions_[j];
         }
 
-        boost::shared_ptr<Vector> Up     (new Vector(dimensions_[i]));
-        boost::shared_ptr<Vector> Um     (new Vector(dimensions_[i]));
+        std::shared_ptr<Vector> Up     (new Vector(dimensions_[i]));
+        std::shared_ptr<Vector> Um     (new Vector(dimensions_[i]));
         double * A_p   = ATy->pointer();
 
         double * myA = (double*)malloc(dimensions_[i]*dimensions_[i]*sizeof(double));

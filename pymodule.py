@@ -1,7 +1,7 @@
 #
 #@BEGIN LICENSE
 #
-# v2rdm_casscf by Psi4 Developer, a plugin to:
+# v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
 #
 # Psi4: an open-source quantum chemistry software package
 #
@@ -23,16 +23,10 @@
 #
 
 import psi4
-import re
-import os
-import inputparser
-import math
-import warnings
-import driver
-from molutil import *
-import p4util
-from p4util.exceptions import *
-from procedures import *
+from psi4 import core
+import psi4.driver.p4util as p4util
+from psi4.driver.procedures import proc_util
+
 
 def run_v2rdm_casscf(name, **kwargs):
     r"""Function encoding sequence of PSI module and plugin calls so that
@@ -48,16 +42,16 @@ def run_v2rdm_casscf(name, **kwargs):
     optstash = p4util.OptionsState(
         ['SCF', 'DF_INTS_IO'])
 
-    psi4.set_local_option('SCF', 'DF_INTS_IO', 'SAVE')
+    core.set_local_option('SCF', 'DF_INTS_IO', 'SAVE')
 
     # Your plugin's psi4 run sequence goes here
     ref_wfn = kwargs.get('ref_wfn', None)
     if ref_wfn is None:
-        ref_wfn = driver.scf_helper(name, **kwargs)
+        ref_wfn = psi4.driver.scf_helper(name, **kwargs)
 
     # if restarting from a checkpoint file, this file
     # needs to be in scratch with the correct name
-    filename = psi4.get_option("V2RDM_CASSCF","RESTART_FROM_CHECKPOINT_FILE")
+    filename = core.get_option("V2RDM_CASSCF","RESTART_FROM_CHECKPOINT_FILE")
 
     # todo PSIF_V2RDM_CHECKPOINT should be definied in psifiles.h
     if ( filename != "" ):
@@ -65,20 +59,20 @@ def run_v2rdm_casscf(name, **kwargs):
         p4util.copy_file_to_scratch(filename,'psi',molname,269,False)
 
     # Ensure IWL files have been written when not using DF/CD
-    scf_type = psi4.get_option('SCF', 'SCF_TYPE')
+    scf_type = core.get_option('SCF', 'SCF_TYPE')
     if ( scf_type == 'PK' or scf_type == 'DIRECT' ):
-        proc_util.check_iwl_file_from_scf_type(psi4.get_option('SCF', 'SCF_TYPE'), ref_wfn)
+        proc_util.check_iwl_file_from_scf_type(core.get_option('SCF', 'SCF_TYPE'), ref_wfn)
 
-    returnvalue = psi4.plugin('v2rdm_casscf.so', ref_wfn)
+    returnvalue = core.plugin('v2rdm_casscf.so', ref_wfn)
 
-    #psi4.set_variable('CURRENT ENERGY', returnvalue)
+    #core.set_variable('CURRENT ENERGY', returnvalue)
 
-    #return psi4.get_variable('CURRENT ENERGY')
+    #return core.get_variable('CURRENT ENERGY')
     return returnvalue
 
 
 # Integration with driver routines
-driver.procedures['energy']['v2rdm-casscf'] = run_v2rdm_casscf
+psi4.driver.procedures['energy']['v2rdm-casscf'] = run_v2rdm_casscf
 
 def exampleFN():
     # Your Python code goes here

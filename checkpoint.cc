@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF, a plugin to:
+ * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,24 +20,22 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- * 
+ *
  *@END LICENSE
  *
  */
 
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libqt/qt.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/libparallel/parallel.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libqt/qt.h>
 
-#include<libtrans/integraltransform.h>
-#include<libtrans/mospace.h>
+#include<psi4/libtrans/integraltransform.h>
+#include<psi4/libtrans/mospace.h>
 
-#include<libmints/wavefunction.h>
-#include<libmints/mints.h>
-#include<libmints/vector.h>
-#include<libmints/matrix.h>
-#include<../bin/fnocc/blas.h>
+#include<psi4/libmints/wavefunction.h>
+#include<psi4/libmints/vector.h>
+#include<psi4/libmints/matrix.h>
 #include<time.h>
 
 #include"v2rdm_solver.h"
@@ -49,19 +47,17 @@
     #define omp_get_max_threads() 1
 #endif
 
-using namespace boost;
 using namespace psi;
-using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
 
 void v2RDMSolver::InitializeCheckpointFile() {
 
-    boost::shared_ptr<PSIO> psio ( new PSIO() );
+    std::shared_ptr<PSIO> psio ( new PSIO() );
     psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_NEW);
 
-    // scf energy 
+    // scf energy
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"SCF ENERGY",(char*)(&escf_),sizeof(double));
 
     // number of irreps
@@ -100,7 +96,7 @@ void v2RDMSolver::InitializeCheckpointFile() {
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER_REALLY_FULL",
         (char*)energy_to_pitzer_order_really_full,nmo_*sizeof(int));
 
-    // orbital symmetries (energy order) 
+    // orbital symmetries (energy order)
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"SYMMETRY_ENERGY_ORDER",
         (char*)symmetry_energy_order,(nmo_-nfrzv_)*sizeof(int));
 
@@ -108,7 +104,7 @@ void v2RDMSolver::InitializeCheckpointFile() {
 }
 void v2RDMSolver::WriteCheckpointFile() {
 
-    boost::shared_ptr<PSIO> psio ( new PSIO() );
+    std::shared_ptr<PSIO> psio ( new PSIO() );
     psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
 
     // mu
@@ -137,12 +133,12 @@ void v2RDMSolver::WriteCheckpointFile() {
 }
 void v2RDMSolver::ReadFromCheckpointFile() {
 
-    boost::shared_ptr<PSIO> psio ( new PSIO() );
+    std::shared_ptr<PSIO> psio ( new PSIO() );
     psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
 
     double dume;
 
-    // scf energy 
+    // scf energy
     psio->read_entry(PSIF_V2RDM_CHECKPOINT,"SCF ENERGY",(char*)(&dume),sizeof(double));
     if ( fabs(dume - escf_) > 1e-8 ) {
         throw PsiException("CHECKPOINT and current SCF energies do not agree",__FILE__,__LINE__);
@@ -193,7 +189,7 @@ void v2RDMSolver::ReadFromCheckpointFile() {
     psio->read_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER_REALLY_FULL",
         (char*)energy_to_pitzer_order_really_full,nmo_*sizeof(int));
 
-    // orbital symmetries (energy order) 
+    // orbital symmetries (energy order)
     psio->read_entry(PSIF_V2RDM_CHECKPOINT,"SYMMETRY_ENERGY_ORDER",
         (char*)symmetry_energy_order,(nmo_-nfrzv_)*sizeof(int));
 
