@@ -227,7 +227,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->close(PSIF_DCC_QMO,1);
     psio->close(PSIF_DCC_QSO,1);
 
-    delete rowdims;
+    delete[] rowdims;
 
     //F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp1,nso_,&(myCa->pointer()[0][0]),nso_,0.0,tmp2,nso_*nQ_);
     //F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp2,nso_,&(myCa->pointer()[0][0]),nso_,0.0,tmp1,nso_*nQ_);
@@ -280,7 +280,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     }
     psio->close(PSIF_DCC_QMO,1);
 
-    delete rowdims2;
+    delete[] rowdims2;
     free(tmp3);
 
 }
