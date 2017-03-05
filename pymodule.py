@@ -25,7 +25,7 @@
 import psi4
 from psi4 import core
 import psi4.driver.p4util as p4util
-from psi4.driver.procedures import proc_util
+from psi4.driver.procrouting import proc_util
 
 
 def run_v2rdm_casscf(name, **kwargs):
