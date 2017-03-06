@@ -204,6 +204,7 @@ void  v2RDMSolver::common_init(){
     escf_     = reference_wavefunction_->reference_energy();
     nalpha_   = reference_wavefunction_->nalpha();
     nbeta_    = reference_wavefunction_->nbeta();
+    nirrep_   = reference_wavefunction_->nirrep();
     nalphapi_ = reference_wavefunction_->nalphapi();
     nbetapi_  = reference_wavefunction_->nbetapi();
     doccpi_   = reference_wavefunction_->doccpi();
@@ -211,7 +212,6 @@ void  v2RDMSolver::common_init(){
     frzcpi_   = reference_wavefunction_->frzcpi();
     frzvpi_   = reference_wavefunction_->frzvpi();
     nmopi_    = reference_wavefunction_->nmopi();
-    nirrep_   = reference_wavefunction_->nirrep();
     nso_      = reference_wavefunction_->nso();
     nmo_      = reference_wavefunction_->nmo();
     nsopi_    = reference_wavefunction_->nsopi();
