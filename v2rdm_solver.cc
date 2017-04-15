@@ -1714,12 +1714,12 @@ double v2RDMSolver::compute_energy() {
         bpsdp_ATu(ATy, y);
         ATy->add(z);
         ATy->subtract(c);
-        ed = sqrt(ATy->norm());
+        ed = ATy->norm();
 
         // evaluate || Ax - b ||
         bpsdp_Au(Ax, x);
         Ax->subtract(b);
-        ep = sqrt(Ax->norm());
+        ep = Ax->norm();
 
         // don't update mu every iteration
         if ( oiter % mu_update_frequency == 0 && oiter > 0) {
