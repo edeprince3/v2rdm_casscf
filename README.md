@@ -189,4 +189,4 @@ To run the Psi4 plugin v2rdm_casscf:
 
 [2] J. Fosso-Tande, D. R. Nascimento, and A. E. DePrince III, *Mol. Phys.* **114**, 423-430 (2015). "Accuracy of two-particle N-representability conditions for describing different spin states and the singlet-triplet gap in the linear acene series." http://dx.doi.org/10.1080/00268976.2015.1078008
 
-[3] J. Fosso-Tande, T.-S. Nguyen, G. Gidofalvi, and A. E. DePrince III, *J. Chem. Theory Comput.*,  **12**, 2260-2271 (2016).  "Large-scale v2RDM-driven CASSCF methods."  http://dx.doi.org/10.1021/acs.jctc.6b00190
+[3] J. Fosso-Tande, T.-S. Nguyen, G. Gidofalvi, and A. E. DePrince III, *J. Chem. Theory Comput.*,  **12**, 2260-2271 (2016).  "Large-scale variational two-electron reduced-density-matrix-driven complete active space self-consistent field methods."  http://dx.doi.org/10.1021/acs.jctc.6b00190
