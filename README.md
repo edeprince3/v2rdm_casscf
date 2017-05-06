@@ -3,7 +3,7 @@ A variational 2-RDM-driven CASSCF plugin to Psi4
 
 ##OVERVIEW
 
-This plugin to Psi4[1] performs variational two-electron reduced-density-matrix (2-RDM)-driven complete active space self consistent field (CASSCF) computations.  In principle, because  variational 2-RDM (v-2RDM) methods scale only polynomially with system size, v-2RDM-driven CASSCF computations can be performed using active spaces that are larger than can be used within conventional configuration-interaction-driven CASSCF methods.  For more information regarding the performance of the method, see Refs. 2-3.
+This plugin to Psi4[1] performs variational two-electron reduced-density-matrix (2-RDM)-driven complete active space self consistent field (CASSCF) computations.  In principle, because  variational 2-RDM (v2RDM) methods scale only polynomially with system size, vRDM-driven CASSCF computations can be performed using active spaces that are larger than can be used within conventional configuration-interaction-driven CASSCF methods.  For more information regarding the performance of the method, see Refs. 2-3.
 
 ##INSTALLATION
 
@@ -189,4 +189,4 @@ To run the Psi4 plugin v2rdm_casscf:
 
 [2] J. Fosso-Tande, D. R. Nascimento, and A. E. DePrince III, *Mol. Phys.* **114**, 423-430 (2015). "Accuracy of two-particle N-representability conditions for describing different spin states and the singlet-triplet gap in the linear acene series." http://dx.doi.org/10.1080/00268976.2015.1078008
 
-[3] J. Fosso-Tande, T.-S. Nguyen, G. Gidofalvi, and A. E. DePrince III, *J. Chem. Theory Comput.*, accepted (2016).  "Large-scale v2RDM-driven CASSCF methods."  http://dx.doi.org/10.1021/acs.jctc.6b00190
+[3] J. Fosso-Tande, T.-S. Nguyen, G. Gidofalvi, and A. E. DePrince III, *J. Chem. Theory Comput.*,  **12**, 2260-2271 (2016).  "Large-scale v2RDM-driven CASSCF methods."  http://dx.doi.org/10.1021/acs.jctc.6b00190
