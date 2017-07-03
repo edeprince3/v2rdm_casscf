@@ -25,7 +25,8 @@
  *
  */
 
-#include"v2rdm_solver.h"
+#include "v2rdm_solver.h"
+#include <psi4/libpsi4util/process.h>
 #include <psi4/libpsio/psio.hpp>
 #include <psi4/libmints/basisset.h>
 #include <psi4/libmints/sieve.h>
