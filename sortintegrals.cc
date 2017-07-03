@@ -27,6 +27,7 @@
 
 #include <psi4/psi4-dec.h>
 #include <psi4/psifiles.h>
+#include <psi4/libpsi4util/PsiOutStream.h>
 #include <psi4/libiwl/iwl.h>
 #include <psi4/libpsio/psio.hpp>
 #include <psi4/libtrans/integraltransform.h>
@@ -41,11 +42,11 @@ namespace psi{namespace v2rdm_casscf{
 
 void ReadAllIntegrals(iwlbuf *Buf,double*tei,long int nmo) {
 
-  ULI lastbuf;
+  size_t lastbuf;
   Label *lblptr;
   Value *valptr;
 
-  ULI idx, p, q, r, s, pq, rs, pqrs;
+  size_t idx, p, q, r, s, pq, rs, pqrs;
 
   lblptr = Buf->labels;
   valptr = Buf->values;
@@ -57,10 +58,10 @@ void ReadAllIntegrals(iwlbuf *Buf,double*tei,long int nmo) {
     * first buffer (read in when Buf was initialized)
     */
   for (idx=4*Buf->idx; Buf->idx<Buf->inbuf; Buf->idx++) {
-      p = (ULI) lblptr[idx++];
-      q = (ULI) lblptr[idx++];
-      r = (ULI) lblptr[idx++];
-      s = (ULI) lblptr[idx++];
+      p = (size_t) lblptr[idx++];
+      q = (size_t) lblptr[idx++];
+      r = (size_t) lblptr[idx++];
+      s = (size_t) lblptr[idx++];
 
       pq   = INDEX(p,q);
       rs   = INDEX(r,s);
@@ -86,10 +87,10 @@ void ReadAllIntegrals(iwlbuf *Buf,double*tei,long int nmo) {
       lastbuf = Buf->lastbuf;
       for (idx=4*Buf->idx; Buf->idx<Buf->inbuf; Buf->idx++) {
 
-          p = (ULI) lblptr[idx++];
-          q = (ULI) lblptr[idx++];
-          r = (ULI) lblptr[idx++];
-          s = (ULI) lblptr[idx++];
+          p = (size_t) lblptr[idx++];
+          q = (size_t) lblptr[idx++];
+          r = (size_t) lblptr[idx++];
+          s = (size_t) lblptr[idx++];
 
           pq   = INDEX(p,q);
           rs   = INDEX(r,s);

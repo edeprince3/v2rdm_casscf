@@ -34,7 +34,6 @@
 
 #include <psi4/libplugin/plugin.h>
 #include <psi4/psi4-dec.h>
-#include <psi4/libparallel/parallel.h>
 #include <psi4/liboptions/liboptions.h>
 #include <psi4/libpsio/psio.hpp>
 #include <psi4/libqt/qt.h>
