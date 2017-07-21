@@ -47,7 +47,6 @@ endif()
 
 add_psi4_plugin(v2rdm_casscf
     basis.cc
-    blas.cc
     cg_solver.cc
     checkpoint.cc
     d2.cc

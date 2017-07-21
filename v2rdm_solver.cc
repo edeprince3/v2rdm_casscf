@@ -69,6 +69,7 @@
 
 using namespace psi;
 
+using namespace fnocc;
 
 extern "C" {
     void dgeev(char& JOBVL,char& JOBVR,long int& N,double* A,long int& LDA,double* WR,double* WI,

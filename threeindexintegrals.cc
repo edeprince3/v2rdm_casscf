@@ -35,6 +35,7 @@
 #include "blas.h"
 
 using namespace psi;
+using namespace fnocc;
 
 namespace psi { namespace v2rdm_casscf {
 
