@@ -1281,10 +1281,10 @@ void  v2RDMSolver::common_init(){
     outfile->Printf("        Number of frozen virtual orbitals:      %5i\n",nfrzv_);
     outfile->Printf("\n");
 
-    char **labels = reference_wavefunction_->molecule()->irrep_labels();
+    std::vector<std::string> labels = reference_wavefunction_->molecule()->irrep_labels();
     outfile->Printf("        Irrep:           ");
     for (int h = 0; h < nirrep_; h++) {
-        outfile->Printf("%4s",labels[h]);
+        outfile->Printf("%4s",labels[h].c_str());
         if ( h < nirrep_ - 1 ) {
             outfile->Printf(",");
         }
