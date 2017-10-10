@@ -206,8 +206,6 @@ class v2RDMSolver: public Wavefunction{
     int * t2bbboff;
     int * t2aaboff;
     int * t2bbaoff;
-    int * t2abaoff;
-    int * t2baboff;
     int * d3aaaoff;
     int * d3bbboff;
     int * d3aaboff;

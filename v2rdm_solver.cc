@@ -174,8 +174,6 @@ v2RDMSolver::~v2RDMSolver()
         free(t2bbaoff);
         free(t2aaaoff);
         free(t2bbboff);
-        free(t2abaoff);
-        free(t2baboff);
     }
     if ( constrain_d3_ ) {
         free(d3aaaoff);
@@ -599,12 +597,6 @@ void  v2RDMSolver::common_init(){
         for ( int h = 0; h < nirrep_; h++) {
             dimx_ += trip_aab[h]*trip_aab[h]; // T2bba
         }
-        for ( int h = 0; h < nirrep_; h++) {
-            dimx_ += trip_aba[h]*trip_aba[h]; // T2aba
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            dimx_ += trip_aba[h]*trip_aba[h]; // T2bab
-        }
     }
     if ( constrain_d3_ ) {
         for ( int h = 0; h < nirrep_; h++) {
@@ -773,8 +765,6 @@ void  v2RDMSolver::common_init(){
         t2bbaoff = (int*)malloc(nirrep_*sizeof(int));
         t2aaaoff = (int*)malloc(nirrep_*sizeof(int));
         t2bbboff = (int*)malloc(nirrep_*sizeof(int));
-        t2abaoff = (int*)malloc(nirrep_*sizeof(int));
-        t2baboff = (int*)malloc(nirrep_*sizeof(int));
         for (int h = 0; h < nirrep_; h++) {
             t2aaaoff[h] = offset; offset += (trip_aab[h]+trip_aba[h])*(trip_aab[h]+trip_aba[h]); // T2aaa
         }
@@ -786,12 +776,6 @@ void  v2RDMSolver::common_init(){
         }
         for (int h = 0; h < nirrep_; h++) {
             t2bbaoff[h] = offset; offset += trip_aab[h]*trip_aab[h]; // T2bba
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            t2abaoff[h] = offset; offset += trip_aba[h]*trip_aba[h]; // T2aba
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            t2baboff[h] = offset; offset += trip_aba[h]*trip_aba[h]; // T2bab
         }
     }
     if ( constrain_d3_ ) {
@@ -975,12 +959,6 @@ void  v2RDMSolver::common_init(){
         }
         for (int h = 0; h < nirrep_; h++) {
             nconstraints_ += trip_aab[h]*trip_aab[h]; // T2bba
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            nconstraints_ += trip_aba[h]*trip_aba[h]; // T2aba
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            nconstraints_ += trip_aba[h]*trip_aba[h]; // T2bab
         }
     }
     if ( constrain_d3_ ) {
@@ -1175,12 +1153,6 @@ void  v2RDMSolver::common_init(){
         }
         for (int h = 0; h < nirrep_; h++) {
             dimensions_.push_back(trip_aab[h]); // T2bba
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            dimensions_.push_back(trip_aba[h]); // T2aba
-        }
-        for (int h = 0; h < nirrep_; h++) {
-            dimensions_.push_back(trip_aba[h]); // T2bab
         }
     }
     if ( constrain_d3_ ) {
@@ -1388,8 +1360,6 @@ void  v2RDMSolver::common_init(){
             nt2 += (trip_aab[h]+trip_aba[h]) * (trip_aab[h]+trip_aba[h]); // T2bbb
             nt2 += trip_aab[h] * trip_aab[h]; // T2aab
             nt2 += trip_aab[h] * trip_aab[h]; // T2bba
-            nt2 += trip_aba[h] * trip_aba[h]; // T2aba
-            nt2 += trip_aba[h] * trip_aba[h]; // T2bab
 
             if ( trip_aab[h]+trip_aaa[h] > maxgem ) {
                 maxgem = trip_aab[h]+trip_aaa[h];
@@ -2551,12 +2521,6 @@ void v2RDMSolver::BuildConstraints(){
                 }
             }
             offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
-            //for(int i = 0; i < trip_aab[h]; i++){
-            //    for(int j = 0; j < trip_aab[h]; j++){
-            //        b_p[offset + i*trip_aab[h]+j] = 0.0;
-            //    }
-            //}
-            //offset += trip_aab[h]*trip_aab[h];
         }
         // T2bbb
         for (int h = 0; h < nirrep_; h++) {
@@ -2566,12 +2530,6 @@ void v2RDMSolver::BuildConstraints(){
                 }
             }
             offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
-            //for(int i = 0; i < trip_aaa[h]; i++){
-            //    for(int j = 0; j < trip_aaa[h]; j++){
-            //        b_p[offset + i*trip_aaa[h]+j] = 0.0;
-            //    }
-            //}
-            //offset += trip_aaa[h]*trip_aaa[h];
         }
         // T2aab
         for (int h = 0; h < nirrep_; h++) {
@@ -2590,24 +2548,6 @@ void v2RDMSolver::BuildConstraints(){
                 }
             }
             offset += trip_aab[h]*trip_aab[h];
-        }
-        // T2aba
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aba[h]; i++){
-                for(int j = 0; j < trip_aba[h]; j++){
-                    b_p[offset + i*trip_aba[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aba[h]*trip_aba[h];
-        }
-        // T2bab
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aba[h]; i++){
-                for(int j = 0; j < trip_aba[h]; j++){
-                    b_p[offset + i*trip_aba[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aba[h]*trip_aba[h];
         }
     }
     if ( constrain_d3_ ) {
