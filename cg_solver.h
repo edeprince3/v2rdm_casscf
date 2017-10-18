@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
@@ -30,9 +30,10 @@
 
 #include<psi4/libmints/vector.h>
 
-namespace psi{
 
-typedef void (*CallbackType)(long int,SharedVector,SharedVector,void *);
+namespace psi{ 
+
+typedef void (*CallbackType)(long int,SharedVector,SharedVector,void *);  
 
 class CGSolver {
 public:
@@ -40,15 +41,15 @@ public:
     CGSolver(long int n);
     ~CGSolver();
     void preconditioned_solve(long int n,
-               std::shared_ptr<Vector> Ap,
-               std::shared_ptr<Vector>  x,
-               std::shared_ptr<Vector>  b,
-               std::shared_ptr<Vector>  precon,
+               SharedVector Ap,
+               SharedVector  x,
+               SharedVector  b,
+               SharedVector  precon,
                CallbackType function, void * data);
     void solve(long int n,
-               std::shared_ptr<Vector> Ap,
-               std::shared_ptr<Vector>  x,
-               std::shared_ptr<Vector>  b,
+               SharedVector Ap,
+               SharedVector  x,
+               SharedVector  b,
                CallbackType function, void * data);
 
     int total_iterations();
@@ -61,9 +62,9 @@ private:
     int    iter_;
     int    cg_max_iter_;
     double cg_convergence_;
-    std::shared_ptr<Vector> p;
-    std::shared_ptr<Vector> r;
-    std::shared_ptr<Vector> z;
+    SharedVector p;
+    SharedVector r;
+    SharedVector z;
 
 };
 

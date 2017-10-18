@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -32,6 +32,7 @@
 #include<stdlib.h>
 #include<math.h>
 
+#include <psi4/libiwl/iwl.h>
 #include <psi4/libplugin/plugin.h>
 #include <psi4/psi4-dec.h>
 #include <psi4/liboptions/liboptions.h>
@@ -41,7 +42,6 @@
 #include <psi4/libmints/wavefunction.h>
 #include <psi4/libmints/matrix.h>
 #include <psi4/libmints/vector.h>
-
 
 // greg
 #include"fortran.h"
@@ -61,7 +61,7 @@ namespace psi{ namespace v2rdm_casscf{
 
 class v2RDMSolver: public Wavefunction{
   public:
-    v2RDMSolver(std::shared_ptr<psi::Wavefunction> reference_wavefunction,Options & options);
+    v2RDMSolver(SharedWavefunction reference_wavefunction,Options & options);
     ~v2RDMSolver();
     void common_init();
     double compute_energy();
@@ -93,9 +93,6 @@ class v2RDMSolver: public Wavefunction{
 
     /// keep d3 positive semidefinite and constrain D3->D2 mapping?
     bool constrain_d3_;
-
-    /// keep d4 positive semidefinite and constrain D4->D3 mapping?
-    bool constrain_d4_;
 
     /// constrain spin?
     bool constrain_spin_;
@@ -161,7 +158,7 @@ class v2RDMSolver: public Wavefunction{
     double * Qmo_;
 
     /// grab one-electron integrals (T+V) in MO basis
-    std::shared_ptr<Matrix> GetOEI();
+    SharedMatrix GetOEI();
 
     /// DIIS stuff
     void DIIS(double*c,long int nvec,int replace_diis_iter);
@@ -210,11 +207,6 @@ class v2RDMSolver: public Wavefunction{
     int * d3bbboff;
     int * d3aaboff;
     int * d3bbaoff;
-    int * d4aaaaoff;
-    int * d4aaaboff;
-    int * d4aabboff;
-    int * d4bbbaoff;
-    int * d4bbbboff;
 
     /// convergence in primal energy
     double e_convergence_;
@@ -255,6 +247,7 @@ class v2RDMSolver: public Wavefunction{
     int *** ibas_aa_sym;
     int *** ibas_00_sym;
     int *** ibas_full_sym;
+    int *** ibas_really_full_sym;
 
     /// triplets for each irrep:
     std::vector < std::vector < std::tuple<int,int,int> > > triplets;
@@ -268,18 +261,6 @@ class v2RDMSolver: public Wavefunction{
     int **** ibas_aab_sym;
     int **** ibas_aba_sym;
 
-    /// quartets for each irrep:
-    std::vector < std::vector < std::tuple<int,int,int,int> > > quartets;
-    int * quartet_aaaa;
-    int * quartet_aaab;
-    int * quartet_aabb;
-    int  ***  bas_aaaa_sym;
-    int  ***  bas_aaab_sym;
-    int  ***  bas_aabb_sym;
-    int ***** ibas_aaaa_sym;
-    int ***** ibas_aaab_sym;
-    int ***** ibas_aabb_sym;
-
     void PrintHeader();
 
     /// grab one- and two-electron integrals
@@ -287,6 +268,9 @@ class v2RDMSolver: public Wavefunction{
 
     /// read two-electron integrals from disk
     void GetTEIFromDisk();
+
+    // read teis from disk:
+    void ReadAllIntegrals(iwlbuf *Buf);
 
     /// grab a specific two-electron integral
     double TEI(int i, int j, int k, int l, int h);
@@ -313,7 +297,6 @@ class v2RDMSolver: public Wavefunction{
     void T2_constraints_Au_slow(SharedVector A,SharedVector u);
     void T2_tilde_constraints_Au(SharedVector A,SharedVector u);
     void D3_constraints_Au(SharedVector A,SharedVector u);
-    void D4_constraints_Au(SharedVector A,SharedVector u);
 
     void bpsdp_ATu(SharedVector A, SharedVector u);
     void bpsdp_ATu_slow(SharedVector A, SharedVector u);
@@ -327,7 +310,6 @@ class v2RDMSolver: public Wavefunction{
     void T2_constraints_ATu_slow(SharedVector A,SharedVector u);
     void T2_tilde_constraints_ATu(SharedVector A,SharedVector u);
     void D3_constraints_ATu(SharedVector A,SharedVector u);
-    void D4_constraints_ATu(SharedVector A,SharedVector u);
 
     /// SCF energy
     double escf_;
@@ -356,8 +338,6 @@ class v2RDMSolver: public Wavefunction{
     void NaturalOrbitals();
     void MullikenPopulations();
 
-    // read teis from disk:
-    void ReadIntegrals(double * tei,long int nmo);
 
     // multiplicity
     int multiplicity_;
@@ -373,12 +353,19 @@ class v2RDMSolver: public Wavefunction{
     double * d2_plus_core_sym_;
     int d2_plus_core_dim_;
 
-    /// full space D1, blocked by symmetry
-    double * d1_plus_core_sym_;
-    int d1_plus_core_dim_;
+    /// active space spatial D2, blocked by symmetry
+    double * d2_act_spatial_sym_;
+    int d2_act_spatial_dim_;
+
+    /// active space spatial D1, blocked by symmetry
+    double * d1_act_spatial_sym_;
+    int d1_act_spatial_dim_;
 
     /// unpack active-space density into full-space density
     void UnpackDensityPlusCore();
+
+    /// pack active-space spin-blocked density into spatial density
+    void PackSpatialDensity();
 
     /// repack rotated full-space integrals into active-space integrals
     void RepackIntegrals();
@@ -390,6 +377,9 @@ class v2RDMSolver: public Wavefunction{
     /// function to rotate orbitals
     void RotateOrbitals();
 
+    /// function to exponentiate step vector
+    void exponentiate_step(double * X);
+
     double * orbopt_transformation_matrix_;
     double * orbopt_data_;
     char * orbopt_outfile_;
@@ -398,14 +388,14 @@ class v2RDMSolver: public Wavefunction{
     /// are we using 3-index integrals?
     bool is_df_;
 
-    /// initialize a checkpoint file
-    void InitializeCheckpointFile();
-
-    /// write current solution and integrals to a checkpoint file
+    /// write primal, dual, and orbitals to a checkpoint file
     void WriteCheckpointFile();
 
-    /// read solution and integrals from a checkpoint file
+    /// read primal, dual, and orbitals from a checkpoint file
     void ReadFromCheckpointFile();
+
+    /// read orbitals from a checkpoint file
+    void ReadOrbitalsFromCheckpointFile();
 
     /// wall time for microiterations
     double iiter_time_;
@@ -440,6 +430,9 @@ class v2RDMSolver: public Wavefunction{
     /// write active 3RDM to disk
     void WriteActive3PDM();
 
+    /// write molden file
+    void WriteMoldenFile();
+
     /// read 3RDM from disk
     void Read3PDM();
 
@@ -451,6 +444,7 @@ class v2RDMSolver: public Wavefunction{
 
     void OrbitalLagrangian();
     void DualD1Q1();
+    void PrintDual();
 
     /// memory available beyond what is allocated for v2RDM-CASSCF
     long int available_memory_;
@@ -459,13 +453,13 @@ class v2RDMSolver: public Wavefunction{
     void UpdatePrimal();
 
     /// transform a four-index quantity from one basis to another
-    void TransformFourIndex(double * inout, double * tmp, std::shared_ptr<Matrix>trans);
+    void TransformFourIndex(double * inout, double * tmp, SharedMatrix trans);
 
     /// update ao/mo transformation matrix after orbital optimization
     void UpdateTransformationMatrix();
 
     /// mo-mo transformation matrix
-    std::shared_ptr<Matrix> newMO_;
+    SharedMatrix newMO_;
 };
 
 }}
