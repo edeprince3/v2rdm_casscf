@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -46,7 +46,8 @@ module focas_transform_driver
       if ( df_vars_%use_df_teints == 0 ) then
         error = transform_teints(int2)
       else
-        error = transform_teints_df(int2)
+!        error = gpu_transform_teints_df(int2)
+         error = transform_teints_df(int2)
       end if
       if ( error /= 0 ) call abort_print(31)
 
@@ -57,10 +58,156 @@ module focas_transform_driver
       return
     end subroutine transform_driver
 
+!    integer function gpu_transform_teints_df(int2)
+!      ! simple function to vectorize the transformation matrix blocks
+!      ! and call a c function to transform df 3-index integrals
+!      implicit none
+!
+!      real(wp) :: int2(:)
+!      real(wp), allocatable :: U_vec(:)
+!
+!      integer :: U_dim,U_ind
+!      integer :: sym_L,L,R
+!
+!      U_dim = 0
+!
+!      do sym_L = 1 , nirrep_
+!
+!        U_dim = U_dim + trans_%nmopi(sym_L)*trans_%nmopi(sym_L)
+!
+!      end do
+!
+!      allocate(U_vec(U_dim))
+!
+!      U_ind = 0
+!
+!      U_vec = 0.0_wp
+!
+!      ! collect transformation matrices in vectorized format
+!      ! column major indexing (fortran) : U(L,R)=U_vec(U_ind)
+!      ! row    major indexing (c)       : I(R,L)=U_vec(U_ind)
+!
+!      do sym_L = 1 , nirrep_
+!
+!        do R = 1 , trans_%nmopi(sym_L)
+!
+!          do L = 1 , trans_%nmopi(sym_L)
+!
+!            U_ind = U_ind + 1
+!
+!            U_vec(U_ind) = trans_%u_irrep_block(sym_L)%val(L,R)
+!
+!          end do
+!
+!        end do
+!
+!      end do
+!
+!      call transform_3index_teints_driver(int2,U_vec,trans_%nmopi,nirrep_,df_vars_%nQ)
+!
+!      deallocate(U_vec)
+!
+!      gpu_transform_teints_df = 0
+!
+!      return
+!
+!    end function gpu_transform_teints_df
+
+
     subroutine allocate_transformation_matrices()
       implicit none
 
       integer :: nmo_i_sym,i_sym,i_class
+      integer :: ndoc,nact,next
+
+      ! figure out which blocks of U must be equal to the identity matrix
+      allocate(trans_%U_eq_I(nirrep_))
+
+      trans_%U_eq_I = 0
+
+      do i_sym = 1 , nirrep_
+
+        ! # of active doubly occupied, active, and external orbitals
+
+        ndoc = ndocpi_(i_sym) - nfzcpi_(i_sym)
+        nact = nactpi_(i_sym)
+        next = nextpi_(i_sym)
+
+        if ( ndocpi_(i_sym) + nact + next == 1 ) then
+
+          trans_%U_eq_I(i_sym) = 1
+
+          cycle
+
+        end if    
+ 
+        if ( ndoc == 0 ) then
+
+          if ( next == 0 ) then
+
+            if ( nact == 0 ) then
+
+              ! D = A = E = 0
+
+              trans_%U_eq_I(i_sym) = 1
+
+            else
+
+              ! D = E = 0 // A/=0 (possibly A-A rotations)
+
+              if ( include_aa_rot_ == 0 ) trans_%U_eq_I(i_sym) = 1
+
+            end if
+
+          else
+
+            if ( nact == 0 ) then
+
+              ! D = A = 0 // E/=0
+
+              trans_%U_eq_I(i_sym) = 1
+
+            else
+
+              ! D = 0 // A & E /= 0 (A-E rotations) 
+
+            end if
+
+          end if
+
+        else
+
+          if ( next == 0 ) then
+
+            if ( nact == 0 ) then
+
+              ! A = E = 0 // D/=0 
+
+              trans_%U_eq_I(i_sym) = 1
+
+            else
+
+              ! E = 0 // D & A /= 0 (D-A rotations)
+
+            end if
+
+          else
+
+            if ( nact == 0 ) then
+
+              ! A = 0 // D & E /=0 (D-E rotations) 
+
+            else
+
+              ! D & A & E /= 0 (D-A, D-E, A-E and possibly A-A rotations)
+
+            end if
+
+          end if
+
+        end if
+
+      end do
 
       ! figure out the total number of mos per irrep
 
@@ -174,6 +321,7 @@ module focas_transform_driver
     subroutine deallocate_transformation_matrices()
       implicit none
       integer :: i_sym
+      if (allocated(trans_%U_eq_I))             deallocate(trans_%U_eq_I)
       if (allocated(trans_%npairpi))            deallocate(trans_%npairpi)
       if (allocated(trans_%nmopi))              deallocate(trans_%nmopi)
       if (allocated(trans_%offset))             deallocate(trans_%offset)

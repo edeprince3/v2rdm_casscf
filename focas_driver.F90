@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -38,7 +38,7 @@ module focas_driver
   contains
 
   subroutine focas_optimize(mo_coeff,int1,nnz_int1,int2,nnz_int2,den1,nnz_den1,den2,nnz_den2,    &
-                           & ndocpi,nactpi,nextpi,nirrep,orbopt_data,fname)
+                           & nfzcpi,ndocpi,nactpi,nextpi,nirrep,orbopt_data,fname)
  
     ! integer input
     integer, intent(in)     :: nirrep          ! number of irreps in point group
@@ -46,6 +46,7 @@ module focas_driver
     integer(ip), intent(in) :: nnz_int2        ! total number of nonzero 2-e integrals
     integer, intent(in)     :: nnz_den1        ! total number of nonzero 1-e density elements
     integer, intent(in)     :: nnz_den2        ! total number of nonzero 2-e density elements
+    integer, intent(in)     :: nfzcpi(nirrep)  ! number of frozen (not optimized) doubly occupied orbitals per irrep
     integer, intent(in)     :: ndocpi(nirrep)  ! number of doubly occupied orbitals per irrep (includes frozen doubly occupied orbitals)
     integer, intent(in)     :: nactpi(nirrep)  ! number of active orbitals per irrep
     integer, intent(in)     :: nextpi(nirrep)  ! number of virtual orbitals per irrep (excluding forzen virtual orbitals) 
@@ -65,7 +66,7 @@ module focas_driver
     real(wp), parameter     :: r_decrease_fac=0.70_wp  ! factor by which to reduce the step size 
 
     ! timing variables
-    real(wp) :: t0,t1,t_ene,t_gh,t_exp,t_trans
+    real(wp) :: t0(2),t1(2),t_ene,t_gh,t_exp,t_wall_trans,t_cpu_trans,t_wall_aux,t_cpu_aux
 
     ! iteration variables
     real(wp) :: current_energy,last_energy,delta_energy,gradient_norm_tolerance,delta_energy_tolerance
@@ -73,8 +74,9 @@ module focas_driver
     integer  :: i,iter,max_iter,error,converged
    
     ! variables for trust radius
-    integer :: evaluate_gradient,reject 
-    real(wp) :: step_size,step_size_update,step_size_factor,e_new,e_init,de_ratio
+    integer :: evaluate_gradient,reject
+    real(wp) :: step_size,step_size_update,step_size_factor,e_new,e_init,de_ratio,e_tmp 
+    character :: reject_char(1)
 
     ! other variables
     logical :: fexist
@@ -90,11 +92,6 @@ module focas_driver
     max_iter                    = int(orbopt_data(9)) 
     df_vars_%use_df_teints      = int(orbopt_data(10))
 
-    ! orbitals should be sorted accoring to 
-    ! 1) class (doubly occupied, active, virtual)
-    ! 2) within each class, orbitals should be sorted accoring to irrep
-    ! 3) within each class and irrep, orbitals are sorted according to energy
-
     if ( log_print_ == 1 ) then
       inquire(file=fname,exist=fexist)
       if (fexist) then
@@ -105,16 +102,18 @@ module focas_driver
     endif
 
     ! calculate the total number of orbitals in space
+    nfzc_tot_ = sum(nfzcpi)
     ndoc_tot_ = sum(ndocpi)
     nact_tot_ = sum(nactpi)
     next_tot_ = sum(nextpi)
     nmo_tot_  = ndoc_tot_+nact_tot_+next_tot_
+    ngem_tot_ = nmo_tot_ * ( nmo_tot_ + 1 ) / 2
 
     ! allocate indexing arrays
     call allocate_indexing_arrays(nirrep)
 
     ! determine integral/density addressing arrays
-    call setup_indexing_arrays(ndocpi,nactpi,nextpi)
+    call setup_indexing_arrays(nfzcpi,ndocpi,nactpi,nextpi)
 
     ! allocate transformation matrices
     call allocate_transformation_matrices() 
@@ -145,15 +144,9 @@ module focas_driver
     ! allocate intermediate matrices for DF integrals
     if ( df_vars_%use_df_teints == 1 ) call allocate_qint()
 
-!    ! print information
-!    if ( log_print_ == 1 ) call print_info()    
-
     ! **********************************************************************************
     ! *** at this point, everything is allocated and we are ready to do the optimization
     ! **********************************************************************************
-
-!    allocate(P(rot_pair_%n_tot))
-!    P = 0.0_wp
 
     last_energy             = 0.0_wp
     iter                    = 0
@@ -169,12 +162,12 @@ module focas_driver
 
       write(fid_,*)
 
-      write(fid_,'((a4,1x),(a20,1x),4(a10,1x),1(a4,1x),(a3,1x),(a9,1x),(a7,1x),(a10,1x),(a8,1x),a6)') &
-                & 'iter','E(k)','dE','dE_pred','||g||','max|g|','type','sym','(i,j)','n_large',       &
-                & '|g_large|','step','reject'
-  
-      write(fid_,'(a)')('---------------------------------------------------------------------&
-                       & -----------------------------------------------------')
+      write(fid_,'((a4,1x),(a16,1x),(a10),(2x),2(a10,1x),1(a4,1x),(a3,1x),(a9,1x),(a8,1x),2(a11,1x),2(a11,1x))') &
+                & 'iter','E(k)','dE','||g||','max|g|','type','sym','(i,j)','R_step',     &
+                & 'twall_trans','tcpu_trans','twall_aux','tcpu_other'
+
+      write(fid_,'(a)')('-----------------------------------------------------------------&
+                       & -----------------------------------------------------------------')
 
     end if
 
@@ -182,28 +175,32 @@ module focas_driver
 
       if ( evaluate_gradient == 1 ) then
 
-        ! calculate the current energy  
-        call compute_energy(int1,int2,den1,den2)
-        e_init = e_total_ 
-
-        ! save initial energy
-        if ( iter == 0 ) initial_energy = e_init 
+        t0=timer()
 
         ! construct gradient (temporary Fock matrices allocated/deallocated within routine)
         call orbital_gradient(int1,int2,den1,den2)
-     
-!        call print_vector(orbital_gradient_)
- 
+
+        t1=timer()
+        t_wall_aux = t1(1) - t0(1)
+        t_cpu_aux  = t1(2) - t0(2)
+
+        ! calculate current energy
+        e_init = compute_energy_tindex(fock_i_%occ,fock_a_%occ,q_,z_,int1,den1)   
+
+        ! save initial energy
+        if ( iter == 0 ) initial_energy = e_init
+
         ! calculate diagonal Hessian elements
         call diagonal_hessian(q_,z_,int2,den1,den2)
-
-!        call print_vector(orbital_hessian_)
 
         ! calculate approximate energy change
         delta_energy_approximate = compute_approximate_de()
 
         ! calculate -g/H
         call precondition_step(kappa_)
+
+        ! zero out frozen doubly occupied orbitals
+        if ( nfzc_tot_ > 0 ) call zero_frozen_docc_vector_elements(kappa_)
 
         ! calculate approximate energy change
         delta_energy_approximate = compute_approximate_de()
@@ -216,9 +213,15 @@ module focas_driver
       ! compute transformation matrix
       call compute_exponential(kappa_)
 
+      t0 = timer() 
+
       ! transform the integrals
       call transform_driver(int1,int2,mo_coeff)
-      
+
+      t1 = timer()     
+      t_wall_trans = t1(1) - t0(1)
+      t_cpu_trans  = t1(2) - t0(2)
+
       ! calculate the current energy  
       call compute_energy(int1,int2,den1,den2)
       e_new = e_total_ 
@@ -226,17 +229,27 @@ module focas_driver
       ! calculate energy change
       delta_energy = e_new - e_init
 
-      reject = 0 
-      if ( delta_energy > 0 ) reject = 1
+      reject      = 0 
+      reject_char = ' '
+
+      if ( delta_energy > 0 ) then
+        reject      = 1
+        reject_char = '*'
+      end if
 
       if ( log_print_ == 1 ) then  
 
-        write(fid_,'((i4,1x),(f20.13,1x),4(es10.3,1x),(a4,1x),(i3,1x),2(i4,1x),(i7,1x),                &
-            & (es10.3,1x),(f8.5,1x),i6)')iter,e_new,delta_energy,delta_energy_approximate,grad_norm_, &
-            & max_grad_val_,g_element_type_(max_grad_typ_),max_grad_sym_,                             &
-            & trans_%class_to_irrep_map(max_grad_ind_),n_grad_large_,norm_grad_large_,step_size,reject
+        write(fid_,'((i4,1x),(f16.9,1x),(es10.3),(a1,1x),2(es10.3,1x),(a4,1x),(i3,1x), &
+            & 2(i4,1x),(f8.5,1x),2(f11.5,1x),2(f11.5,1x))')iter,e_new,delta_energy,    &
+            & reject_char,grad_norm_,max_grad_val_,g_element_type_(max_grad_typ_),     &
+            & max_grad_sym_,trans_%class_to_irrep_map(max_grad_ind_),step_size,        &
+            & t_wall_trans,t_cpu_trans,t_wall_aux,t_cpu_aux
 
       endif
+
+      t_wall_aux   = 0.0_wp
+      t_cpu_trans  = 0.0_wp
+      t_wall_trans = 0.0_wp 
 
       de_ratio = delta_energy/delta_energy_approximate
 
@@ -283,8 +296,8 @@ module focas_driver
 
     if ( log_print_ == 1 ) then
 
-      write(fid_,'(a)')('---------------------------------------------------------------------&
-                       & -----------------------------------------------------')
+      write(fid_,'(a)')('-----------------------------------------------------------------&
+                       & -----------------------------------------------------------------')
 
       if ( converged == 1 ) then
         write(fid_,'(a)')'gradient descent converged'
@@ -320,12 +333,6 @@ module focas_driver
     orbopt_data(13) = last_energy - initial_energy
     orbopt_data(14) = real(converged,kind=wp)
 
-!    stop
-
-    ! debug
-    !call compute_energy(int1,int2,den1,den2)
-    !write(*,*)'opt',e_total_
-
     ! deallocate indexing arrays
     call deallocate_indexing_arrays()
 
@@ -338,6 +345,7 @@ module focas_driver
     if ( log_print_ == 1 ) close(fid_)
 
     return
+
   end subroutine focas_optimize
 
   subroutine deallocate_final()
@@ -348,7 +356,7 @@ module focas_driver
     if (allocated(kappa_))                   deallocate(kappa_)
     if (allocated(rot_pair_%pair_offset))    deallocate(rot_pair_%pair_offset)
     if (allocated(df_vars_%class_to_df_map)) deallocate(df_vars_%class_to_df_map)
-    if (allocated(df_vars_%noccgempi))       deallocate(df_vars_%noccgempi)
+!    if (allocated(df_vars_%noccgempi))       deallocate(df_vars_%noccgempi)
     call deallocate_transformation_matrices()
     call deallocate_hessian_data()
     return
@@ -392,6 +400,9 @@ module focas_driver
     ! determine the number of auxiliary function 
     df_vars_%nQ  = nnz_int2/npair
 
+    ! stride of Q
+    df_vars_%Qstride = ngem_tot_ 
+
     ! allocate and determine mapping array from class order to df order
     allocate(df_vars_%class_to_df_map(nmo_tot_))
 
@@ -419,8 +430,8 @@ module focas_driver
 
     end if
 
-    allocate(df_vars_%noccgempi(nirrep_))
-    df_vars_%noccgempi=dens_%ngempi
+!    allocate(df_vars_%noccgempi(nirrep_))
+!    df_vars_%noccgempi=dens_%ngempi
 
     df_map_setup = 0
 
@@ -431,11 +442,11 @@ module focas_driver
 
     implicit none
 
-    real(wp) :: compute_approximate_de,ddot
+    real(wp) :: compute_approximate_de
 
     integer  :: i
 
-    compute_approximate_de= 2.0_wp * ddot(rot_pair_%n_tot,orbital_gradient_,1,kappa_,1)
+    compute_approximate_de= 2.0_wp * my_ddot(rot_pair_%n_tot,orbital_gradient_,1,kappa_,1)
 
     do i = 1 , rot_pair_%n_tot
 
@@ -591,15 +602,17 @@ module focas_driver
     allocate(first_index_(nirrep_,3))
     allocate(last_index_(nirrep_,3))
     allocate(orb_sym_scr_(nmo_tot_))
+    allocate(nfzcpi_(nirrep_))
     allocate(ndocpi_(nirrep_))
     allocate(nactpi_(nirrep_))
     allocate(nextpi_(nirrep_))
     first_index_ = 0
     last_index_  = 0
     orb_sym_scr_ = 0
+    nfzcpi_      = 0
     ndocpi_      = 0
     nactpi_      = 0
-    nextpi_      =0
+    nextpi_      = 0
     return 
   end subroutine allocate_indexing_arrays
 
@@ -619,6 +632,7 @@ module focas_driver
     if (allocated(first_index_)) deallocate(first_index_)
     if (allocated(last_index_))  deallocate(last_index_)
     if (allocated(orb_sym_scr_)) deallocate(orb_sym_scr_)
+    if (allocated(nfzcpi_))      deallocate(nfzcpi_)
     if (allocated(ndocpi_))      deallocate(ndocpi_)
     if (allocated(nactpi_))      deallocate(nactpi_)
     if (allocated(nextpi_))      deallocate(nextpi_)    
@@ -637,9 +651,9 @@ module focas_driver
     return
   end subroutine deallocate_indexing_arrays_help
 
-  subroutine setup_indexing_arrays(ndocpi,nactpi,nextpi)
+  subroutine setup_indexing_arrays(nfzcpi,ndocpi,nactpi,nextpi)
     implicit none
-    integer, intent(in) :: ndocpi(nirrep_),nactpi(nirrep_),nextpi(nirrep_)
+    integer, intent(in) :: nfzcpi(nirrep_),ndocpi(nirrep_),nactpi(nirrep_),nextpi(nirrep_)
     integer :: irrep,oclass,i,j,i_sym,j_sym,ij_sym
     ! ** Figure out index of the first orbital in each class and each irrep
     ! doubly occupied orbitals
@@ -671,6 +685,7 @@ module focas_driver
       last_index_(irrep,3) = first_index_(irrep,3) + nextpi(irrep)-1
     end do
     ! determine number of orbitals per irrep for each class
+    nfzcpi_ = nfzcpi
     ndocpi_ = last_index_(:,1) - first_index_(:,1) + 1
     nactpi_ = last_index_(:,2) - first_index_(:,2) + 1
     nextpi_ = last_index_(:,3) - first_index_(:,3) + 1

@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -36,18 +36,22 @@ module focas_transform_teints
 
       real(wp) :: int2(:)
 
+      type sym_R_info
+        type(matrix_block), allocatable :: sym_L(:)
+      end type sym_R_info
+
       type tmp_matrix
-        real(wp), allocatable :: int_tmp(:)
         real(wp), allocatable :: tmp(:,:)
-        real(wp), allocatable :: mat(:,:)
+        type(sym_R_info), allocatable :: sym_R(:)
       end type tmp_matrix
 
       type(tmp_matrix), allocatable :: aux(:)
 
-      integer :: i_thread,Q,row,col,row_sym,col_sym,max_nmopi
-      integer :: col_min,col_max,row_min,row_max,ncol,nrow,row_off,col_off
-      integer :: first_Q(nthread_use_),last_Q(nthread_use_)
-      integer(ip) :: int_ind,nQ
+      integer :: i_thread,sym_L,sym_R,L_eq_I,R_eq_I,L,R,max_nmopi
+      integer :: nmo_R,nmo_L,R_copy
+      integer :: nfz_R,nac_R,nfz_L,nac_L
+      integer(ip) :: first_Q(nthread_use_),last_Q(nthread_use_)
+      integer(ip) :: int_ind,nQ,Q
 
       nQ                  = int(df_vars_%nQ,kind=ip)
 
@@ -57,12 +61,8 @@ module focas_transform_teints
 
       transform_teints_df = setup_Q_bounds()
 
-      ! loop over threads
-
-#ifdef OMP
 !$omp parallel shared(first_Q,last_Q,int2,df_vars_,nirrep_) num_threads(nthread_use_)
-!$omp do private(i_thread,Q,col,row,int_ind,col_sym,row_sym,col_min,col_max,row_min,row_max,ncol,nrow,col_off,row_off)
-#endif
+!$omp do private(i_thread,Q,int_ind,sym_R,sym_L,nmo_R,nmo_L,L,R,R_eq_I,L_eq_I,R_copy)
 
       do i_thread = 1 , nthread_use_
 
@@ -70,127 +70,175 @@ module focas_transform_teints
  
         do Q = first_Q(i_thread) , last_Q(i_thread)
 
-          ! initialize temporary matrix
-
-          aux(i_thread)%mat = 0.0_wp
-
           ! *************************************************************
           ! *** GATHER ( only LT row > col elements are accessed in int2)
           ! *************************************************************
 
-          ! loop over column indeces
+!          int_ind =  int(Q,kind=ip)  
+          int_ind = ( ( Q - 1 ) * int(ngem_tot_,kind = ip) ) + 1
 
-          int_ind = int(Q,kind=ip)
+          do sym_L = 1 , nirrep_
 
-          do col = 1 , nmo_tot_
+            nmo_L = trans_%nmopi(sym_L)
 
-            ! loop over row indeces
- 
-            do row = 1 , col
+            do L = 1 , nmo_L
 
-              ! save off-diagonal elements
- 
-              aux(i_thread)%mat(col,row) = int2(int_ind)
+              do sym_R = 1 , sym_L - 1
 
-              int_ind = int_ind + nQ
+                nmo_R = trans_%nmopi(sym_R)
 
-            end do ! end row loop 
+                do R = 1 , nmo_R
 
-          end do ! end col loop
+                  aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val(L,R)= int2(int_ind)
+
+                  int_ind = int_ind + 1
+
+                end do
+
+              end do
+
+              do R = 1 , L
+
+                aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val(R,L) = int2(int_ind)
+
+                int_ind = int_ind + 1
+
+              end do
+
+            end do
+
+          end do
 
           ! **************************************************************
-          ! *** TRANSFORM ( only lower triangular blocks are transformed )
+          ! *** TRANSFORM (only lower triangular blocks are transformed )
           ! **************************************************************
 
-          ! loop over orbital symmetries in the columns
+          ! ***********************************************************
+          ! THIS CODE ONLY TAKES ANDVANTAGE OF PARTIAL SPARSE STRUCTURE 
+          ! WHEN EITHER L==I AND/OR R==I
+          ! ***********************************************************
 
-          do col_sym = 1 , nirrep_
- 
-            ncol    = trans_%nmopi(col_sym)
-  
-            if ( ncol == 0 ) cycle
+          do sym_R = 1 , nirrep_
 
-            col_off = trans_%offset(col_sym)
+            nmo_R    = trans_%nmopi(sym_R)
 
-            col_min = col_off + 1
-            
-            col_max = col_off + ncol
+            R_eq_I   = trans_%U_eq_I(sym_R)
 
-            ! symmetrize the diagonal block since only the LT elements were saved in the above gather
+            if ( nmo_R == 0 ) cycle
 
-            call symmetrize_diagonal_block(aux(i_thread)%mat(col_min:col_max,col_min:col_max),ncol)
+            if ( R_eq_I == 0 ) then
 
-!#ifdef BLAS
-            call dgemm('N','N',ncol,ncol,ncol,1.0_wp,aux(i_thread)%mat(col_min:col_max,col_min:col_max),ncol,&
-                     & trans_%u_irrep_block(col_sym)%val,ncol,0.0_wp,aux(i_thread)%tmp,max_nmopi)
-            call dgemm('T','N',ncol,ncol,ncol,1.0_wp,trans_%u_irrep_block(col_sym)%val,ncol, &
-                     & aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%mat(col_min:col_max,col_min:col_max),ncol)
-!#else
-!            aux(i_thread)%tmp(1:ncol,1:ncol) = matmul(aux(i_thread)%mat(col_min:col_max,col_min:col_max),&
-!                                             & trans_%u_irrep_block(col_sym)%val)
-!            aux(i_thread)%mat(col_min:col_max,col_min:col_max) = matmul(transpose(trans_%u_irrep_block(col_sym)%val),&
-!                                                               & aux(i_thread)%tmp(1:ncol,1:ncol))
-!#endif
+              call symmetrize_diagonal_block(aux(i_thread)%sym_R(sym_R)%sym_L(sym_R)%val,nmo_R)
 
-            do row_sym = col_sym + 1 , nirrep_
+              call dgemm('N','N',nmo_R,nmo_R,nmo_R,1.0_wp,aux(i_thread)%sym_R(sym_R)%sym_L(sym_R)%val,nmo_R,&
+              & trans_%u_irrep_block(sym_R)%val,nmo_R,0.0_wp,aux(i_thread)%tmp,max_nmopi)
 
-              nrow    = trans_%nmopi(row_sym)
+              call dgemm('T','N',nmo_R,nmo_R,nmo_R,1.0_wp,trans_%u_irrep_block(sym_R)%val,nmo_R, &
+              & aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%sym_R(sym_R)%sym_L(sym_R)%val,nmo_R)
 
-              if ( nrow == 0 ) cycle
+            end if
 
-              row_off = trans_%offset(row_sym)
+            do sym_L = sym_R +1 , nirrep_
 
-              row_min = row_off + 1
- 
-              row_max = row_off + nrow
+              nmo_L    = trans_%nmopi(sym_L)
 
-!#ifdef BLAS
-              call dgemm('N','N',nrow,ncol,ncol,1.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow,&
-                         trans_%u_irrep_block(col_sym)%val,ncol,0.0_wp,aux(i_thread)%tmp,max_nmopi)
-              call dgemm('T','N',nrow,ncol,nrow,1.0_wp,trans_%u_irrep_block(row_sym)%val,nrow, &
-                         aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%mat(row_min:row_max,col_min:col_max),nrow)
-!#else
-!              aux(i_thread)%tmp(1:nrow,1:ncol) = matmul(aux(i_thread)%mat(row_min:row_max,col_min:col_max),&
-!                                               & trans_%u_irrep_block(col_sym)%val)
-!              aux(i_thread)%mat(row_min:row_max,col_min:col_max) = matmul(transpose(trans_%u_irrep_block(row_sym)%val),&
-!                                                                 & aux(i_thread)%tmp(1:nrow,1:ncol))
-!#endif
+              if ( nmo_L == 0 ) cycle
 
+              L_eq_I   = trans_%U_eq_I(sym_L)
 
-            end do ! end row_sym loop
+              if ( L_eq_I == 1 ) then
 
-          end do ! end col_sym loop
+                if ( R_eq_I /= 1 ) then
+
+                  ! L == I and R /= I
+
+                  call dgemm('n','n',nmo_L,nmo_R,nmo_R,1.0_wp,aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val,nmo_L,&
+                  & trans_%u_irrep_block(sym_R)%val,nmo_R,0.0_wp,aux(i_thread)%tmp,max_nmopi)
+
+                  do R_copy = 1 , nmo_R
+                    call my_dcopy(nmo_L,aux(i_thread)%tmp(:,R_copy),1,&
+                         & aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val(:,R_copy),1)
+                  end do
+
+                end if
+
+              else
+
+                if ( R_eq_I == 1 ) then
+                
+                  ! L /= I and R == I
+
+                  call dgemm('t','n',nmo_L,nmo_R,nmo_L,1.0_wp,trans_%u_irrep_block(sym_L)%val,nmo_L, &
+                  & aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val,nmo_L,0.0_wp,aux(i_thread)%tmp,max_nmopi)
+
+                  do R_copy = 1 , nmo_R
+                    call my_dcopy(nmo_L,aux(i_thread)%tmp(:,R_copy),1,&
+                         & aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val(:,R_copy),1)
+                  end do
+
+                else
+
+                  ! L /= I and R /= I
+
+                  call dgemm('n','n',nmo_L,nmo_R,nmo_R,1.0_wp,aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val,nmo_L,&
+                  & trans_%u_irrep_block(sym_R)%val,nmo_R,0.0_wp,aux(i_thread)%tmp,max_nmopi)
+
+                  call dgemm('t','n',nmo_L,nmo_R,nmo_L,1.0_wp,trans_%u_irrep_block(sym_L)%val,nmo_L, &
+                  & aux(i_thread)%tmp,max_nmopi,0.0_wp,aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val,nmo_L)
+
+                end if
+
+              end if
+
+            end do ! sym_L loop
+
+          end do ! sym_R loop
 
           ! *************************************************************
           ! *** SCATTER (only LT row > col elements are accessed in int2)
           ! *************************************************************
 
-          int_ind = int(Q,kind=ip)
+!          int_ind =  int(Q,kind=ip)
+          int_ind = ( ( Q - 1 ) * int(ngem_tot_,kind = ip) ) + 1
 
-          do col = 1 , nmo_tot_
+          do sym_L = 1 , nirrep_
 
-            ! loop over row indeces
+            nmo_L = trans_%nmopi(sym_L)
 
-            do row = 1 , col
+            do L = 1 , nmo_L
 
-              ! save off-diagonal elements
+              do sym_R = 1 , sym_L - 1
 
-              int2(int_ind) = aux(i_thread)%mat(col,row)
+                nmo_R = trans_%nmopi(sym_R)
 
-              int_ind = int_ind + nQ
+                do R = 1 , nmo_R
 
-            end do ! end row loop 
+                  int2(int_ind) = aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val(L,R)
 
-          end do ! end col loop
+                  int_ind = int_ind + 1
+
+                end do
+
+              end do
+
+              do R = 1 , L
+
+                int2(int_ind) = aux(i_thread)%sym_R(sym_R)%sym_L(sym_L)%val(R,L) 
+
+                int_ind = int_ind + 1
+
+              end do
+
+            end do
+
+          end do
 
         end do ! end Q loop
 
       end do ! end i_thread loop
 
-#ifdef OMP
 !$omp end do
 !$omp end parallel
-#endif
 
       transform_teints_df = deallocate_tmp_matrices()
 
@@ -199,30 +247,31 @@ module focas_transform_teints
       contains
 
         subroutine symmetrize_diagonal_block(diag_block,ndim)
-        
+
          implicit none
 
          ! simple function to symmetrize a square matrix for which onyl the LT elements 
          ! were stored
-      
+
          integer, intent(in)     :: ndim
          real(wp), intent(inout) :: diag_block(ndim,ndim)
 
-         integer :: row,col
+         integer :: R,L
 
-         do col = 1 , ndim
+         do R = 1 , ndim
 
-           do row = col + 1 , ndim
+           do L = R + 1 , ndim
 
-             diag_block(col,row) = diag_block(row,col)
+             diag_block(L,R) = diag_block(R,L)
 
-           end do 
-  
+           end do
+
          end do
 
          return
 
         end subroutine symmetrize_diagonal_block
+
 
         integer function setup_Q_bounds()
 
@@ -256,14 +305,36 @@ module focas_transform_teints
 
           ! simple function to allocate temporary matrices for 3-index integral transformation
 
-          integer :: i
+          integer :: i,sym_L,sym_R,nmo_R,nmo_L
    
-          allocate(aux(nthread_use_))
-         
+          allocate(aux(nthread_use_))        
+ 
           do i = 1 , nthread_use_
 
-            allocate(aux(i)%mat(nmo_tot_,nmo_tot_))
             allocate(aux(i)%tmp(max_nmopi,max_nmopi))
+
+            allocate(aux(i)%sym_R(nirrep_))
+
+            do sym_R = 1 , nirrep_
+
+              nmo_R = trans_%nmopi(sym_R)
+
+              if ( nmo_R == 0 ) cycle
+
+              allocate(aux(i)%sym_R(sym_R)%sym_L(sym_R:nirrep_))
+
+              do sym_L = sym_R , nirrep_
+
+                nmo_L = trans_%nmopi(sym_L)
+ 
+                if ( nmo_L == 0 ) cycle
+
+                allocate(aux(i)%sym_R(sym_R)%sym_L(sym_L)%val(nmo_L,nmo_R))
+
+              end do
+
+            end do
+
 
           end do
 
@@ -279,14 +350,31 @@ module focas_transform_teints
 
           ! simple function to deallocate temporary matrices for 3-indes integral transformation
 
-          integer :: i
+          integer :: i,sym_L,sym_R
 
           if ( .not. allocated(aux) ) return
  
           do i = 1 , size(aux)
 
-            if ( allocated(aux(i)%mat) ) deallocate(aux(i)%mat)
-            if ( allocated(aux(i)%tmp) ) deallocate(aux(i)%tmp)
+            if ( allocated(aux(i)%tmp) )    deallocate(aux(i)%tmp)
+
+            do sym_R = 1 , nirrep_
+
+              if ( trans_%nmopi(sym_R) == 0 ) cycle
+
+              do sym_L = sym_R , nirrep_
+
+                if ( trans_%nmopi(sym_L) == 0 ) cycle
+
+                deallocate(aux(i)%sym_R(sym_R)%sym_L(sym_L)%val)
+
+              end do
+
+              deallocate(aux(i)%sym_R(sym_R)%sym_L)
+
+            end do
+
+            deallocate(aux(i)%sym_R)
 
           end do
 
@@ -379,6 +467,13 @@ module focas_transform_teints
         type(int_scr), allocatable :: irrep(:)
       end type int_tmp
 
+      type index_info
+        integer :: num_tu
+        integer, allocatable :: tu(:,:)
+      end type index_info
+
+      type(index_info), allocatable :: tu_inds(:)
+
       type(int_tmp), allocatable :: A(:)
 
       real(wp), allocatable :: A_tilde(:,:),B_tilde(:,:)
@@ -386,7 +481,7 @@ module focas_transform_teints
       integer :: nnz_ij,max_nmopi
 
       integer :: i_class,j_class,k_class,l_class,t_class,u_class,tu_class,kl_class,ij_class
-      integer :: i_irrep,j_irrep,k_irrep,l_irrep,t_irrep,u_irrep
+      integer :: i_irrep,j_irrep,k_irrep,l_irrep,t_irrep,u_irrep,tu
       integer :: i_sym,j_sym,k_sym,l_sym,t_sym,u_sym 
       integer :: num_i,num_j,num_k,num_l,num_t,num_u
       integer :: i_offset,j_offset,k_offset,l_offset,t_offset,u_offset
@@ -420,6 +515,10 @@ module focas_transform_teints
       ! ********************************
 
       ! loop over ij geminals
+
+!$omp parallel shared(nnz_ij,nirrep_,ij_sym,trans_,int_block,A) num_threads(nthread_use_)
+!$omp do private(ij_class,k_sym,l_sym,k_offset,l_offset,num_k,num_l,k_irrep,k_class,&
+!$omp l_irrep,l_class,kl_class,ijkl_class,A_tilde)
 
       do ij_class = 1 , nnz_ij
 
@@ -494,19 +593,18 @@ module focas_transform_teints
 
           if ( ( num_k == 0 ) .or. ( num_l == 0 ) ) cycle
 
-!# ifdef BLAS
           call dgemm('N','N',num_k,num_l,num_l,1.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k,&
                      trans_%u_irrep_block(l_sym)%val,num_l,0.0_wp,A_tilde,max_nmopi)
+
           call dgemm('T','N',num_k,num_l,num_k,1.0_wp,trans_%u_irrep_block(k_sym)%val,num_k, &
                      A_tilde,max_nmopi,0.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k)
-!# else
-!          A_tilde(1:num_k,1:num_l)       = matmul(A(ij_class)%irrep(k_sym)%mat,trans_%u_irrep_block(l_sym)%val)
-!          A(ij_class)%irrep(k_sym)%mat   = matmul(transpose(trans_%u_irrep_block(k_sym)%val),A_tilde(1:num_k,1:num_l))
-!# endif
           
         end do ! end k_sym loop
 
       end do ! end ij_class loop      
+
+!$omp end do
+!$omp end parallel
 
       ! at this point, we have transformed the second index and 
       ! A[ij](t,u) = g(ij|tu)
@@ -516,7 +614,6 @@ module focas_transform_teints
       ! **********************
 
       ! loop over symmetries for t
-
 
       do t_sym = 1 , nirrep_
 
@@ -537,142 +634,146 @@ module focas_transform_teints
 
         t_offset = trans_%offset(t_sym)
         u_offset = trans_%offset(u_sym)
-  
-        ! loop over t indeces
 
-        do t_irrep = 1 , num_t
+        ! loop over tu indeces
 
-          ! this information is used in the scatter operation below
-  
-          t_class = trans_%irrep_to_class_map(t_offset+t_irrep) 
+!$omp parallel shared(nirrep_,ij_sym,tu_inds,ints_,trans_,int_block,t_sym,u_sym, &
+!$omp num_t,num_u,t_offset,u_offset,max_nmopi) num_threads(nthread_use_)
+!$omp do private(tu,t_irrep,u_irrep,t_class,u_class,tu_class,i_sym,j_sym,num_i,num_j,i_offset,j_offset,     &
+!$omp i_irrep,j_irrep,i_class,j_class,ij_class,B_tilde,A_tilde,rstu_class)
 
-          ! loop over u indeces
+        do tu = 1 , tu_inds(t_sym)%num_tu
 
-          do u_irrep = 1 , num_u
+          ! retrieve irrep ordered t & u indeces
 
-            ! this information is used in the scatter operation below
+          t_irrep =  tu_inds(t_sym)%tu(1,tu)
+          u_irrep =  tu_inds(t_sym)%tu(2,tu) 
 
-            u_class = trans_%irrep_to_class_map(u_offset+u_irrep)
+          ! retrieve class ordered t & u indeces
 
-            tu_class = ints_%gemind(t_class,u_class)   
+          t_class =  trans_%irrep_to_class_map(t_offset+t_irrep)
+          u_class =  trans_%irrep_to_class_map(u_offset+u_irrep)
 
-            ! **********
-            ! *** GATHER
-            ! **********
+          ! retrieve class ordered tu index
 
-            ! loop over symmetries for i
+          tu_class = ints_%gemind(t_class,u_class)
 
-            do i_sym = 1 , nirrep_
+          ! **********
+          ! *** GATHER
+          ! **********
+
+          ! loop over symmetries for i
+
+          do i_sym = 1 , nirrep_
  
-              ! corresponding symmetry for j
+            ! corresponding symmetry for j
 
-              j_sym = group_mult_tab_(i_sym,ij_sym)
+            j_sym = group_mult_tab_(i_sym,ij_sym)
 
-              ! make sure that we are only addressing unique integrals with i_sym > j_sym
+            ! make sure that we are only addressing unique integrals with i_sym > j_sym
 
-              if ( i_sym < j_sym ) cycle
+            if ( i_sym < j_sym ) cycle
 
-              ! number of i/j orbitals
+            ! number of i/j orbitals
 
-              num_i = trans_%nmopi(i_sym)
-              num_j = trans_%nmopi(j_sym)              
+            num_i = trans_%nmopi(i_sym)
+            num_j = trans_%nmopi(j_sym)              
 
-              ! offsets for indexing
+            ! offsets for indexing
 
-              i_offset = trans_%offset(i_sym)
-              j_offset = trans_%offset(j_sym)
+            i_offset = trans_%offset(i_sym)
+            j_offset = trans_%offset(j_sym)
 
-              ! zero out temporary matrix
+            ! zero out temporary matrix
 
-              B_tilde = 0.0_wp
+            B_tilde = 0.0_wp
 
-              ! loop over i indeces
+            ! loop over i indeces
 
-              do i_irrep = 1 , num_i
+            do i_irrep = 1 , num_i
 
-                ! i index in class order
+              ! i index in class order
 
-                i_class = trans_%irrep_to_class_map(i_irrep+i_offset)
+              i_class = trans_%irrep_to_class_map(i_irrep+i_offset)
 
-                do j_irrep = 1 , num_j
+              do j_irrep = 1 , num_j
   
-                  ! j index in class order
+                ! j index in class order
 
-                  j_class      = trans_%irrep_to_class_map(j_irrep+j_offset)                
+                j_class      = trans_%irrep_to_class_map(j_irrep+j_offset)                
                   
-                  ij_class     = ints_%gemind(i_class,j_class)
+                ij_class     = ints_%gemind(i_class,j_class)
 
-                  ! save the corresponding matrix element
+                ! save the corresponding matrix element
 
-                  B_tilde(i_irrep,j_irrep) = A(ij_class)%irrep(t_sym)%mat(t_irrep,u_irrep)
+                B_tilde(i_irrep,j_irrep) = A(ij_class)%irrep(t_sym)%mat(t_irrep,u_irrep)
 
-                end do ! end j_irrep loop
+              end do ! end j_irrep loop
 
-              end do ! end i_irrep loop
+            end do ! end i_irrep loop
 
-              ! *************
-              ! *** TRANSFORM
-              ! *************
+            ! *************
+            ! *** TRANSFORM
+            ! *************
               
-              ! A_tilde[tu][i_sym] = B_tilde[tu][i_sym] * C[[j_sym]
-              ! followed by
-              ! B_tilde[tu][i_sym] = (C[i_sym])^T * A_tilde[tu][i_sym]
+            ! A_tilde[tu][i_sym] = B_tilde[tu][i_sym] * C[[j_sym]
+            ! followed by
+            ! B_tilde[tu][i_sym] = (C[i_sym])^T * A_tilde[tu][i_sym]
 
-              ! only need to do work if there are orbitals with symmetry i_sym and j_sym
+            ! only need to do work if there are orbitals with symmetry i_sym and j_sym
 
-              if ( ( num_i == 0 ) .or. ( num_j == 0 ) ) cycle 
+            if ( ( num_i == 0 ) .or. ( num_j == 0 ) ) cycle 
  
-!# ifdef BLAS
-              call dgemm('N','N',num_i,num_j,num_j,1.0_wp,B_tilde,max_nmopi,&
-                     trans_%u_irrep_block(j_sym)%val,num_j,0.0_wp,A_tilde,max_nmopi)
-              call dgemm('T','N',num_i,num_j,num_i,1.0_wp,trans_%u_irrep_block(i_sym)%val,num_i, &
-                     A_tilde,max_nmopi,0.0_wp,B_tilde,max_nmopi)
-!# else
-!              A_tilde(1:num_i,1:num_j) = matmul(B_tilde(1:num_i,1:num_j),trans_%u_irrep_block(j_sym)%val)
-!              B_tilde(1:num_i,1:num_j) = matmul(transpose(trans_%u_irrep_block(i_sym)%val),A_tilde(1:num_i,1:num_j))
-!
-!# endif
-              ! ***********
-              ! *** SCATTER
-              ! ***********
+            call dgemm('N','N',num_i,num_j,num_j,1.0_wp,B_tilde,max_nmopi,&
+                   trans_%u_irrep_block(j_sym)%val,num_j,0.0_wp,A_tilde,max_nmopi)
 
-              ! at this point ij-->rs && kl-->tu so B_tilde[tu][i_sym]%mat(i,j) = g(rs|tu)
+            call dgemm('T','N',num_i,num_j,num_i,1.0_wp,trans_%u_irrep_block(i_sym)%val,num_i, &
+                   A_tilde,max_nmopi,0.0_wp,B_tilde,max_nmopi)
 
-              ! loop over indeces for i
+            ! ***********
+            ! *** SCATTER
+            ! ***********
 
-              do i_irrep = 1 , num_i
+            ! at this point ij-->rs && kl-->tu so B_tilde[tu][i_sym]%mat(i,j) = g(rs|tu)
 
-                ! i index in class order
+            ! loop over indeces for i
 
-                i_class = trans_%irrep_to_class_map(i_irrep+i_offset)
+            do i_irrep = 1 , num_i
 
-                do j_irrep = 1 , num_j
+              ! i index in class order
 
-                  ! j index in class order
+              i_class = trans_%irrep_to_class_map(i_irrep+i_offset)
 
-                  j_class               = trans_%irrep_to_class_map(j_irrep+j_offset)
+              do j_irrep = 1 , num_j
 
-                  ! ij geminal index in class order
+                ! j index in class order
 
-                  ij_class              = ints_%gemind(i_class,j_class)
+                j_class               = trans_%irrep_to_class_map(j_irrep+j_offset)
 
-                  ! integral address in class order
+                ! ij geminal index in class order
 
-                  rstu_class            = pq_index(ij_class,tu_class)
+                ij_class              = ints_%gemind(i_class,j_class)
 
-                  ! save integral
+                ! integral address in class order
 
-                  int_block(rstu_class) = B_tilde(i_irrep,j_irrep)
+                if ( ij_class < tu_class ) cycle
+ 
+                rstu_class            = pq_index(ij_class,tu_class)
 
-                end do ! end j_irrep loop
+                ! save integral
 
-              end do ! end i_irrep loop
+                int_block(rstu_class) = B_tilde(i_irrep,j_irrep)
 
-            end do ! end i_sym loop
+              end do ! end j_irrep loop
 
-          end do ! end u_irrep loop
+            end do ! end i_irrep loop
 
-        end do ! end t_irrep loop
+          end do ! end i_sym loop
+
+        end do ! end tu loop
+
+!$omp end do
+!$omp end parallel
 
       end do ! end t_sym loop
 
@@ -688,7 +789,7 @@ module focas_transform_teints
 
         integer function allocate_transform_scr()
 
-          integer :: ij,k_sym,l_sym,num_k,num_l
+          integer :: ij,k,l,kl,k_sym,l_sym,num_k,num_l
           ! function to allocate scratch arrays for integral transformation
 
           allocate_transform_scr = 0 
@@ -732,6 +833,56 @@ module focas_transform_teints
 
           allocate(B_tilde(max_nmopi,max_nmopi))
 
+          if (allocated(tu_inds)) then
+
+            do k_sym = 1 , nirrep_
+
+              if ( .not. allocated(tu_inds(k_sym)%tu) ) cycle
+ 
+              deallocate(tu_inds(k_sym)%tu)
+
+            end do
+
+            deallocate(tu_inds)
+
+          endif
+
+          allocate(tu_inds(nirrep_))
+
+          do k_sym = 1 , nirrep_
+
+            l_sym = group_mult_tab_(k_sym,ij_sym)
+    
+             tu_inds(k_sym)%num_tu = 0
+
+            if ( k_sym < l_sym ) cycle
+
+            num_k = trans_%nmopi(k_sym)
+            num_l = trans_%nmopi(l_sym)
+
+            tu_inds(k_sym)%num_tu = num_k * num_l
+
+            if ( tu_inds(k_sym)%num_tu == 0 ) cycle
+
+            allocate(tu_inds(k_sym)%tu(2,tu_inds(k_sym)%num_tu))
+
+            kl = 0
+
+            do k = 1 , num_k
+
+              do l = 1 , num_l
+
+                kl = kl + 1
+
+                tu_inds(k_sym)%tu(1,kl)=k
+                tu_inds(k_sym)%tu(2,kl)=l
+
+              end do
+
+            end do
+
+          end do
+
           allocate_transform_scr = 0
 
           return
@@ -765,6 +916,20 @@ module focas_transform_teints
           if (allocated(A_tilde)) deallocate(A_tilde)
 
           if (allocated(B_tilde)) deallocate(B_tilde)
+
+          if (allocated(tu_inds)) then
+
+            do k_sym = 1 , nirrep_
+
+              if ( .not. allocated(tu_inds(k_sym)%tu) ) cycle
+
+              deallocate(tu_inds(k_sym)%tu)
+
+            end do
+
+            deallocate(tu_inds)
+
+          endif
 
           deallocate_transform_scr = 0
 
@@ -808,13 +973,20 @@ module focas_transform_teints
         type(int_scr), allocatable :: irrep(:)
       end type int_tmp
 
+      type index_info
+        integer :: num_tu
+        integer, allocatable :: tu(:,:)
+      end type index_info
+
+      type(index_info), allocatable :: tu_inds(:)
+
       type(int_tmp), allocatable :: A(:)
 
       real(wp), allocatable :: A_tilde(:,:),B_tilde(:,:)
 
       integer :: nnz_ij,max_nmopi
 
-      integer :: i_class,j_class,k_class,l_class,t_class,u_class,tu_class,kl_class,ij_class
+      integer :: i_class,j_class,k_class,l_class,t_class,u_class,tu_class,tu_irrep,kl_class,ij_class
       integer :: i_irrep,j_irrep,k_irrep,l_irrep,t_irrep,u_irrep
       integer :: i_sym,k_sym,t_sym 
       integer :: num_i,num_k,num_t
@@ -847,6 +1019,10 @@ module focas_transform_teints
       ! ********************************
 
       ! loop over ij geminals
+
+!$omp parallel shared(nnz_ij,max_nmopi,nirrep_,trans_,ints_,int_block,A) num_threads(nthread_use_)
+!$omp do private(k_sym,k_offset,num_k,k_irrep,l_irrep,k_class,l_class,&
+!$omp ij_class,kl_class,ijkl_class,A_tilde)
 
       do ij_class = 1 , nnz_ij
 
@@ -913,19 +1089,19 @@ module focas_transform_teints
 
           if ( num_k == 0 )  cycle
 
-!# ifdef BLAS
           call dgemm('N','N',num_k,num_k,num_k,1.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k,&
                      trans_%u_irrep_block(k_sym)%val,num_k,0.0_wp,A_tilde,max_nmopi)
+
           call dgemm('T','N',num_k,num_k,num_k,1.0_wp,trans_%u_irrep_block(k_sym)%val,num_k, &
                      A_tilde,max_nmopi,0.0_wp,A(ij_class)%irrep(k_sym)%mat,num_k)
-!# else
-!          A_tilde(1:num_k,1:num_k)       = matmul(A(ij_class)%irrep(k_sym)%mat,trans_%u_irrep_block(k_sym)%val)
-!          A(ij_class)%irrep(k_sym)%mat   = matmul(transpose(trans_%u_irrep_block(k_sym)%val),A_tilde(1:num_k,1:num_k))
-!# endif
 
         end do ! end k_sym loop
 
       end do ! end ij_class loop      
+
+!$omp end do
+!$omp end parallel
+
 
       ! at this point, we have transformed the second index and 
       ! A[ij](t,u) = g(ij|tu)
@@ -946,132 +1122,131 @@ module focas_transform_teints
 
         t_offset = trans_%offset(t_sym)
   
-        ! loop over t indeces
+        ! loop over tu indeces
 
-        do t_irrep = 1 , num_t
+!$omp parallel shared(t_sym,num_t,t_offset,nirrep_,trans_,ints_,int_block,A,tu_inds,&
+!$omp max_nmopi) num_threads(nthread_use_)
+!$omp do private(tu_irrep,t_irrep,u_irrep,t_class,u_class, &
+!$omp i_sym,num_i,i_offset,i_irrep,i_class,j_irrep,j_class,&
+!$omp tu_class,ij_class,rstu_class,B_tilde,A_tilde)
 
-          ! this information is used in the scatter operation below
+        do tu_irrep = 1 , tu_inds(t_sym)%num_tu
+
+          t_irrep = tu_inds(t_sym)%tu(1,tu_irrep)
+          u_irrep = tu_inds(t_sym)%tu(2,tu_irrep)
+
+          t_class = trans_%irrep_to_class_map(t_offset+t_irrep)
+          u_class = trans_%irrep_to_class_map(t_offset+u_irrep) 
+
+          tu_class = ints_%gemind(t_class,u_class)   
+
+          ! **********
+          ! *** GATHER
+          ! **********
+
+          ! loop over symmetries for i
+
+          do i_sym = 1 , nirrep_
+
+            num_i = trans_%nmopi(i_sym)
+
+            ! offsets for indexing
+
+            i_offset = trans_%offset(i_sym)
+
+            ! zero out temporary matrix
+
+            B_tilde = 0.0_wp
+
+            ! loop over i indeces
+
+            do i_irrep = 1 , num_i
+
+              ! i index in class order
+
+              i_class = trans_%irrep_to_class_map(i_irrep+i_offset)
+
+              do j_irrep = 1 , i_irrep
   
-          t_class = trans_%irrep_to_class_map(t_offset+t_irrep) 
+                ! j index in class order
 
-          ! loop over u indeces
-
-          do u_irrep = 1 , t_irrep
-
-            ! this information is used in the scatter operation below
-
-            u_class = trans_%irrep_to_class_map(t_offset+u_irrep)
-
-            tu_class = ints_%gemind(t_class,u_class)   
-
-            ! **********
-            ! *** GATHER
-            ! **********
-
-            ! loop over symmetries for i
-
-            do i_sym = 1 , nirrep_
- 
-              num_i = trans_%nmopi(i_sym)
-
-              ! offsets for indexing
-
-              i_offset = trans_%offset(i_sym)
-
-              ! zero out temporary matrix
-
-              B_tilde = 0.0_wp
-
-              ! loop over i indeces
-
-              do i_irrep = 1 , num_i
-
-                ! i index in class order
-
-                i_class = trans_%irrep_to_class_map(i_irrep+i_offset)
-
-                do j_irrep = 1 , i_irrep
-  
-                  ! j index in class order
-
-                  j_class      = trans_%irrep_to_class_map(j_irrep+i_offset)                
+                j_class      = trans_%irrep_to_class_map(j_irrep+i_offset)                
                   
-                  ij_class     = ints_%gemind(i_class,j_class)
+                ij_class     = ints_%gemind(i_class,j_class)
 
-                  ! save the corresponding matrix element
+                ! save the corresponding matrix element
 
-                  B_tilde(i_irrep,j_irrep) = A(ij_class)%irrep(t_sym)%mat(t_irrep,u_irrep)
-                  B_tilde(j_irrep,i_irrep) = B_tilde(i_irrep,j_irrep)
+                B_tilde(i_irrep,j_irrep) = A(ij_class)%irrep(t_sym)%mat(t_irrep,u_irrep)
+                B_tilde(j_irrep,i_irrep) = B_tilde(i_irrep,j_irrep)
 
-                end do ! end j_irrep loop
+              end do ! end j_irrep loop
 
-              end do ! end i_irrep loop
+            end do ! end i_irrep loop
 
-              ! *************
-              ! *** TRANSFORM
-              ! *************
+            ! *************
+            ! *** TRANSFORM
+            ! *************
 
-              ! A_tilde[tu][i_sym] = B_tilde[tu][i_sym] * C[[i_sym]
-              ! followed by
-              ! B_tilde[tu][i_sym] = (C[i_sym])^T * A_tilde[tu][i_sym]
+            ! A_tilde[tu][i_sym] = B_tilde[tu][i_sym] * C[[i_sym]
+            ! followed by
+            ! B_tilde[tu][i_sym] = (C[i_sym])^T * A_tilde[tu][i_sym]
 
-              ! only need to do work if there are orbitals with symmetry k_sym  
+            ! only need to do work if there are orbitals with symmetry k_sym  
  
-              if ( num_i == 0 )  cycle
+            if ( num_i == 0 )  cycle
 
-!# ifdef BLAS
-              call dgemm('N','N',num_i,num_i,num_i,1.0_wp,B_tilde,max_nmopi,&
-                     trans_%u_irrep_block(i_sym)%val,num_i,0.0_wp,A_tilde,max_nmopi)
-              call dgemm('T','N',num_i,num_i,num_i,1.0_wp,trans_%u_irrep_block(i_sym)%val,num_i, &
-                     A_tilde,max_nmopi,0.0_wp,B_tilde,max_nmopi)
-!# else
-!              A_tilde(1:num_i,1:num_i) = matmul(B_tilde(1:num_i,1:num_i),trans_%u_irrep_block(i_sym)%val)
-!              B_tilde(1:num_i,1:num_i) = matmul(transpose(trans_%u_irrep_block(i_sym)%val),A_tilde(1:num_i,1:num_i))
-!# endif
+            call dgemm('N','N',num_i,num_i,num_i,1.0_wp,B_tilde,max_nmopi,&
+                   trans_%u_irrep_block(i_sym)%val,num_i,0.0_wp,A_tilde,max_nmopi)
 
-              ! ***********
-              ! *** SCATTER
-              ! ***********
+            call dgemm('T','N',num_i,num_i,num_i,1.0_wp,trans_%u_irrep_block(i_sym)%val,num_i, &
+                   A_tilde,max_nmopi,0.0_wp,B_tilde,max_nmopi)
 
-              ! at this point ij-->rs && kl-->tu so B_tilde[tu][i_sym]%mat(i,j) = g(rs|tu)
+            ! ***********
+            ! *** SCATTER
+            ! ***********
 
-              ! loop over indeces for i
+            ! at this point ij-->rs && kl-->tu so B_tilde[tu][i_sym]%mat(i,j) = g(rs|tu)
 
-              do i_irrep = 1 , num_i
+            ! loop over indeces for i
 
-                ! i index in class order
+            do i_irrep = 1 , num_i
 
-                i_class = trans_%irrep_to_class_map(i_irrep+i_offset)
+              ! i index in class order
 
-                do j_irrep = 1 , i_irrep
+              i_class = trans_%irrep_to_class_map(i_irrep+i_offset)
 
-                  ! j index in class order
+              do j_irrep = 1 , i_irrep
 
-                  j_class               = trans_%irrep_to_class_map(j_irrep+i_offset)
+                ! j index in class order
 
-                  ! ij geminal index in class order
+                j_class               = trans_%irrep_to_class_map(j_irrep+i_offset)
 
-                  ij_class              = ints_%gemind(i_class,j_class)
+                ! ij geminal index in class order
 
-                  ! integral address in class order
+                ij_class              = ints_%gemind(i_class,j_class)
 
-                  rstu_class            = pq_index(ij_class,tu_class)
+                if ( ij_class < tu_class ) cycle
 
-                  ! save integral
+                ! integral address in class order
 
-                  int_block(rstu_class) = B_tilde(i_irrep,j_irrep)
+                rstu_class            = pq_index(ij_class,tu_class)
+
+                ! save integral
+
+                int_block(rstu_class) = B_tilde(i_irrep,j_irrep)
 
 
-                end do ! end j_irrep loop
+              end do ! end j_irrep loop
 
-              end do ! end i_irrep loop
+            end do ! end i_irrep loop
 
-            end do ! end i_sym loop
+          end do ! end i_sym loop
 
-          end do ! end u_irrep loop
-
-        end do ! end t_irrep loop
-
+        end do ! tu loop
+      
+!$omp end do
+!$omp end parallel
+    
       end do ! end t_sym loop
 
       ! ******** END ACTUAL WORK
@@ -1086,7 +1261,7 @@ module focas_transform_teints
 
         integer function allocate_transform_scr_g0()
 
-          integer :: ij,k_sym,l_sym,num_k,num_l
+          integer :: ij,k,l,kl,k_sym,num_k
           ! function to allocate scratch arrays for integral transformation
 
           allocate_transform_scr_g0 = 0 
@@ -1125,6 +1300,51 @@ module focas_transform_teints
 
           allocate(B_tilde(max_nmopi,max_nmopi))
 
+          if (allocated(tu_inds)) then
+
+            do k_sym = 1 , nirrep_
+
+              if ( .not. allocated(tu_inds(k_sym)%tu) ) cycle
+
+              deallocate(tu_inds(k_sym)%tu)
+
+            end do
+
+            deallocate(tu_inds)
+
+          endif
+
+          allocate(tu_inds(nirrep_))
+
+          do k_sym = 1 , nirrep_
+
+            tu_inds(k_sym)%num_tu = 0
+
+            num_k = trans_%nmopi(k_sym)
+
+            tu_inds(k_sym)%num_tu = num_k * ( num_k + 1 ) / 2
+
+            if ( tu_inds(k_sym)%num_tu == 0 ) cycle
+
+            allocate(tu_inds(k_sym)%tu(2,tu_inds(k_sym)%num_tu))
+
+            kl = 0
+
+            do k = 1 , num_k
+
+              do l = 1 , k
+
+                kl = kl + 1
+
+                tu_inds(k_sym)%tu(1,kl)=k
+                tu_inds(k_sym)%tu(2,kl)=l
+
+              end do
+
+            end do
+
+          end do
+
           allocate_transform_scr_g0 = 0
 
           return
@@ -1158,6 +1378,20 @@ module focas_transform_teints
           if (allocated(A_tilde)) deallocate(A_tilde)
 
           if (allocated(B_tilde)) deallocate(B_tilde)
+
+          if (allocated(tu_inds)) then
+
+            do k_sym = 1 , nirrep_
+
+              if ( .not. allocated(tu_inds(k_sym)%tu) ) cycle
+
+              deallocate(tu_inds(k_sym)%tu)
+
+            end do
+
+            deallocate(tu_inds)
+
+          endif
 
           deallocate_transform_scr_g0 = 0
 

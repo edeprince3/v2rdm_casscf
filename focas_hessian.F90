@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -257,7 +257,7 @@ module focas_hessian
       integer(ip)          :: ii,uv,ui,vi,ti,tu,uu,nQ
       integer              :: idf,adf,udf,vdf,tdf
       integer              :: u,v,u_sym,tu_sym,den_ind,den_offset
-      real(wp)             :: te_terms_ad_df,dfac,val,int_val,ddot
+      real(wp)             :: te_terms_ad_df,dfac,val,int_val
       real(wp)             :: v_ui(df_vars_%nQ),v_ii(df_vars_%nQ),v_ti(df_vars_%nQ)
 
       val = 0.0_wp
@@ -267,11 +267,11 @@ module focas_hessian
       tdf    = df_vars_%class_to_df_map(t) 
 
       tt_den = dens_%gemind(t,t)
-      ii     = df_pq_index(idf,idf)
-      ti     = df_pq_index(idf,tdf)
+      ii     = df_pq_index(idf,idf) 
+      ti     = df_pq_index(idf,tdf) 
 
-      call dcopy(df_vars_%nQ,int2(ii+1:ii+nQ),1,v_ii,1)
-      call dcopy(df_vars_%nQ,int2(ti+1:ti+nQ),1,v_ti,1)
+      call my_dcopy(df_vars_%nQ,int2(ii+1:),df_vars_%Qstride,v_ii,1)
+      call my_dcopy(df_vars_%nQ,int2(ti+1:),df_vars_%Qstride,v_ti,1)
 
       do u_sym = 1 , nirrep_
 
@@ -285,10 +285,10 @@ module focas_hessian
 
           udf    = df_vars_%class_to_df_map(u)
 
-          ui     = df_pq_index(udf,idf)
-          uu     = df_pq_index(udf,udf)
+          ui     = df_pq_index(udf,idf) 
+          uu     = df_pq_index(udf,udf) 
 
-          call dcopy(df_vars_%nQ,int2(ui+1:ui+nQ),1,v_ui,1)
+          call my_dcopy(df_vars_%nQ,int2(ui+1:),df_vars_%Qstride,v_ui,1)
 
           ! u > v --> factor of 2
 
@@ -299,16 +299,16 @@ module focas_hessian
 
             vdf     = df_vars_%class_to_df_map(v)
 
-            uv      = df_pq_index(udf,vdf)
-            vi      = df_pq_index(idf,vdf)
+            uv      = df_pq_index(udf,vdf) 
+            vi      = df_pq_index(idf,vdf) 
 
             ! 2 * d(tt|uv) * g(ii|uv)
             den_ind = pq_index(tt_den,uv_den)
-            val     = val + 2.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_ii,1,int2(uv+1:uv+nQ),1)
+            val     = val + 2.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_ii,1,int2(uv+1:),df_vars_%Qstride)
 
             ! 4 * d(tv|tu) * g(ui|vi)
             den_ind = pq_index(tv_den,tu_den) + den_offset
-            val     = val + 4.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_ui,1,int2(vi+1:vi+nQ),1)
+            val     = val + 4.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_ui,1,int2(vi+1:),df_vars_%Qstride)
 
           end do
 
@@ -316,11 +316,11 @@ module focas_hessian
 
           ! d(tt|uu) * g(ii|uu)
           den_ind = pq_index(tt_den,uu_den)
-          val     = val + den2(den_ind) * ddot(df_vars_%nQ,v_ii,1,int2(uu+1:uu+nQ),1)
+          val     = val + den2(den_ind) * my_ddot(df_vars_%nQ,v_ii,1,int2(uu+1:),df_vars_%Qstride)
 
           ! 2 * d(tu|tu) * g(ui|ui)
           den_ind = pq_index(tu_den,tu_den) + den_offset
-          val     = val + 2.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_ui,1,v_ui,1)
+          val     = val + 2.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_ui,1,v_ui,1)
 
         end do
 
@@ -334,8 +334,8 @@ module focas_hessian
  
         udf     = df_vars_%class_to_df_map(u)
 
-        ui      = df_pq_index(udf,idf)
-        tu      = df_pq_index(tdf,udf)
+        ui      = df_pq_index(udf,idf) 
+        tu      = df_pq_index(tdf,udf) 
 
         if ( t == u ) then
           dfac  = 1.0_wp - den1(tu_den)
@@ -344,10 +344,10 @@ module focas_hessian
         endif
 
         ! 3 * g(ui|ti) 
-        int_val = 3.0_wp * ddot(df_vars_%nQ,v_ti,1,int2(ui+1:ui+nQ),1)
+        int_val = 3.0_wp * my_ddot(df_vars_%nQ,v_ti,1,int2(ui+1:),df_vars_%Qstride)
 
         ! - g(ii|tu) 
-        int_val = int_val - ddot(df_vars_%nQ,v_ii,1,int2(tu+1:tu+nQ),1)
+        int_val = int_val - my_ddot(df_vars_%nQ,v_ii,1,int2(tu+1:),df_vars_%Qstride)
 
        ! only factor of 2 because of multiplication below
 
@@ -472,7 +472,7 @@ module focas_hessian
       integer              :: den_offset,den_ind
       integer              :: x_sym,xt_sym
       
-      real(wp)             :: te_terms_aa_df,val,ddot
+      real(wp)             :: te_terms_aa_df,val
       real(wp)             :: v_uu(df_vars_%nQ),v_tt(df_vars_%nQ),v_ut(df_vars_%nQ)
       real(wp)             :: v_ux(df_vars_%nQ),v_tx(df_vars_%nQ),v_xy(df_varS_%nQ)     
       real(wp)             :: v_ty(df_vars_%nQ)
@@ -490,13 +490,13 @@ module focas_hessian
       tdf    = df_vars_%class_to_df_map(t)
       udf    = df_vars_%class_to_df_map(u)
 
-      tt     = df_pq_index(tdf,tdf)
-      uu     = df_pq_index(udf,udf)
-      ut     = df_pq_index(udf,tdf)
+      tt     = df_pq_index(tdf,tdf) 
+      uu     = df_pq_index(udf,udf) 
+      ut     = df_pq_index(udf,tdf) 
 
-      call dcopy(df_vars_%nQ,int2(tt+1:tt+nQ),1,v_tt,1)
-      call dcopy(df_vars_%nQ,int2(uu+1:uu+nQ),1,v_uu,1)
-      call dcopy(df_vars_%nQ,int2(ut+1:ut+nQ),1,v_ut,1)
+      call my_dcopy(df_vars_%nQ,int2(tt+1:),df_vars_%Qstride,v_tt,1)
+      call my_dcopy(df_vars_%nQ,int2(uu+1:),df_vars_%Qstride,v_uu,1)
+      call my_dcopy(df_vars_%nQ,int2(ut+1:),df_vars_%Qstride,v_ut,1)
 
       ! loop over symmetries for x
 
@@ -515,12 +515,12 @@ module focas_hessian
           tx_den = dens_%gemind(t,x)
           xx_den = dens_%gemind(x,x)
 
-          ux     = df_pq_index(udf,xdf)
-          tx     = df_pq_index(tdf,xdf)
-          xx     = df_pq_index(xdf,xdf)
+          ux     = df_pq_index(udf,xdf) 
+          tx     = df_pq_index(tdf,xdf) 
+          xx     = df_pq_index(xdf,xdf) 
 
-          call dcopy(df_vars_%nQ,int2(ux+1:ux+nQ),1,v_ux,1)
-          call dcopy(df_vars_%nQ,int2(tx+1:tx+nQ),1,v_tx,1)
+          call my_dcopy(df_vars_%nQ,int2(ux+1:),df_vars_%Qstride,v_ux,1)
+          call my_dcopy(df_vars_%nQ,int2(tx+1:),df_vars_%Qstride,v_tx,1)
 
           den_offset = dens_%offset(xt_sym)
 
@@ -535,67 +535,67 @@ module focas_hessian
             ty_den  = dens_%gemind(t,y)
             xy_den  = dens_%gemind(x,y)
 
-            uy      = df_pq_index(udf,ydf)
-            ty      = df_pq_index(tdf,ydf)
-            xy      = df_pq_index(xdf,ydf)
+            uy      = df_pq_index(udf,ydf) 
+            ty      = df_pq_index(tdf,ydf) 
+            xy      = df_pq_index(xdf,ydf) 
 
-            call dcopy(df_vars_%nQ,int2(xy+1:xy+nQ),1,v_xy,1)
-            call dcopy(df_vars_%nQ,int2(ty+1:ty+nQ),1,v_ty,1)
+            call my_dcopy(df_vars_%nQ,int2(xy+1:),df_vars_%Qstride,v_xy,1)
+            call my_dcopy(df_vars_%nQ,int2(ty+1:),df_vars_%Qstride,v_ty,1)
 
             ! 4 * d(tx|ty) * g(ux|uy)
             den_ind = pq_index(tx_den,ty_den) + den_offset
-            val     = val + 4.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_ux,1,int2(uy+1:uy+nQ),1)
+            val     = val + 4.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_ux,1,int2(uy+1:),df_vars_%Qstride)
 
             ! 4 * d(ux|uy) * g(tx|ty)
             den_ind = pq_index(ux_den,uy_den) + den_offset
-            val     = val + 4.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_tx,1,v_ty,1)
+            val     = val + 4.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_tx,1,v_ty,1)
 
             ! 2 * d(tt,xy) * g(uu|xy)
             den_ind = pq_index(tt_den,xy_den)
-            val     = val + 2.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_uu,1,v_xy,1)
+            val     = val + 2.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_uu,1,v_xy,1)
 
             ! 2 * d(uu,xy) * g(tt|xy)
             den_ind = pq_index(uu_den,xy_den)
-            val     = val + 2.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_tt,1,v_xy,1)
+            val     = val + 2.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_tt,1,v_xy,1)
 
             ! - 8 * d(ux|ty) * g(ux|ty)
             den_ind = pq_index(ux_den,ty_den) + den_offset
-            val     = val - 8.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_ux,1,v_ty,1)
+            val     = val - 8.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_ux,1,v_ty,1)
 
             ! - 4 * d(tu|xy) * g(ut|xy)
             den_ind = pq_index(ut_den,xy_den)
-            val     = val - 4.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_ut,1,v_xy,1)
+            val     = val - 4.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_ut,1,v_xy,1)
 
           end do
 
           ! x == y
 
-          call dcopy(df_vars_%nQ,int2(xx+1:xx+nQ),1,v_xy,1)
+          call my_dcopy(df_vars_%nQ,int2(xx+1:),df_vars_%Qstride,v_xy,1)
 
           ! 2 * d(tx|tx) * g(ux|ux)
           den_ind = pq_index(tx_den,tx_den) + den_offset
-          val     = val + 2.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_ux,1,v_ux,1)
+          val     = val + 2.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_ux,1,v_ux,1)
 
           ! 2 * d(ux|ux) * g(tx|tx)
           den_ind = pq_index(ux_den,ux_den) + den_offset
-          val     = val + 2.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_tx,1,v_tx,1)
+          val     = val + 2.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_tx,1,v_tx,1)
 
           ! d(tt,xx) * g(uu|xx)
           den_ind = pq_index(tt_den,xx_den)
-          val     = val + den2(den_ind) * ddot(df_vars_%nQ,v_uu,1,v_xy,1) 
+          val     = val + den2(den_ind) * my_ddot(df_vars_%nQ,v_uu,1,v_xy,1) 
 
           ! d(uu,xx) * g(tt|xx)
           den_ind = pq_index(uu_den,xx_den)
-          val     = val + den2(den_ind) * ddot(df_vars_%nQ,v_tt,1,v_xy,1)
+          val     = val + den2(den_ind) * my_ddot(df_vars_%nQ,v_tt,1,v_xy,1)
 
           ! - 4 * d(ux|tx) * g(ux|tx)
 
           den_ind = pq_index(ux_den,tx_den) + den_offset
-          val     = val - 4.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_ux,1,v_tx,1)
+          val     = val - 4.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_ux,1,v_tx,1)
 
           ! - 2 * d(tu|xx) * g(ut|xx)
           den_ind = pq_index(ut_den,xx_den)
-          val     = val - 2.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_ut,1,v_xy,1)
+          val     = val - 2.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_ut,1,v_xy,1)
 
         end do
 
@@ -871,22 +871,22 @@ module focas_hessian
 
       integer(ip)          :: ii,ai,aa,nQ
       integer              :: adf,idf
-      real(wp)             :: te_terms_ed_df,val,ddot
+      real(wp)             :: te_terms_ed_df,val
 
       nQ      = int(df_vars_%nQ,kind=ip)
 
       adf     = df_vars_%class_to_df_map(a)
       idf     = df_vars_%class_to_df_map(i)
 
-      aa      = df_pq_index(adf,adf)
-      ii      = df_pq_index(idf,idf)
-      ai      = df_pq_index(adf,idf)
+      aa      = df_pq_index(adf,adf) 
+      ii      = df_pq_index(idf,idf) 
+      ai      = df_pq_index(adf,idf) 
 
       ! 3 * g(ai|ai)
-      val     = 3.0_wp * ddot(nQ,int2(ai+1:ai+nQ),1,int2(ai+1:ai+nQ),1)
+      val     = 3.0_wp * my_ddot(df_vars_%nQ,int2(ai+1:),df_vars_%Qstride,int2(ai+1:),df_vars_%Qstride)
 
       ! - g(aa|ii)
-      val     = val - ddot(nQ,int2(aa+1:aa+nQ),1,int2(ii+1:ii+nQ),1)
+      val     = val - my_ddot(df_vars_%nQ,int2(aa+1:),df_vars_%Qstride,int2(ii+1:),df_vars_%Qstride)
 
       ! factor of 4 from overall formula
  
@@ -1060,7 +1060,7 @@ module focas_hessian
       integer              :: adf,udf,vdf,tdf
       integer              :: den_offset,den_ind
 
-      real(wp)             :: te_terms_ea_df,val,ddot
+      real(wp)             :: te_terms_ea_df,val
       real(wp)             :: v_aa(df_vars_%nQ),v_au(df_vars_%nQ)
 
       val    = 0.0_wp
@@ -1072,9 +1072,9 @@ module focas_hessian
       adf    = df_vars_%class_to_df_map(a)
       tdf    = df_vars_%class_to_df_map(t)
 
-      aa     = df_pq_index(adf,adf)
+      aa     = df_pq_index(adf,adf) 
 
-      call dcopy(df_vars_%nQ,int2(aa+1:aa+nQ),1,v_aa,1)
+      call my_dcopy(df_vars_%nQ,int2(aa+1:),df_vars_%Qstride,v_aa,1)
 
       do u_sym = 1 , nirrep_
 
@@ -1089,10 +1089,10 @@ module focas_hessian
 
           udf    = df_vars_%class_to_df_map(u)
 
-          au     = df_pq_index(adf,udf)
-          uu     = df_pq_index(udf,udf)
+          au     = df_pq_index(adf,udf) 
+          uu     = df_pq_index(udf,udf) 
 
-          call dcopy(df_vars_%nQ,int2(au+1:au+nQ),1,v_au,1)
+          call my_dcopy(df_vars_%nQ,int2(au+1:),df_vars_%Qstride,v_au,1)
 
           ! u > v --> factor of 2
 
@@ -1103,16 +1103,16 @@ module focas_hessian
 
             vdf     = df_vars_%clasS_to_df_map(v)
 
-            uv      = df_pq_index(udf,vdf)
-            av      = df_pq_index(adf,vdf)
+            uv      = df_pq_index(udf,vdf) 
+            av      = df_pq_index(adf,vdf) 
 
             ! d(tt|uv) * g(aa|uv)
             den_ind = pq_index(tt_den,uv_den)
-            val     = val + den2(den_ind) * ddot(df_vars_%nQ,v_aa,1,int2(uv+1:uv+nQ),1)
+            val     = val + den2(den_ind) * my_ddot(df_vars_%nQ,v_aa,1,int2(uv+1:),df_vars_%Qstride)
 
             ! 2 * d(tu|tv) * g(au|av)
             den_ind = pq_index(tu_den,tv_den) + den_offset
-            val     = val + 2.0_wp * den2(den_ind) * ddot(df_vars_%nQ,v_au,1,int2(av+1:av+nQ),1)
+            val     = val + 2.0_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_au,1,int2(av+1:),df_vars_%Qstride)
 
           end do
 
@@ -1120,11 +1120,11 @@ module focas_hessian
 
           ! d(tt|uu) * g(aa|uu)
           den_ind = pq_index(tt_den,uu_den)
-          val     = val + 0.5_wp * den2(den_ind) * ddot(df_vars_%nQ,v_aa,1,int2(uu+1:uu+nQ),1)
+          val     = val + 0.5_wp * den2(den_ind) * my_ddot(df_vars_%nQ,v_aa,1,int2(uu+1:),df_vars_%Qstride)
 
           ! 2 * d(tu|tu) * g(au|au)
           den_ind = pq_index(tu_den,tu_den) + den_offset
-          val     = val + den2(den_ind) * ddot(df_vars_%nQ,v_aa,1,v_au,1)
+          val     = val + den2(den_ind) * my_ddot(df_vars_%nQ,v_aa,1,v_au,1)
 
         end do
 

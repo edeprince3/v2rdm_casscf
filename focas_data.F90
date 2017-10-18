@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -28,8 +28,9 @@ module focas_data
 
   ! *** parameters
 
+  integer, parameter :: max_regular_int_=2**30                     ! maximum value for signed integer 
   integer, parameter :: wp = selected_real_kind(10)                ! general working precision kind value
-  integer, parameter :: ip = selected_int_kind(16)                  ! 64-bit integers (integral addressing)
+  integer, parameter :: ip = selected_int_kind(16)                 ! 64-bit integers (integral addressing)
   integer, parameter :: fid_ = 12345                               ! file identifier for output file
   integer, parameter :: max_nirrep_=8                              ! maximum number of irreps
   character(3), parameter :: g_element_type_(4) =(/'a-i','e-i','a-a','e-a'/)
@@ -52,6 +53,8 @@ module focas_data
   real(wp), allocatable :: orbital_gradient_(:)                    ! orbital gradient
   real(wp), allocatable :: orbital_hessian_(:)                     ! diagonal elements of the orbital hessian
   real(wp), allocatable :: kappa_(:)                               ! orbital rotation parameters (lt elements of skew-symmetric matrix, npair_ storage)
+  real(wp), allocatable :: fa_scr_4index_(:,:)                     ! 4-index integrals for active Fock matrix construction (n^2 * nA^2 storage)
+  real(wp), allocatable :: fi_scr_4index_(:,:)                     ! 4-index integrals for active Fock matrix construction (n^2 * nD^2 storage)
 
   ! *** symmetry data for integrals and densities
 
@@ -73,6 +76,7 @@ module focas_data
   end type vector_block
 
   type trans_info
+    integer, allocatable :: U_eq_I(:)                              ! flag for the type of U matrix (==1 U==I and ==0 U/=I)                       
     integer, allocatable :: npairpi(:)                             ! number of orbital rotation pairs per irrep
     integer, allocatable :: nmopi(:)                               ! number of orbitals per irrep
     integer, allocatable :: offset(:)                              ! first index of orbital (with a given symmetry) in the irrep_to_class_map array
@@ -95,11 +99,12 @@ module focas_data
   end type rot_info
 
   type df_info 
+    integer :: Qstride                                             ! stride of auxiliary index Q ( == 1 --> (ij,Q=1 ... nQ) // == nQ -> (ij=1...n*(n+1)/2,Q) ) 
     integer :: nQ                                                  !  number of auxiliary function for density-fitted integrals
     integer :: use_df_teints                                       ! flag to use density-fitted 2-e integrals
     integer, allocatable :: class_to_df_map(:)                     ! mapping array to map orbital indeces from class order to df order
-    integer, allocatable :: occgemind(:,:)                         ! symmetry reduced geminal indeces for occupied oritals
-    integer, allocatable :: noccgempi(:)                           ! number of symmetry reduced geminals per irrep
+!    integer, allocatable :: occgemind(:,:)                         ! symmetry reduced geminal indeces for occupied oritals
+!    integer, allocatable :: noccgempi(:)                           ! number of symmetry reduced geminals per irrep
   end type df_info
 
   type diis_info
@@ -133,17 +138,27 @@ module focas_data
     type(vector_block), allocatable :: ext_e(:)
   end type gen_f_info
  
+  type p_sym_info
+    type(matrix_block), allocatable :: t_sym(:)
+  end type p_sym_info
+
+  type fock_scr_info
+    type(p_sym_info), allocatable :: p_sym(:)
+  end type fock_scr_info
+
   ! *** allocatable derived types
 
-  type(sym_info)   :: dens_                                        ! density symmetry data
-  type(sym_info)   :: ints_                                        ! integral symmetry data
-  type(trans_info) :: trans_
-  type(diis_info)  :: diis_
-  type(fock_info)  :: fock_i_ 
-  type(fock_info)  :: fock_a_
-  type(qint_info)  :: qint_
-  type(gen_f_info) :: gen_f_
-  
+  type(sym_info)      :: dens_                                        ! density symmetry data
+  type(sym_info)      :: ints_                                        ! integral symmetry data
+  type(trans_info)    :: trans_
+  type(diis_info)     :: diis_
+  type(fock_info)     :: fock_i_ 
+  type(fock_info)     :: fock_a_
+  type(qint_info)     :: qint_
+  type(gen_f_info)    :: gen_f_
+  type(fock_scr_info) :: fa_scr_(3)
+  type(fock_scr_info) :: fi_scr_(3)
+
   ! indexing derived types
   
   type(rot_info)   :: rot_pair_                                    ! info for rotation pair indexing
@@ -151,7 +166,8 @@ module focas_data
 
   ! *** allocatable orbital index arrays
 
-  integer, allocatable :: ndocpi_(:)                               ! number of doubly occupied orbitals per irrep
+  integer, allocatable :: nfzcpi_(:)                               ! number of frozen (not optimized) doubly occupied orbitals per irrep
+  integer, allocatable :: ndocpi_(:)                               ! number of doubly occupied orbitals (including frozen) per irrep
   integer, allocatable :: nactpi_(:)                               ! number of active orbitals per irrep
   integer, allocatable :: nextpi_(:)                               ! number of external orbitals per irrep  
   integer, allocatable :: first_index_(:,:)                        ! index of first orbital in this class and irrep (nirrep,3)
@@ -161,10 +177,12 @@ module focas_data
   ! *** integers
 
   integer :: nirrep_                                               ! number of irreps in point group
-  integer :: ndoc_tot_                                             ! total number of doubly occupied orbitals
+  integer :: nfzc_tot_                                             ! number of frozen doubly occupied orbitals
+  integer :: ndoc_tot_                                             ! total number of doubly occupied (including frozen) orbitals
   integer :: nact_tot_                                             ! total number of active orbitals
   integer :: next_tot_                                             ! total number of external orbitals
   integer :: nmo_tot_                                              ! total number of orbitals
+  integer :: ngem_tot_                                             ! total number of geminals (ij) with i <= j
   integer :: include_aa_rot_                                       ! 1/0 = include/do not include rotations between active-active orbtials
   integer :: nthread_use_                                          ! number of threads to use in parallel parts of the code (this is the actuaal number of threads used)
   integer :: log_print_                                            ! 1/0 = flag for printing iteration/info for orbtial optimization
@@ -287,23 +305,261 @@ module focas_data
       j_long = int(j,kind=ip)
       if (i_long.ge.j_long) then
         df_pq_index = i_long * ( i_long + 1 ) / 2 + j_long
-        df_pq_index = df_pq_index * int(df_vars_%nQ,kind=ip)
+        if ( df_vars_%Qstride == 1 ) df_pq_index = df_pq_index * int(df_vars_%nQ,kind=ip)
         return
       else
         df_pq_index= j_long * ( j_long + 1 ) / 2 + i_long
-        df_pq_index = df_pq_index * int(df_vars_%nQ,kind=ip)
+        if ( df_vars_%Qstride == 1 ) df_pq_index = df_pq_index * int(df_vars_%nQ,kind=ip)
         return
       end if
     end function df_pq_index
 
     function timer()
-      real(wp) :: timer,omp_get_wtime
-#ifdef OMP
-      timer = omp_get_wtime()
+      real(wp) :: omp_get_wtime
+      real(wp) :: timer(2)
+      ! actual time
+#ifdef OMP 
+      timer(1) = omp_get_wtime()
 #else
-      call cpu_time(timer)
+      call cpu_time(timer(1))
 #endif
+      ! total CPU time
+      call cpu_time(timer(2))
+
     end function timer
+
+    function my_ddot(n,vec_1,stride_1,vec_2,stride_2)
+
+      ! simple wrapper for LAPACKs DDOT to avoid integer overflow
+      real(wp) :: my_ddot
+
+      integer, intent(in)  :: n,stride_1,stride_2
+      real(wp), intent(in) :: vec_1(:),vec_2(:)
+
+      integer(ip)          :: s_1,s_2,e_1,e_2,inc_1,inc_2
+      integer              :: n_pass,n_have,n_need,ddot_pass
+      real(wp)             :: ddot
+
+!      my_ddot = ddot(n,vec_1,stride_1,vec_2,stride_2)
+!      return
+
+      ! number of values accumulated in one pass   
+      if ( stride_1 > stride_2 ) then
+
+        n_pass = max_regular_int_ / stride_1
+
+        if ( mod( max_regular_int_ , stride_1) == 0 ) n_pass = n_pass + 1
+
+      else
+
+        n_pass = max_regular_int_ / stride_2
+        
+        if ( mod( max_regular_int_ , stride_2) == 0 ) n_pass = n_pass + 1
+
+      end if 
+      ! increment in starting index
+      inc_1   = n_pass * stride_1 ; inc_2   = n_pass * stride_2
+
+      ! initialize
+      n_have  = 0 ; my_ddot = 0.0_wp ; s_1 = 1 ; s_2 = 1 
+
+      ! repeated calls to ddot
+      do ddot_pass = 1 , n / n_pass
+
+        n_have = n_have + n_pass
+ 
+        e_1 = s_1 + inc_1 - 1 ; e_2 = s_2 + inc_2 - 1
+
+        my_ddot = my_ddot + ddot(n_pass,vec_1(s_1:e_1),stride_1,vec_2(s_2:e_2),stride_2)
+
+        s_1 = s_1 + inc_1 ; s_2 = s_2 + inc_2
+
+      end do
+
+      n_need = n - n_have
+
+      if ( n_need == 0 ) return
+
+      e_1 = s_1 + ( n_need - 1 ) * stride_1 ; e_2 = s_2 + ( n_need -1 ) * stride_2
+
+      my_ddot = my_ddot + ddot(n-n_have,vec_1(s_1:e_1),stride_1,vec_2(s_2:e_2),stride_2)
+
+      return
+
+    end function my_ddot
+
+    subroutine my_dcopy(n,vec_x,stride_x,vec_y,stride_y)
+
+      ! simple wrapper for LAPACKs DDOT to avoid integer overflow
+      ! assumes that stride_x >= stride_y
+
+      integer, intent(in)  :: n,stride_x,stride_y
+      real(wp), intent(in) :: vec_x(:),vec_y(:)
+
+      integer(ip)          :: s_x,s_y,e_x,e_y,inc_x,inc_y
+      integer              :: n_pass,n_have,n_need,dcopy_pass
+
+!      call dcopy(n,vec_x,stride_x,vec_y,stride_y)
+!      return
+
+      ! number of values accumulated in one pass   
+      if ( stride_x > stride_y ) then
+
+        n_pass = max_regular_int_ / stride_x
+
+        if ( mod( max_regular_int_ , stride_x) == 0 ) n_pass = n_pass + 1
+
+      else
+
+        n_pass = max_regular_int_ / stride_y
+        
+        if ( mod( max_regular_int_ , stride_y) == 0 ) n_pass = n_pass + 1
+
+      end if
+
+      ! increment in starting index
+      inc_x   = n_pass * stride_x ; inc_y   = n_pass * stride_y
+
+      ! initialize
+      n_have  = 0 ; s_x = 1 ; s_y = 1
+
+      ! repeated calls to ddot
+      do dcopy_pass = 1 , n / n_pass
+
+        n_have = n_have + n_pass
+
+        e_x = s_x + inc_x - 1 ; e_y = s_y + inc_y - 1
+
+        call dcopy(n_pass,vec_x(s_x:e_x),stride_x,vec_y(s_y:e_y),stride_y)
+
+        s_x = s_x + inc_x ; s_y = s_y + inc_y
+
+      end do
+
+      n_need = n - n_have
+
+      if ( n_need == 0 ) return
+
+      e_x = s_x + ( n_need - 1 ) * stride_x ; e_y = s_y + ( n_need - 1 ) * stride_y
+
+      call dcopy(n-n_have,vec_x(s_x:e_x),stride_x,vec_y(s_y:e_y),stride_y)
+
+      return
+
+    end subroutine my_dcopy
+
+    subroutine my_daxpy(n,scale_x,vec_x,stride_x,vec_y,stride_y)
+
+      ! simple wrapper for LAPACKs DDOT to avoid integer overflow
+      ! assumes that stride_x >= stride_y
+
+      integer, intent(in)  :: n,stride_x,stride_y
+      real(wp), intent(in) :: vec_x(:),vec_y(:)
+      real(wp), intent(in) :: scale_x
+
+      integer(ip)          :: s_x,s_y,e_x,e_y,inc_x,inc_y
+      integer              :: n_pass,n_have,n_need,dcopy_pass
+  
+!      call daxpy(n,scale_x,vec_x,stride_x,vec_y,stride_y)
+!      return
+
+      ! number of values accumulated in one pass   
+      if ( stride_x > stride_y ) then
+
+        n_pass = max_regular_int_ / stride_x
+
+        if ( mod( max_regular_int_ , stride_x) == 0 ) n_pass = n_pass + 1
+
+      else
+
+        n_pass = max_regular_int_ / stride_y
+
+        if ( mod( max_regular_int_ , stride_y) == 0 ) n_pass = n_pass + 1
+
+      end if
+
+      ! increment in starting index
+      inc_x   = n_pass * stride_x ; inc_y   = n_pass * stride_y
+
+      ! initialize
+      n_have  = 0 ; s_x = 1 ; s_y = 1
+
+      ! repeated calls to ddot
+      do dcopy_pass = 1 , n / n_pass
+
+        n_have = n_have + n_pass
+
+        e_x = s_x + inc_x - 1 ; e_y = s_y + inc_y - 1
+
+        call daxpy(n_pass,scale_x,vec_x(s_x:e_x),stride_x,vec_y(s_y:e_y),stride_y)
+
+        s_x = s_x + inc_x ; s_y = s_y + inc_y
+
+      end do
+
+      n_need = n - n_have
+
+      if ( n_need == 0 ) return
+
+      e_x = s_x + ( n_need - 1 ) * stride_x ; e_y = s_y + ( n_need - 1 ) * stride_y
+
+      call daxpy(n_need,scale_x,vec_x(s_x:e_x),stride_x,vec_y(s_y:e_y),stride_y)
+
+      return
+
+    end subroutine my_daxpy
+
+    subroutine my_dscal(n,scale_fac,vec_x,stride_x)
+
+      ! simple wrapper for LAPACKs DDOT to avoid integer overflow
+      ! assumes that stride_x >= stride_y
+
+      integer, intent(in)  :: n,stride_x
+      real(wp), intent(in) :: vec_x(:)
+      real(wp), intent(in) :: scale_fac
+
+      integer(ip)          :: s_x,e_x,inc_x
+      integer              :: n_pass,n_have,n_need,dscal_pass
+
+!      call dscal(n,scale_fac,vec_tmp,stride_x)
+!      return
+
+      ! number of values accumulated in one pass   
+
+      n_pass = max_regular_int_ / stride_x
+
+      if ( mod( max_regular_int_ , stride_x) == 0 ) n_pass = n_pass + 1
+
+      ! increment in starting index
+      inc_x   = n_pass * stride_x 
+
+      ! initialize
+      n_have  = 0 ; s_x = 1 
+
+      ! repeated calls to ddot
+      do dscal_pass = 1 , n / n_pass
+
+        n_have = n_have + n_pass
+
+        e_x = s_x + inc_x - 1
+
+        call dscal(n_pass,scale_fac,vec_x(s_x:e_x),stride_x)
+
+        s_x = s_x + inc_x 
+
+      end do
+
+      n_need = n - n_have
+
+      if ( n_need == 0 ) return
+
+      e_x = s_x + ( n_need - 1 ) * stride_x
+
+      call dscal(n_need,scale_fac,vec_x(s_x:e_x),stride_x)
+
+      return
+
+    end subroutine my_dscal
 
     subroutine abort_print(error_code)
 

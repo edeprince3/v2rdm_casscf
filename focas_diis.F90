@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -52,8 +52,8 @@ module focas_diis
 
      ! copy current dP/P into the list of stored dP/P
 
-     call dcopy(rot_pair_%n_tot,dP,1,diis_%dP(:,diis_%current_index),1)
-     call dcopy(rot_pair_%n_tot,P,1,diis_%P(:,diis_%current_index),1)
+     call my_dcopy(rot_pair_%n_tot,dP,1,diis_%dP(:,diis_%current_index),1)
+     call my_dcopy(rot_pair_%n_tot,P,1,diis_%P(:,diis_%current_index),1)
 
      if ( diis_%update == 0 ) return
 
@@ -81,7 +81,7 @@ module focas_diis
 
      dP = 0.0_wp
      do i = 1 , diis_%max_num_diis
-       call daxpy(rot_pair_%n_tot,diis_%c(i),diis_%P(:,i),1,dP,1)
+       call my_daxpy(rot_pair_%n_tot,diis_%c(i),diis_%P(:,i),1,dP,1)
      end do    
 
      write(*,*)'new dP'
@@ -89,7 +89,7 @@ module focas_diis
      write(*,*)dP
 
 !
-!     call dcopy(rot_pair_%n_tot,dP,1,diis_%dP(:,diis_%current_index),1)
+!     call my_dcopy(rot_pair_%n_tot,dP,1,diis_%dP(:,diis_%current_index),1)
 !
      return
 

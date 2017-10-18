@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -388,7 +388,7 @@ module focas_semicanonical
 
           precompute_coulomb = 1
 
-          nQ = df_vars_%nQ
+          nQ = int ( df_vars_%nQ , kind = ip )
 
           ! precompute the Coulb terms
 
@@ -400,9 +400,9 @@ module focas_semicanonical
 
               idf   = df_vars_%class_to_df_map(i)
 
-              ii_df = df_pq_index(idf,idf)
+              ii_df = df_pq_index(idf,idf) 
 
-              call daxpy(nQ,2.0_wp,int2(ii_df+1:ii_df+nQ),1,coulomb,1)
+              call my_daxpy(df_vars_%nQ,2.0_wp,int2(ii_df+1:),df_vars_%Qstride,coulomb,1)
 
             end do
 
@@ -418,19 +418,19 @@ module focas_semicanonical
 
                 udf    = df_vars_%class_to_df_map(u)
 
-                tu_df  = df_pq_index(tdf,udf)
+                tu_df  = df_pq_index(tdf,udf) 
 
                 tu_den = dens_%gemind(t,u)
 
-                call daxpy(nQ,2.0_wp*den1(tu_den),int2(tu_df+1:tu_df+nQ),1,coulomb,1)
+                call my_daxpy(df_vars_%nQ,2.0_wp*den1(tu_den),int2(tu_df+1:),df_vars_%Qstride,coulomb,1)
 
               end do
 
-              tu_df  = df_pq_index(tdf,tdf)
+              tu_df  = df_pq_index(tdf,tdf) 
 
               tu_den = dens_%gemind(t,t)
 
-              call daxpy(nQ,den1(tu_den),int2(tu_df+1:tu_df+nQ),1,coulomb,1)
+              call my_daxpy(df_vars_%nQ,den1(tu_den),int2(tu_df+1:),df_vars_%Qstride,coulomb,1)
 
             end do
 
@@ -459,11 +459,11 @@ module focas_semicanonical
           integer      :: tu_den,pq_int
           integer      :: p_i,q_i
           integer      :: off
-          real(wp)     :: f_val,ddot
+          real(wp)     :: f_val
 
           compute_gen_fock_block_df = 1
 
-          nQ = df_vars_%nQ
+          nQ = int( df_vars_%nQ , kind = ip )
 
           do p_sym = 1 , nirrep_
 
@@ -493,7 +493,7 @@ module focas_semicanonical
                 ! 2-e coulomb contributions
                 pq_df  = df_pq_index(pdf,qdf)
 
-                f_val = f_val + ddot(nQ,int2(pq_df+1:pq_df+nQ),1,coulomb,1)  
+                f_val = f_val + my_ddot(df_vars_%nQ,int2(pq_df+1:pq_df+nQ),1,coulomb,1)  
 
                 ! 2-e inactive exchange contribution
 
@@ -503,10 +503,10 @@ module focas_semicanonical
  
                     idf   = df_vars_%class_to_df_map(i)
 
-                    pi_df = df_pq_index(pdf,idf)
-                    qi_df = df_pq_index(qdf,idf)
+                    pi_df = df_pq_index(pdf,idf) 
+                    qi_df = df_pq_index(qdf,idf) 
 
-                    f_val = f_val - ddot(nQ,int2(pi_df+1:pi_df+nQ),1,int2(qi_df+1:qi_df+nQ),1) 
+                    f_val = f_val - my_ddot(df_vars_%nQ,int2(pi_df+1:),df_vars_%Qstride,int2(qi_df+1:),df_vars_%Qstride) 
 
                   end do
 
@@ -520,18 +520,18 @@ module focas_semicanonical
 
                     tdf   = df_vars_%class_to_df_map(t)
 
-                    pt_df = df_pq_index(pdf,tdf)
+                    pt_df = df_pq_index(pdf,tdf) 
  
                     do u = first_index_(t_sym,2) , last_index_(t_sym,2)
 
                       udf    = df_vars_%class_to_df_map(u)
                       
-                      qu_df  = df_pq_index(qdf,udf)
+                      qu_df  = df_pq_index(qdf,udf) 
 
                       tu_den = dens_%gemind(t,u)
 
                       f_val = f_val - 0.5_wp*den1(tu_den)* &
-                              & ddot(nQ,int2(pt_df+1:pt_df+nQ),1,int2(qu_df+1:qu_df+nQ),1)
+                              & my_ddot(df_vars_%nQ,int2(pt_df+1:),df_vars_%Qstride,int2(qu_df+1:),df_vars_%Qstride)
 
                     end do
 
@@ -750,6 +750,7 @@ module focas_semicanonical
       integer, intent(in)     :: nextpi(nirrep)
 
       integer :: error
+      integer :: nfzcpi(nirrep)
 
       ! calculate the total number of orbitals in space
       ndoc_tot_ = sum(ndocpi)
@@ -757,11 +758,15 @@ module focas_semicanonical
       next_tot_ = sum(nextpi)
       nmo_tot_  = ndoc_tot_+nact_tot_+next_tot_
 
+      ! in this case, there are no frozen doubly occupied orbitals
+      nfzc_tot_ = 0
+      nfzcpi_   = 0
+
       ! allocate indexing arrays
       call allocate_indexing_arrays(nirrep)
 
       ! determine integral/density addressing arrays
-      call setup_indexing_arrays(ndocpi,nactpi,nextpi)
+      call setup_indexing_arrays(nfzcpi,ndocpi,nactpi,nextpi)
 
       ! allocate transformation matrices
       call allocate_transformation_matrices()
@@ -795,7 +800,7 @@ module focas_semicanonical
       call deallocate_generalized_fock_matrix()
       
       if (allocated(df_vars_%class_to_df_map)) deallocate(df_vars_%class_to_df_map)
-      if (allocated(df_vars_%noccgempi))       deallocate(df_vars_%noccgempi)
+!      if (allocated(df_vars_%noccgempi))       deallocate(df_vars_%noccgempi)
 
       return
 

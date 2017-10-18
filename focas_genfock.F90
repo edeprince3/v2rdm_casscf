@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -57,6 +57,8 @@ module focas_genfock
       integer, intent(in)     :: nactpi(nirrep)
       integer, intent(in)     :: nextpi(nirrep)
 
+      integer                 :: nfzcpi(nirrep)
+
       real(wp), intent(inout) :: orbopt_data(14)
 
       character(120)          :: fname
@@ -88,8 +90,11 @@ module focas_genfock
 
       endif
 
+      ! set the number of frozen doubly occupied orbitals to zer for each IRREP
+      nfzcpi = 0 
+
       ! allocate variables and set up mapping arrays
-      call allocate_genfock_initial(ndocpi,nactpi,nextpi,nirrep,int2_nnz)
+      call allocate_genfock_initial(nfzcpi,ndocpi,nactpi,nextpi,nirrep,int2_nnz)
 
       ! compute generalized Fock matrix 
       call build_entire_gen_fock(int1,int2,den1,den2,gen_fock_out)
@@ -113,7 +118,7 @@ module focas_genfock
         call compute_f_i(int1,int2)
       else
         call compute_f_i_df_coulomb(int1,int2)
-        call compute_f_i_df_exchange(int1,int2)
+        call compute_f_i_df_exchange(int2)
       endif
       call transpose_matrix(fock_i_)
 
@@ -152,23 +157,23 @@ module focas_genfock
 
       end do
 
-      if ( log_print_ == 1 ) then
-
-        ! debug printing
-
-        offset = 0
-
-        do p_class = 1 , 2
-
-          do q_class = 1 , 3
-
-            error = print_gen_fock_block(p_class,q_class)
-
-          end do
-
-        end do
-
-      endif
+!      if ( log_print_ == 1 ) then
+!
+!        ! debug printing
+!
+!        offset = 0
+!
+!        do p_class = 1 , 2
+!
+!          do q_class = 1 , 3
+!
+!            error = print_gen_fock_block(p_class,q_class)
+!
+!          end do
+!
+!        end do
+!
+!      endif
  
       return
 
@@ -347,7 +352,7 @@ module focas_genfock
 
     end subroutine build_entire_gen_fock
 
-    subroutine allocate_genfock_initial(ndocpi,nactpi,nextpi,nirrep,int2_nnz)
+    subroutine allocate_genfock_initial(nfzcpi,ndocpi,nactpi,nextpi,nirrep,int2_nnz)
 
       implicit none
 
@@ -356,6 +361,7 @@ module focas_genfock
       integer, intent(in)     :: ndocpi(nirrep)
       integer, intent(in)     :: nactpi(nirrep)
       integer, intent(in)     :: nextpi(nirrep)
+      integer, intent(in)     :: nfzcpi(nirrep)
 
       integer :: error
 
@@ -365,11 +371,14 @@ module focas_genfock
       next_tot_ = sum(nextpi)
       nmo_tot_  = ndoc_tot_+nact_tot_+next_tot_
 
+      ! zero out total number of frozen doubly occupied orbitals
+      nfzc_tot_ = sum(nfzcpi) 
+
       ! allocate indexing arrays
       call allocate_indexing_arrays(nirrep)
 
       ! determine integral/density addressing arrays
-      call setup_indexing_arrays(ndocpi,nactpi,nextpi)
+      call setup_indexing_arrays(nfzcpi,ndocpi,nactpi,nextpi)
 
       ! allocate transformation matrices
       call allocate_transformation_matrices()
@@ -403,7 +412,7 @@ module focas_genfock
       call deallocate_transformation_matrices()
 
       if (allocated(df_vars_%class_to_df_map)) deallocate(df_vars_%class_to_df_map)
-      if (allocated(df_vars_%noccgempi))       deallocate(df_vars_%noccgempi)
+!      if (allocated(df_vars_%noccgempi))       deallocate(df_vars_%noccgempi)
 
       ! deallocate temporary fock matrices 
       call deallocate_temporary_fock_matrices()

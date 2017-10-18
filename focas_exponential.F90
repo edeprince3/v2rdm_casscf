@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -57,6 +57,8 @@ module focas_exponential
         error = gather_kappa_block(kappa_in,k_block,i_sym)
         if (error /= 0) call abort_print(10) 
 
+!        call print_kappa_block(k_block,i_sym)
+
         error = 0
         if ( trans_%nmopi(i_sym) > 0 ) error = compute_block_exponential(k_block,i_sym,max_nmopi)
         if (error /= 0) call abort_print(11)
@@ -68,6 +70,31 @@ module focas_exponential
       return
  
     end subroutine compute_exponential
+
+    subroutine print_kappa_block(mat,sym)
+
+      implicit none
+ 
+      integer :: sym
+      real(wp) :: mat(:,:)
+
+      integer :: i,j,nmo
+
+      nmo=trans_%nmopi(sym)
+
+      do i = 1 , nmo
+
+        do j = i+1, nmo
+
+           write(*,'(2(i2,1x),es20.12,5x,es20.12)')j,i,mat(j,i),mat(i,j)
+
+        end do
+
+      end do
+
+      return
+
+    end subroutine print_kappa_block
 
     integer function compute_block_exponential(K,block_sym,max_dim)
       implicit none
@@ -84,15 +111,41 @@ module focas_exponential
       integer :: iwork_tmp(1)
       real(wp) :: work_tmp(1,1),val
 
-      integer :: block_dim,i,j, il,iu,neig_found,lwork,liwork,success
-      real(wp) :: vl,vu,diag_tol,max_normalization_error,max_orthogonality_error,ddot
+      integer :: block_dim,i,j, il,iu,neig_found,lwork,liwork,success,nfzc,nmo
+      real(wp) :: vl,vu,diag_tol,max_normalization_error,max_orthogonality_error
 
       ! initialize return value
       compute_block_exponential = 1
 
-      ! dimension of actual block
-      
-      block_dim = trans_%nmopi(block_sym)
+      ! check to see if this block is going to be equal to the I
+
+      if ( trans_%U_eq_I(block_sym) == 1 ) then
+
+        trans_%u_irrep_block(block_sym)%val = 0.0_wp
+
+        do i = 1 , trans_%nmopi(block_sym)
+
+          trans_%u_irrep_block(block_sym)%val(i,i) = 1.0_wp
+
+        end do
+
+        compute_block_exponential = 0
+
+        return
+
+      end if
+
+      ! number of frozen doubly occupied orbitals
+     
+      nfzc = nfzcpi_(block_sym)
+
+      ! save total number of orbitals
+
+      nmo = trans_%nmopi(block_sym)
+
+      ! dimension of active block
+
+      block_dim = nmo - nfzc
 
       ! ***************************
       ! allocate temporary matrices
@@ -106,47 +159,19 @@ module focas_exponential
       ! compute and K^2
       ! ***************
 
-!#ifdef BLAS
-!
       do i = 1 , block_dim
-        call dcopy(block_dim,K(1:block_dim,i),1,X(:,i),1)
+        call my_dcopy(block_dim,K(nfzc+1:block_dim+nfzc,i+nfzc),1,X(:,i),1)
       end do
-      call dgemm('n','n',block_dim,block_dim,block_dim,1.0_wp,K,max_dim,X,block_dim,0.0_wp,K2,block_dim)
-!
-!#else
-!
-!      K2 = matmul(K(1:block_dim,1:block_dim),K(1:block_dim,1:block_dim))
-!
-!#endif         
+
+      call dgemm('n','n',block_dim,block_dim,block_dim,1.0_wp,K(nfzc+1:nmo,nfzc+1:nmo),& 
+      & block_dim,X,block_dim,0.0_wp,K2,block_dim)
 
       ! ***************
       ! diagonalize K^2
       ! ***************
-!
-!      ***** NOTE *****
-!      dsyevr fails using ACML but works with OPENBLAS AND MKL
-!      for now, we will use dsyev instead
-!
-!      il=1
-!      iu=block_dim
-!      vl=-huge(1.0_wp)
-!      vu=0.0_wp
-!      diag_tol=2.0_wp*epsilon(1.0_wp)
-!      allocate(isuppz(2*block_dim))
-!      ! figure out optimal dimensions for iwork and work
-!      call dsyevr('v','a','u',block_dim,K2,block_dim,vl,vu,il,iu,diag_tol,neig_found,d,X,&
-!                 & block_dim,isuppz,work_tmp,-1,iwork_tmp,-1,success)
-!      if ( success /= 0 ) return
-!      liwork=iwork_tmp(1)
-!      lwork=int(work_tmp(1,1))
-!      allocate(work(lwork),iwork(liwork))
-!      call dsyevr('v','a','u',block_dim,K2,block_dim,vl,vu,il,iu,diag_tol,neig_found,d,X,&
-!                 & block_dim,isuppz,work,lwork,iwork,liwork,success)
-!      deallocate(isuppz,work,iwork)
-
       
       X = K2
-      call dsyev('v','u',block_dim,X,block_dim,d, work_tmp,-1,success)
+      call dsyev('v','u',block_dim,X,block_dim,d,work_tmp,-1,success)
       lwork=int(work_tmp(1,1))
       if ( success /= 0 ) then 
         deallocate(K2,d,X)
@@ -158,6 +183,18 @@ module focas_exponential
         deallocate(work)
         return
       endif
+
+      ! *************************
+      ! initialize unitary matrix
+      ! *************************
+
+      trans_%u_irrep_block(block_sym)%val = 0.0_wp
+
+      do i = 1 , nfzc
+
+        trans_%u_irrep_block(block_sym)%val(i,i) = 1.0_wp
+
+      end do
 
       ! ***********************************************************************************
       ! compute exponential U = exp(K) = X * cos(d) * X^(T) + K * X * d^(-1) * sin(d) * X^T
@@ -186,37 +223,31 @@ module focas_exponential
         val = 1.0_wp
         if ( d(i) /= 0.0_wp ) val = sin(d(i)) / d(i) 
 
-!#ifdef BLAS
-!
-        call dcopy(block_dim,X(:,i),1,tmp_mat_1(:,i),1)
-        call dscal(block_dim,val,tmp_mat_1(:,i),1)
-!
-!#else
-!
-!        tmp_mat_1(:,i) = val * X(:,i)
-!
-!#endif      
+        call my_dcopy(block_dim,X(:,i),1,tmp_mat_1(:,i),1)
+        call my_dscal(block_dim,val,tmp_mat_1(:,i),1)
 
       end do
 
-      ! now do the rest in two steps to compute the full second term
-      ! tmp_mat_2 = X * tmp_mat_1^T
-      ! U = K * tmp_mat_2
-
-!#ifdef BLAS
-!
       call dgemm('n','t',block_dim,block_dim,block_dim,1.0_wp,X,block_dim,tmp_mat_1, &
                 & block_dim,0.0_wp,tmp_mat_2,block_dim)
-      call dgemm('n','n',block_dim,block_dim,block_dim,1.0_wp,K,max_dim,tmp_mat_2, &
-                & block_dim,0.0_wp,trans_%u_irrep_block(block_sym)%val,block_dim)
-!
-!#else
-!
-!      tmp_mat_2                           = matmul(X,transpose(tmp_mat_1))
-!      trans_%u_irrep_block(block_sym)%val = matmul(K(1:block_dim,1:block_dim),tmp_mat_2)
-!
-!#endif        
+
+!      write(*,*)'X d^-1 sin(d) X^T'
+!      do i=1,block_dim
+!        do j = 1 ,block_dim
+!           write(*,'(2(i2,1x),5x,es20.12)')j,i,tmp_mat_2(j,i)
+!        end do
+!      end do
+
+      call dgemm('n','n',block_dim,block_dim,block_dim,1.0_wp,K(nfzc+1:nmo,nfzc+1:nmo),block_dim,tmp_mat_2, &
+                & block_dim,0.0_wp,trans_%u_irrep_block(block_sym)%val(nfzc+1:nmo,nfzc+1:nmo),block_dim)
      
+!      write(*,*)'K X d^-1 sin(d) X^T'
+!      do i=1,block_dim
+!        do j = 1 ,block_dim
+!           write(*,'(2(i2,1x),5x,es20.12)')j,i,trans_%u_irrep_block(block_sym)%val(j,i)
+!        end do
+!      end do
+
       ! ****************************
       ! *** COMPUTE X * cos(d) * X^T
       ! ****************************
@@ -226,66 +257,30 @@ module focas_exponential
       do i = 1 , block_dim
         val = cos(d(i))
 
-!#ifdef BLAS
-!
-        call dcopy(block_dim,X(:,i),1,tmp_mat_1(:,i),1)
-        call dscal(block_dim,val,tmp_mat_1(:,i),1)        
-!
-!#else
-!
-!       tmp_mat_1(:,i) = val * X(:,i)
-!
-!#endif  
+        call my_dcopy(block_dim,X(:,i),1,tmp_mat_1(:,i),1)
+        call my_dscal(block_dim,val,tmp_mat_1(:,i),1)        
+
       end do 
 
-      ! tmp_mat_2 = X * (tmp_mat_1)^T
-      ! U = U + tmp_mat_2
-
-!#ifdef BLAS
-!
       call dgemm('n','t',block_dim,block_dim,block_dim,1.0_wp,X,block_dim,tmp_mat_1, & 
-                & block_dim,1.0_wp,trans_%u_irrep_block(block_sym)%val,block_dim)
-!
-!#else
-!
-!      tmp_mat_2                           = matmul(X,transpose(tmp_mat_1))
-!      trans_%u_irrep_block(block_sym)%val = trans_%u_irrep_block(block_sym)%val + tmp_mat_2
-!
-!#endif
-
-      ! check orthonormality error
+                & block_dim,1.0_wp,trans_%u_irrep_block(block_sym)%val(nfzc+1:nmo,nfzc+1:nmo),block_dim)
 
       max_orthogonality_error = 0.0_wp
       max_normalization_error = 0.0_wp
 
-      do i = 1 , block_dim
+      do i = 1 , nmo
 
         ! compute norm of vector
 
-!#ifdef BLAS
-!
-        val = ddot(block_dim,trans_%u_irrep_block(block_sym)%val(:,i),1,&
+        val = my_ddot(nmo,trans_%u_irrep_block(block_sym)%val(:,i),1,&
               trans_%u_irrep_block(block_sym)%val(:,i),1)
-!
-!#else
-!
-!        val = dot_product(trans_%u_irrep_block(block_sym)%val(:,i),trans_%u_irrep_block(block_sym)%val(:,i))
-!
-!#endif
+
         if ( abs( 1.0_wp - val ) > max_normalization_error ) max_normalization_error = abs ( 1.0_wp - val )
 
         do j = 1 , i - 1
 
-!#ifdef BLAS
-!
-          val = ddot(block_dim,trans_%u_irrep_block(block_sym)%val(:,i),1,&
+          val = my_ddot(nmo,trans_%u_irrep_block(block_sym)%val(:,i),1,&
               trans_%u_irrep_block(block_sym)%val(:,j),1)
-!
-!#else
-!
-!          val = dot_product(trans_%u_irrep_block(block_sym)%val(:,i),trans_%u_irrep_block(block_sym)%val(:,j))
-!
-!#endif         
 
           if ( abs( val ) > max_orthogonality_error ) max_orthogonality_error = abs ( val )
            

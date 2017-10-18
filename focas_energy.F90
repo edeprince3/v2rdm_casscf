@@ -1,7 +1,7 @@
 !!
  !@BEGIN LICENSE
  !
- ! v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ ! v2RDM-CASSCF, a plugin to:
  !
  ! Psi4: an open-source quantum chemistry software package
  !
@@ -29,6 +29,83 @@ module focas_energy
   implicit none
 
   contains
+
+  function compute_energy_tindex(f_i,f_a,q,z,h,d1)
+
+    ! function to compute energy using only two-index quantities: i
+    ! F_i, F_a, Q, Z, D, and h
+    !
+    ! E = 0.5 * [ sum_{p,q} d1(p,q)h(p|q) + sum_{p} F(p|p) ]
+    ! 
+    ! terms proportional to d1
+    !
+    ! E = sum_{i} h(i|i) + sum_{u>v} d1(u|v) * h(u|v) + 0.5 * sum_{u} d1(u|u) * h(u|u)  
+    !
+    ! terms proportional to generalized Fock matrix
+    !
+    ! E = 0.5 * [ sum_{i} F(i|i) + sum_{u} F(u|u) ]
+    !   = sum_{i} ( f_i(i|i) + f_a(i|i) ) + 0.5 * sum_{u} ( z(u|u) + q(u|u) )
+    
+    implicit none
+
+    type(matrix_block), intent(in) :: f_i(:)
+    type(matrix_block), intent(in) :: f_a(:)
+    real(wp), intent(in)           :: q(:,:)
+    real(wp), intent(in)           :: z(:,:)
+    real(wp), intent(in)           :: h(:)
+    real(wp), intent(in)           :: d1(:)
+    
+    integer :: i,u,v,i_i,u_i
+    integer :: i_sym,u_sym
+    integer :: ii_int,uv_int,uv_den,uu_int,uu_den
+   
+    real(wp) :: energy,compute_energy_tindex
+ 
+    energy = 0.0_wp
+
+    ! terms involving inactive orbitals
+ 
+    do i_sym = 1 , nirrep_
+
+      do i = first_index_(i_sym,1) , last_index_(i_sym,1)
+
+        ii_int = ints_%gemind(i,i)
+        i_i    = trans_%class_to_irrep_map(i)
+
+        energy = energy + h(ii_int) + f_i(i_sym)%val(i_i,i_i) + f_a(i_sym)%val(i_i,i_i)
+
+      end do
+
+    end do 
+
+    do u_sym = 1 , nirrep_
+
+      do u = first_index_(u_sym,2) , last_index_(u_sym,2)
+
+        do v = first_index_(u_sym,2) , u - 1
+
+          uv_den = dens_%gemind(u,v)
+          uv_int = ints_%gemind(u,v)
+
+          energy = energy + d1(uv_den) * h(uv_int)
+
+        end do
+
+        uu_den = dens_%gemind(u,u)
+        uu_int = ints_%gemind(u,u)
+
+        energy = energy + 0.5_wp * ( d1(uu_den) * h(uu_int) + &
+                                   & z(u-ndoc_tot_,u) + q(u-ndoc_tot_,u) ) 
+ 
+      end do
+
+    end do
+
+    compute_energy_tindex=energy
+
+    return
+
+  end function compute_energy_tindex
 
   subroutine compute_energy(int1,int2,den1,den2)
     implicit none
@@ -83,6 +160,13 @@ module focas_energy
 
     ! total 2-e energy
     e2_total_      = e2_cc_ + e2_ca_ + e2_aa_
+
+!    write(fid_,*)e1_c_,e2_cc_
+!
+!    write(fid_,*)e_frozen_core_,e_active_,e_total_
+!    write(fid_,*)e1_total_,e2_total_
+!
+!    stop
 
     return
   end subroutine compute_energy
@@ -188,7 +272,7 @@ module focas_energy
     real(wp) :: e_out,coulomb,exchange
     integer :: j_sym,i_sym,i,j,idf,jdf
     integer(ip) :: ii,jj,ij,nQ
-    real(wp) :: ddot,int_val
+    real(wp) :: int_val
     real(wp) :: v_ii(df_vars_%nQ)
 
     nQ = int(df_vars_%nQ,kind=ip)
@@ -218,8 +302,8 @@ module focas_energy
           idf = df_vars_%class_to_df_map(i)
 
           ! ii-geminal index
-          ii   = df_pq_index(idf,idf)  
-          call dcopy(df_vars_%nQ,int2(ii+1:ii+nQ),1,v_ii,1)
+          ii  =  df_pq_index(idf,idf) 
+          call my_dcopy(df_vars_%nQ,int2(ii+1:),df_vars_%Qstride,v_ii,1)
 
           ! loop over j indeces
 
@@ -229,14 +313,14 @@ module focas_energy
             jdf       = df_vars_%class_to_df_map(j)
 
             ! geminal indeces
-            jj        = df_pq_index(jdf,jdf)
-            ij        = df_pq_index(idf,jdf) 
+            jj        =  df_pq_index(jdf,jdf)
+            ij        =  df_pq_index(idf,jdf)
 
             ! calculate Coulomb contribution // g(ii,jj) ... i,j \in C)
             ! calculate exchange contribution // g(ij,ij) ... i,j \in C)
 
-            coulomb  = coulomb  + ddot(df_vars_%nQ,v_ii,1,int2(jj+1:jj+nQ),1)
-            exchange = exchange + ddot(df_vars_%nQ,int2(ij+1:ij+nQ),1,int2(ij+1:ij+nQ),1)
+            coulomb  = coulomb  + my_ddot(df_vars_%nQ,v_ii,1,int2(jj+1:),df_vars_%Qstride)
+            exchange = exchange + my_ddot(df_vars_%nQ,int2(ij+1:),df_vars_%Qstride,int2(ij+1:),df_vars_%Qstride)
 
           end do ! end j loop
 
@@ -256,8 +340,8 @@ module focas_energy
         idf = df_vars_%class_to_df_map(i)
 
         ! ii-geminal index
-        ii  = df_pq_index(idf,idf) 
-        call dcopy(df_vars_%nQ,int2(ii+1:ii+nQ),1,v_ii,1)
+        ii  = df_pq_index(idf,idf)
+        call my_dcopy(df_vars_%nQ,int2(ii+1:),df_vars_%Qstride,v_ii,1)
 
         ! loop over j indeces
 
@@ -267,14 +351,14 @@ module focas_energy
           jdf       = df_vars_%class_to_df_map(j)
 
           ! geminal indeces
-          jj        = df_pq_index(jdf,jdf) 
-          ij        = df_pq_index(idf,jdf) 
+          jj        = df_pq_index(jdf,jdf)
+          ij        = df_pq_index(idf,jdf)
 
           ! calculate Coulomb contribution // g(ii,jj) ... i,j \in C)
           ! calculate exchange contribution // g(ij,ij) ... i,j \in C)
 
-          coulomb  = coulomb  + ddot(df_vars_%nQ,v_ii,1,int2(jj+1:jj+nQ),1)
-          exchange = exchange + ddot(df_vars_%nQ,int2(ij+1:ij+nQ),1,int2(ij+1:ij+nQ),1)
+          coulomb  = coulomb  + my_ddot(df_vars_%nQ,v_ii,1,int2(jj+1:),df_vars_%Qstride)
+          exchange = exchange + my_ddot(df_vars_%nQ,int2(ij+1:),df_vars_%Qstride,int2(ij+1:),df_vars_%Qstride)
 
         end do ! end j loop
 
@@ -282,7 +366,7 @@ module focas_energy
         ! *** i_sym == j_sym && i == j
         ! ****************************
 
-        int_val  = 0.5_wp * ddot(df_vars_%nQ,int2(ii+1:ii+nQ),1,int2(ii+1:jj+nQ),1)
+        int_val  = 0.5_wp * my_ddot(df_vars_%nQ,int2(ii+1:),df_vars_%Qstride,int2(ii+1:),df_vars_%Qstride)
 
         coulomb  = coulomb  + int_val
         exchange = exchange + int_val    
@@ -372,7 +456,7 @@ module focas_energy
     integer :: i,j,k,i_sym,k_sym,ik_sym
     integer :: idf,jdf,kdf,ij_den,ii_den
     integer(ip) :: ii,ij,kk,ik,jk,nQ
-    real(wp) :: coulomb,exchange,ddot
+    real(wp) :: coulomb,exchange
     real(wp) :: v_ij(df_vars_%nQ),v_ii(df_vars_%nQ)
 
     nQ = int(df_vars_%nQ,kind=ip)
@@ -410,8 +494,8 @@ module focas_energy
             jdf = df_vars_%class_to_df_map(j)
 
             ! ij geminal integral index
-            ij  = df_pq_index(idf,jdf) 
-            call dcopy(df_vars_%nQ,int2(ij+1:ij+nQ),1,v_ij,1)
+            ij  = df_pq_index(idf,jdf)
+            call my_dcopy(df_vars_%nQ,int2(ij+1:),df_vars_%Qstride,v_ij,1)
 
             ! initialize coulomb and exhange contributions
             coulomb  = 0.0_wp
@@ -425,15 +509,15 @@ module focas_energy
               kdf      = df_vars_%class_to_df_map(k)
  
               ! geminal indeces
-              kk       = df_pq_index(kdf,kdf) 
+              kk       = df_pq_index(kdf,kdf)  
               ik       = df_pq_index(idf,kdf) 
-              jk       = df_pq_index(jdf,kdf) 
+              jk       = df_pq_index(jdf,kdf)
 
               ! calculate Coulomb contribution // g(ij,kk) ... i,j \in A && k \in D
               ! calculate exchange contribution // g(ik,jk) ... i,j \in A && k \in D
 
-              coulomb  = coulomb  + ddot(df_vars_%nQ,v_ij,1,int2(kk+1:kk+nQ),1)
-              exchange = exchange + ddot(df_vars_%nQ,int2(ik+1:ik+nQ),1,int2(jk+1:jk+nQ),1)
+              coulomb  = coulomb  + my_ddot(df_vars_%nQ,v_ij,1,int2(kk+1:),df_vars_%Qstride)
+              exchange = exchange + my_ddot(df_vars_%nQ,int2(ik+1:),df_vars_%Qstride,int2(jk+1:),df_vars_%Qstride)
 
             end do ! end k loop
 
@@ -450,7 +534,7 @@ module focas_energy
 
           ! ij geminal integral index
           ii  = df_pq_index(idf,idf) 
-          call dcopy(df_vars_%nQ,int2(ii+1:ii+nQ),1,v_ii,1)
+          call my_dcopy(df_vars_%nQ,int2(ii+1:),df_vars_%Qstride,v_ii,1)
 
           ! initialize coulomb and exhange contributions
           coulomb  = 0.0_wp
@@ -470,8 +554,8 @@ module focas_energy
             ! calculate Coulomb contribution // g(ii,kk) ... i \in A && k \in D
             ! calculate exchange contribution // g(ik,ik) ... i \in A && k \in D
 
-            coulomb  = coulomb  + ddot(df_vars_%nQ,v_ii,1,int2(kk+1:kk+nQ),1)
-            exchange = exchange + ddot(df_vars_%nQ,int2(ik+1:ik+nQ),1,int2(ik+1:ik+nQ),1)
+            coulomb  = coulomb  + my_ddot(df_vars_%nQ,v_ii,1,int2(kk+1:),df_vars_%Qstride)
+            exchange = exchange + my_ddot(df_vars_%nQ,int2(ik+1:),df_vars_%Qstride,int2(ik+1:),df_vars_%Qstride)
 
           end do ! end k loop
 
@@ -580,7 +664,7 @@ module focas_energy
     integer :: kl_den,ij_den,ii_den,kk_den
     integer(ip) :: ij,kl,kk,ii,nQ
     integer :: den_ind,ij_den_offset
-    real(wp) :: int_val,ddot
+    real(wp) :: int_val
     real(wp) :: v_ii(df_vars_%nQ),v_ij(df_vars_%nQ)
 
     nQ = int(df_vars_%nQ,kind=ip)
@@ -616,7 +700,7 @@ module focas_energy
 
               ij_den = dens_%gemind(i,j)
 
-              ij     = df_pq_index(idf,jdf)  
+              ij     = df_pq_index(idf,jdf) 
 
               do k = first_index_(k_sym,2) , last_index_(k_sym,2)
 
@@ -634,7 +718,7 @@ module focas_energy
 
                   ! do work here i > j && k > l --> factor of 4
                   
-                  int_val  = ddot(df_vars_%nQ,int2(ij+1:ij+nQ),1,int2(kl+1:kl+nQ),1)
+                  int_val  = my_ddot(df_vars_%nQ,int2(ij+1:),df_vars_%Qstride,int2(kl+1:),df_vars_%Qstride)
 
                   e_out    = e_out + 4.0_wp * int_val * den2(den_ind)  
 
@@ -666,8 +750,8 @@ module focas_energy
 
             ij_den = dens_%gemind(i,j)
 
-            ij     = df_pq_index(idf,jdf)
-            call dcopy(df_vars_%nQ,int2(ij+1:ij+nQ),1,v_ij,1)
+            ij     = df_pq_index(idf,jdf) 
+            call my_dcopy(df_vars_%nQ,int2(ij+1:),df_vars_%Qstride,v_ij,1)
 
             do k = first_index_(k_sym,2) , last_index_(k_sym,2)
 
@@ -685,7 +769,7 @@ module focas_energy
  
                 ! do work here i > j && k > l --> factor of 4
 
-                int_val  = ddot(df_vars_%nQ,v_ij,1,int2(kl+1:kl+nQ),1)
+                int_val  = my_ddot(df_vars_%nQ,v_ij,1,int2(kl+1:),df_vars_%Qstride)
 
                 e_out    = e_out + 4.0_wp * int_val * den2(den_ind)                
 
@@ -699,7 +783,7 @@ module focas_energy
  
               ! do work here i > j && k == l --> factor of 2
 
-              int_val  = ddot(df_vars_%nQ,v_ij,1,int2(kk+1:kk+nQ),1)
+              int_val  = my_ddot(df_vars_%nQ,v_ij,1,int2(kk+1:),df_vars_%Qstride)
 
               e_out    = e_out + 2.0_wp * int_val * den2(den_ind)
 
@@ -708,7 +792,7 @@ module focas_energy
           end do ! end j loop
 
           ii     = df_pq_index(idf,idf) 
-          call dcopy(df_vars_%nQ,int2(ii+1:ii+nQ),1,v_ii,1)
+          call my_dcopy(df_vars_%nQ,int2(ii+1:),df_vars_%Qstride,v_ii,1)
 
           ii_den = dens_%gemind(i,i) 
  
@@ -724,11 +808,11 @@ module focas_energy
 
               den_ind = pq_index(ii_den,kl_den)
  
-              kl      = df_pq_index(kdf,ldf) 
+              kl      = df_pq_index(kdf,ldf)  
 
               ! do work here i == j && k > l --> factor of 2
 
-              int_val  = ddot(df_vars_%nQ,v_ii,1,int2(kl+1:kl+nQ),1)
+              int_val  = my_ddot(df_vars_%nQ,v_ii,1,int2(kl+1:),df_vars_%Qstride)
 
               e_out    = e_out + 2.0_wp * int_val * den2(den_ind)
 
@@ -742,7 +826,7 @@ module focas_energy
 
             ! do work here i == j && k == l --> factor of 1
 
-            int_val  = ddot(df_vars_%nQ,v_ii,1,int2(kk+1:kk+nQ),1)
+            int_val  = my_ddot(df_vars_%nQ,v_ii,1,int2(kk+1:),df_vars_%Qstride)
 
             e_out    = e_out + int_val * den2(den_ind)
 
