@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
@@ -28,11 +28,15 @@
 #include <psi4/psi4-dec.h>
 #include <psi4/liboptions/liboptions.h>
 #include <psi4/libqt/qt.h>
-#include <psi4/libtrans/integraltransform.h>
-#include <psi4/libtrans/mospace.h>
-#include <psi4/libmints/wavefunction.h>
-#include <psi4/libmints/vector.h>
-#include <psi4/libmints/matrix.h>
+
+#include<psi4/libtrans/integraltransform.h>
+#include<psi4/libtrans/mospace.h>
+
+#include<psi4/libmints/wavefunction.h>
+//#include<psi4/libmints/mints.h>
+#include<psi4/libmints/vector.h>
+#include<psi4/libmints/matrix.h>
+//#include<../bin/fnocc/blas.h>
 #include<time.h>
 
 #include"v2rdm_solver.h"
@@ -45,6 +49,7 @@
 #endif
 
 using namespace psi;
+//using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
@@ -173,9 +178,9 @@ void v2RDMSolver::UpdatePrimal() {
 
 }
 
-void v2RDMSolver::TransformFourIndex(double * inout, double * tmp, std::shared_ptr<Matrix>trans) {
+void v2RDMSolver::TransformFourIndex(double * inout, double * tmp, SharedMatrix trans) {
 
-    // transform fourth index
+    // transform fourth index 
     for (int h = 0; h < nirrep_; h++) {
         for (int ij = 0; ij < gems_ab[h]; ij++) {
             for (int kl = 0; kl < gems_ab[h]; kl++) {

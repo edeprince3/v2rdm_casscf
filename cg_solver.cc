@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
@@ -32,20 +32,23 @@
 #include <psi4/libplugin/plugin.h>
 #include <psi4/psi4-dec.h>
 #include <psi4/liboptions/liboptions.h>
+//#include <psi4/libmints/mints.h>
 #include <psi4/libpsio/psio.hpp>
+//#include <../bin/fnocc/blas.h>
 #include <psi4/libqt/qt.h>
 #include "cg_solver.h"
 
-namespace psi{
+
+namespace psi{ 
 
 CGSolver::CGSolver(long int n) {
     n_              = n;
     iter_           = 0;
     cg_max_iter_    = 10000;
-    cg_convergence_ = 1e-6;
-    p = std::shared_ptr<Vector>(new Vector(n));
-    r = std::shared_ptr<Vector>(new Vector(n));
-    //z = std::shared_ptr<Vector>(new Vector(n));
+    cg_convergence_ = 1e-9;
+    p = SharedVector(new Vector(n));
+    r = SharedVector(new Vector(n));
+    //z = SharedVector(new Vector(n));
 }
 CGSolver::~CGSolver(){
 }
@@ -57,10 +60,10 @@ void CGSolver::set_convergence(double conv) {
 }
 
 void CGSolver::preconditioned_solve(long int n,
-                    std::shared_ptr<Vector> Ap,
-                    std::shared_ptr<Vector>  x,
-                    std::shared_ptr<Vector>  b,
-                    std::shared_ptr<Vector>  precon,
+                    SharedVector Ap, 
+                    SharedVector  x, 
+                    SharedVector  b, 
+                    SharedVector  precon, 
                     CallbackType function, void * data) {
 
     if ( n != n_ ) {
@@ -102,7 +105,7 @@ void CGSolver::preconditioned_solve(long int n,
 
         // if r is sufficiently small, then exit loop
         double rrnew = C_DDOT(n_,r_p,1,r_p,1);
-        double nrm = sqrt(rrnew);
+        double nrm = sqrt(rrnew);// / sqrt(n_);
         if ( nrm < cg_convergence_ ) break;
 
         for (int i = 0; i < n; i++) {
@@ -120,9 +123,9 @@ void CGSolver::preconditioned_solve(long int n,
 }
 
 void CGSolver::solve(long int n,
-                    std::shared_ptr<Vector> Ap,
-                    std::shared_ptr<Vector>  x,
-                    std::shared_ptr<Vector>  b,
+                    SharedVector Ap, 
+                    SharedVector  x, 
+                    SharedVector  b, 
                     CallbackType function, void * data) {
 
     if ( n != n_ ) {
@@ -161,7 +164,7 @@ void CGSolver::solve(long int n,
 
         // if r is sufficiently small, then exit loop
         double rrnew = C_DDOT(n_,r_p,1,r_p,1);
-        double nrm = sqrt(rrnew);
+        double nrm = sqrt(rrnew);// / sqrt(n_);
         double beta = rrnew/rr;
         if ( nrm < cg_convergence_ ) break;
 

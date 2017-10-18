@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,33 +20,39 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
 
 #include "v2rdm_solver.h"
 
+#include <psi4/libplugin/plugin.h>
 #include <psi4/psi4-dec.h>
-#include <psi4/libciomr/libciomr.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libpsio/psio.hpp>
+#include<psi4/libciomr/libciomr.h>
 #include <psi4/libpsi4util/process.h>
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+#include"backtransform_tpdm.h"
+
+INIT_PLUGIN
 
 using namespace psi;
+//using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf {
 
-extern "C"
+extern "C" 
 int read_options(std::string name, Options& options)
 {
-    if (name == "V2RDM_CASSCF"|| options.read_globals()) {
+    if (name == "V2RDM_CASSCF_PRIVATE"|| options.read_globals()) {
+        /* Do v2RDM-CASSCF gradient? !expert */
+        options.add_str("DERTYPE", "NONE", "NONE FIRST");
         /*- Do optimize orbitals? -*/
         options.add_bool("OPTIMIZE_ORBITALS",true);
         /*- Do semicanonicalize orbitals? -*/
-        options.add_bool("SEMICANONICALIZE_ORBITALS",true);
+        options.add_bool("SEMICANONICALIZE_ORBITALS",false);
         /*- Type of guess -*/
         options.add_str("TPDM_GUESS","RANDOM", "RANDOM HF");
         /*- Do write the 2-RDM to disk? All nonzero elements of the 2-RDM will be written.  -*/
@@ -57,7 +63,7 @@ int read_options(std::string name, Options& options)
         options.add_bool("3PDM_WRITE",false);
         /*- Do save progress in a checkpoint file? -*/
         options.add_bool("WRITE_CHECKPOINT_FILE",false);
-        /*- Frequency of checkpoint file generation.  The checkpoint file is
+        /*- Frequency of checkpoint file generation.  The checkpoint file is 
         updated every CHECKPOINT_FREQUENCY iterations.  The default frequency
         will be ORBOPT_FREQUENCY. -*/
         options.add_int("CHECKPOINT_FREQUENCY",500);
@@ -70,8 +76,6 @@ int read_options(std::string name, Options& options)
         options.add_str("POSITIVITY", "DQG", "DQG D DQ DG DQGT1 DQGT2 DQGT1T2");
         /*- Do constrain D3 to D2 mapping? -*/
         options.add_bool("CONSTRAIN_D3",false);
-        /*- Do constrain D4 to D3 mapping? -*/
-        options.add_bool("CONSTRAIN_D4",false);
         /*- Do spin adapt G2 condition? -*/
         options.add_bool("SPIN_ADAPT_G2", false);
         /*- Do spin adapt Q2 condition? -*/
@@ -92,8 +96,6 @@ int read_options(std::string name, Options& options)
         options.add_int("DIIS_MAX_VECS", 8);
         /*- Frequency of DIIS extrapolation steps -*/
         options.add_int("DIIS_UPDATE_FREQUENCY",50);
-        /*- Extra convergence parameter. Default 1.0.  recommendation: tau = 1.0:1.6 !expert -*/
-        options.add_double("TAU_PARAMETER",1.0);
 
         /*- Auxiliary basis set for SCF density fitting computations.
         :ref:`Defaults <apdx:basisFamily>` to a JKFIT basis. -*/
@@ -107,6 +109,8 @@ int read_options(std::string name, Options& options)
 
         /*- SUBSECTION ORBITAL OPTIMIZATION -*/
 
+        /*- algorithm for orbital optimization -*/
+        options.add_str("ORBOPT_ALGORITHM","QUASI_NEWTON", "QUASI_NEWTON CONJUGATE_GRADIENT NEWTON_RAPHSON");
         /*- flag to optimize orbitals using a one-step type approach -*/
         options.add_bool("ORBOPT_ONE_STEP",true);
         /*- do rotate active/active orbital pairs? -*/
@@ -119,7 +123,7 @@ int read_options(std::string name, Options& options)
         options.add_bool("ORBOPT_EXACT_DIAGONAL_HESSIAN",false);
         /*- number of DIIS vectors to keep in orbital optimization -*/ 
         options.add_int("ORBOPT_NUM_DIIS_VECTORS",0);
-        /*- frequency of orbital optimization.  optimization occurs every
+        /*- frequency of orbital optimization.  optimization occurs every 
         orbopt_frequency iterations -*/
         options.add_int("ORBOPT_FREQUENCY",500);
         /*- maximum number of iterations for orbital optimization -*/
@@ -143,10 +147,9 @@ int read_options(std::string name, Options& options)
     return true;
 }
 
-extern "C"
-SharedWavefunction v2rdm_casscf(SharedWavefunction ref_wfn, Options& options)
+extern "C" 
+SharedWavefunction v2rdm_casscf_private(SharedWavefunction ref_wfn, Options& options)
 {
-
     tstart();
 
     std::shared_ptr<v2RDMSolver > v2rdm (new v2RDMSolver(ref_wfn,options));
@@ -154,6 +157,21 @@ SharedWavefunction v2rdm_casscf(SharedWavefunction ref_wfn, Options& options)
     double energy = v2rdm->compute_energy();
 
     Process::environment.globals["CURRENT ENERGY"] = energy;
+
+    if ( options.get_str("DERTYPE") == "FIRST" ) {
+        // backtransform the tpdm
+        std::vector<std::shared_ptr<MOSpace> > spaces;
+        spaces.push_back(MOSpace::all);
+        std::shared_ptr<TPDMBackTransform> transform = std::shared_ptr<TPDMBackTransform>(
+        new TPDMBackTransform(ref_wfn,
+                        spaces,
+                        IntegralTransform::Unrestricted, // Transformation type
+                        IntegralTransform::DPDOnly,      // Output buffer
+                        IntegralTransform::QTOrder,      // MO ordering
+                        IntegralTransform::None));       // Frozen orbitals?
+        transform->backtransform_density();
+        transform.reset();
+    }
 
     tstop();
 

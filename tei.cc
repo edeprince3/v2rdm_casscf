@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
@@ -28,11 +28,14 @@
 #include <psi4/psi4-dec.h>
 #include <psi4/liboptions/liboptions.h>
 #include <psi4/libqt/qt.h>
-#include <psi4/libtrans/integraltransform.h>
-#include <psi4/libtrans/mospace.h>
-#include <psi4/libmints/wavefunction.h>
-#include <psi4/libmints/vector.h>
-#include <psi4/libmints/matrix.h>
+
+#include<psi4/libtrans/integraltransform.h>
+#include<psi4/libtrans/mospace.h>
+
+#include<psi4/libmints/wavefunction.h>
+#include<psi4/libmints/vector.h>
+#include<psi4/libmints/matrix.h>
+
 #include<time.h>
 
 #include"v2rdm_solver.h"
@@ -45,14 +48,15 @@
 #endif
 
 using namespace psi;
+//using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
 void v2RDMSolver::GetIntegrals() {
 
-
-    // one-electron integrals:
-    std::shared_ptr<Matrix> K1 = GetOEI();
+    
+    // one-electron integrals:  
+    SharedMatrix K1 = GetOEI();
 
     // size of the tei buffer
     if ( is_df_ ) {
@@ -81,9 +85,15 @@ void v2RDMSolver::GetIntegrals() {
     for (int h = 0; h < nirrep_; h++) {
         d2_plus_core_dim_ += (long int)gems_plus_core[h] * ( (long int)gems_plus_core[h] + 1L ) / 2L;
     }
-
     d2_plus_core_sym_  = (double*)malloc(d2_plus_core_dim_*sizeof(double));
     memset((void*)d2_plus_core_sym_,'\0',d2_plus_core_dim_*sizeof(double));
+
+    d2_act_spatial_dim_ = 0;
+    for (int h = 0; h < nirrep_; h++) {
+        d2_act_spatial_dim_ += (long int)gems_00[h] * ( (long int)gems_00[h] + 1L ) / 2L;
+    }
+    d2_act_spatial_sym_  = (double*)malloc(d2_act_spatial_dim_*sizeof(double));
+    memset((void*)d2_act_spatial_sym_,'\0',d2_act_spatial_dim_*sizeof(double));
 
     // allocate memory for oei tensor, blocked by symmetry, excluding frozen virtuals
     oei_full_dim_ = 0;
@@ -91,17 +101,26 @@ void v2RDMSolver::GetIntegrals() {
         oei_full_dim_ += ( nmopi_[h] - frzvpi_[h] ) * ( nmopi_[h] - frzvpi_[h] + 1 ) / 2;
     }
 
+
     // allocate memory for d1 tensor, blocked by symmetry, including the core orbitals
-    d1_plus_core_dim_ = 0;
+    //gg -- only active orbitals are stored now (old code below)
+    d1_act_spatial_dim_ = 0;
     for ( int h = 0; h < nirrep_; h++) {
-        d1_plus_core_dim_ += (rstcpi_[h] + frzcpi_[h] + amopi_[h]) * ( rstcpi_[h] + frzcpi_[h] + amopi_[h] + 1 ) / 2;
+        d1_act_spatial_dim_ += amopi_[h] * ( amopi_[h] + 1 ) / 2;
     }
+
+/*
+    d1_act_spatial_dim_ = 0;
+    for ( int h = 0; h < nirrep_; h++) {
+        d1_act_spatial_dim_ += (rstcpi_[h] + frzcpi_[h] + amopi_[h]) * ( rstcpi_[h] + frzcpi_[h] + amopi_[h] + 1 ) / 2;
+    }
+*/
 
     oei_full_sym_ = (double*)malloc(oei_full_dim_*sizeof(double));
     memset((void*)oei_full_sym_,'\0',oei_full_dim_*sizeof(double));
 
-    d1_plus_core_sym_ = (double*)malloc(d1_plus_core_dim_*sizeof(double));
-    memset((void*)d1_plus_core_sym_,'\0',d1_plus_core_dim_*sizeof(double));
+    d1_act_spatial_sym_ = (double*)malloc(d1_act_spatial_dim_*sizeof(double));
+    memset((void*)d1_act_spatial_sym_,'\0',d1_act_spatial_dim_*sizeof(double));
 
     offset = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -119,34 +138,6 @@ void v2RDMSolver::GetIntegrals() {
     }
     RepackIntegrals();
 
-}
-
-void v2RDMSolver::GetTEIFromDisk() {
-
-    double * temptei = (double*)malloc((long int)nmo_*(long int)nmo_*(long int)nmo_*(long int)nmo_*sizeof(double));
-    memset((void*)temptei,'\0',(long int)nmo_*(long int)nmo_*(long int)nmo_*(long int)nmo_*sizeof(double));
-
-    // read two-electron integrals from disk
-    ReadIntegrals(temptei,(long int)nmo_);
-
-    // load tei_full_sym_
-    long int offset = 0;
-    long int n2 = (long int)nmo_*(long int)nmo_;
-    long int n3 = n2 * (long int)nmo_;
-    for (int h = 0; h < nirrep_; h++) {
-        for (long int ij = 0; ij < gems_full[h]; ij++) {
-            long int i = bas_really_full_sym[h][ij][0];
-            long int j = bas_really_full_sym[h][ij][1];
-            for (long int kl = ij; kl < gems_full[h]; kl++) {
-                long int k = bas_really_full_sym[h][kl][0];
-                long int l = bas_really_full_sym[h][kl][1];
-                tei_full_sym_[offset + INDEX(ij,kl)] = temptei[i*n3+j*n2+k*(long int)nmo_+l];
-            }
-        }
-        offset += (long int)gems_full[h] * ( (long int)gems_full[h] + 1 ) / 2;
-    }
-
-    free(temptei);
 }
 
 // repack rotated full-space integrals into active-space integrals
@@ -293,9 +284,8 @@ double v2RDMSolver::TEI(int i, int j, int k, int l, int h) {
 
     if ( is_df_ ) {
 
-        //throw PsiException("DF/CD is broken until GG updates the orbital optimization",__FILE__,__LINE__);
-        dum = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(i,j),1,Qmo_+nQ_*INDEX(k,l),1);
-        //dum = C_DDOT(nQ_,Qmo_ + INDEX(i,j),(nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2,Qmo_+INDEX(k,l),(nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2);
+        //dum = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(i,j),1,Qmo_+nQ_*INDEX(k,l),1);
+        dum = C_DDOT(nQ_,Qmo_ + INDEX(i,j),(nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2,Qmo_+INDEX(k,l),(nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2);
 
     }else {
 

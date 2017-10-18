@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,12 +20,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
 
-#include "psi4/psi4-dec.h"
+#include <psi4/psi4-dec.h>
 #include <psi4/psifiles.h>
 #include <psi4/libiwl/iwl.h>
 #include <psi4/libpsio/psio.hpp>
@@ -175,7 +175,7 @@ void v2RDMSolver::WriteTPDM(){
 
             int ifull      = i + pitzer_offset_full[hi];
 
-            // D2(ij; il)
+            // D2(ij; il) 
             for (int hj = 0; hj < nirrep_; hj++) {
 
                 for (int j = 0; j < amopi_[hj]; j++) {
@@ -452,9 +452,9 @@ void v2RDMSolver::ReadTPDM(){
             trab += D2ab[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+i*nmo_+j];
         }
     }
-    //printf("  tr(d2aa) = %20.12lf\n",traa);
-    //printf("  tr(d2bb) = %20.12lf\n",trbb);
-    //printf("  tr(d2ab) = %20.12lf\n",trab);
+    printf("  tr(d2aa) = %20.12lf\n",traa); fflush(stdout);
+    printf("  tr(d2bb) = %20.12lf\n",trbb); fflush(stdout);
+    printf("  tr(d2ab) = %20.12lf\n",trab); fflush(stdout);
 
     double * Da = (double*)malloc(nmo_*nmo_*sizeof(double));
     double * Db = (double*)malloc(nmo_*nmo_*sizeof(double));
@@ -482,14 +482,14 @@ void v2RDMSolver::ReadTPDM(){
 
             if ( i == j ) {
                 tra += Da[i*nmo_+j];
-                trb += Da[i*nmo_+j];
+                trb += Db[i*nmo_+j];
             }
 
         }
     }
 
-    //printf("  tr(da) = %20.12lf\n",tra);
-    //printf("  tr(db) = %20.12lf\n",trb);
+    printf("  tr(da) = %20.12lf\n",tra); fflush(stdout);
+    printf("  tr(db) = %20.12lf\n",trb); fflush(stdout);
 
     // check energy:
 
@@ -499,8 +499,8 @@ void v2RDMSolver::ReadTPDM(){
             for (int k = 0; k < nmo_; k++) {
                 for (int l = 0; l < nmo_; l++) {
 
-                    double eri = C_DDOT(nQ_,Qmo_ + nQ_*INDEX(i,k),1,Qmo_+nQ_*INDEX(j,l),1);
-
+                    double eri = C_DDOT(nQ_,Qmo_ + INDEX(i,k),(nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2,Qmo_+INDEX(j,l),(nmo_-nfrzv_)*(nmo_-nfrzv_+1)/2);
+                    
                     en2 +=       eri * D2ab[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
                     en2 += 0.5 * eri * D2aa[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
                     en2 += 0.5 * eri * D2bb[i*nmo_*nmo_*nmo_+j*nmo_*nmo_+k*nmo_+l];
@@ -511,7 +511,7 @@ void v2RDMSolver::ReadTPDM(){
     }
 
     std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
-    std::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
+    SharedMatrix K1 (new Matrix(mints->so_potential()));
     K1->add(mints->so_kinetic());
     K1->transform(Ca_);
 

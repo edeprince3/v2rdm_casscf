@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
@@ -28,12 +28,16 @@
 #include <psi4/psi4-dec.h>
 #include <psi4/liboptions/liboptions.h>
 #include <psi4/libqt/qt.h>
-#include <psi4/libtrans/integraltransform.h>
-#include <psi4/libtrans/mospace.h>
-#include <psi4/libmints/wavefunction.h>
-#include <psi4/libmints/vector.h>
-#include <psi4/libmints/matrix.h>
-#include <psi4/libmints/mintshelper.h>
+
+#include<psi4/libtrans/integraltransform.h>
+#include<psi4/libtrans/mospace.h>
+
+#include<psi4/libmints/wavefunction.h>
+//#include<psi4/libmints/mints.h>
+#include<psi4/libmints/mintshelper.h>
+#include<psi4/libmints/vector.h>
+#include<psi4/libmints/matrix.h>
+//#include<../bin/fnocc/blas.h>
 #include<time.h>
 
 #include<psi4/psifiles.h>
@@ -48,12 +52,13 @@
 #endif
 
 using namespace psi;
+//using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
-std::shared_ptr<Matrix> v2RDMSolver::GetOEI() {
+SharedMatrix v2RDMSolver::GetOEI() {
     std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
-    std::shared_ptr<Matrix> K1 (new Matrix(mints->so_potential()));
+    SharedMatrix K1 (new Matrix(mints->so_potential()));
     K1->add(mints->so_kinetic());
     K1->transform(Ca_);
     return K1;

@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
@@ -35,7 +35,8 @@
 #include<psi4/libmints/wavefunction.h>
 #include<psi4/libmints/vector.h>
 #include<psi4/libmints/matrix.h>
-#include<time.h>
+
+#include <psi4/libpsi4util/PsiOutStream.h>
 
 #include"v2rdm_solver.h"
 
@@ -47,64 +48,19 @@
 #endif
 
 using namespace psi;
+//using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
 
-void v2RDMSolver::InitializeCheckpointFile() {
-
-    std::shared_ptr<PSIO> psio ( new PSIO() );
-    psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_NEW);
-
-    // scf energy
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"SCF ENERGY",(char*)(&escf_),sizeof(double));
-
-    // number of irreps
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"NIRREP",(char*)(&nirrep_),sizeof(int));
-
-    // is_df_
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"IS DF?",(char*)(&is_df_),sizeof(bool));
-
-    // mu
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"MU",(char*)(&mu),sizeof(double));
-
-    // x
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"PRIMAL",(char*)x->pointer(),dimx_*sizeof(double));
-
-    // y
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 1",(char*)y->pointer(),nconstraints_*sizeof(double));
-
-    // z
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 2",(char*)z->pointer(),dimx_*sizeof(double));
-
-    // one-electron integrals
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"OEI",(char*)oei_full_sym_,oei_full_dim_*sizeof(double));
-
-    // two-electron integrals (or DF/CD integrals)
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"TEI",(char*)tei_full_sym_,tei_full_dim_*sizeof(double));
-
-    // orbital optimization transformation matrix
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"TRANSFORMATION MATRIX",
-        (char*)orbopt_transformation_matrix_,(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
-
-    // energy order to pitzer order mapping array
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER",
-        (char*)energy_to_pitzer_order,(nmo_-nfrzv_)*sizeof(int));
-
-    // energy order to pitzer order mapping array
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER_REALLY_FULL",
-        (char*)energy_to_pitzer_order_really_full,nmo_*sizeof(int));
-
-    // orbital symmetries (energy order)
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"SYMMETRY_ENERGY_ORDER",
-        (char*)symmetry_energy_order,(nmo_-nfrzv_)*sizeof(int));
-
-    psio->close(PSIF_V2RDM_CHECKPOINT,1);
-}
 void v2RDMSolver::WriteCheckpointFile() {
 
+    // Update Ca_/Cb_
+    //UpdateTransformationMatrix();
+
     std::shared_ptr<PSIO> psio ( new PSIO() );
-    psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
+
+    psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_NEW);
 
     // mu
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"MU",(char*)(&mu),sizeof(double));
@@ -118,45 +74,36 @@ void v2RDMSolver::WriteCheckpointFile() {
     // z
     psio->write_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 2",(char*)z->pointer(),dimx_*sizeof(double));
 
-    // one-electron integrals
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"OEI",(char*)oei_full_sym_,oei_full_dim_*sizeof(double));
-
-    // two-electron integrals (or DF/CD integrals)
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"TEI",(char*)tei_full_sym_,tei_full_dim_*sizeof(double));
-
-    // orbital optimization transformation matrix
-    psio->write_entry(PSIF_V2RDM_CHECKPOINT,"TRANSFORMATION MATRIX",
-        (char*)orbopt_transformation_matrix_,(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
+    // mo/mo' transformation matrix
+    psio_address addr = PSIO_ZERO;
+    for (int h = 0; h < nirrep_; h++) {
+        if ( nmopi_[h] == 0 ) continue;
+        double ** np = newMO_->pointer(h);
+        psio->write(PSIF_V2RDM_CHECKPOINT,"MO TO MO' TRANSFORMATION MATRIX",(char*)&(np[0][0]),nmopi_[h]*nmopi_[h]*sizeof(double),addr,&addr);
+    }
+    // so/mo transformation matrix
+    addr = PSIO_ZERO;
+    for (int h = 0; h < nirrep_; h++) {
+        if ( nsopi_[h] == 0 || nmopi_[h] == 0 ) continue;
+        double ** cp = Ca_->pointer(h);
+        psio->write(PSIF_V2RDM_CHECKPOINT,"SO TO MO TRANSFORMATION MATRIX",(char*)&(cp[0][0]),nsopi_[h]*nmopi_[h]*sizeof(double),addr,&addr);
+    }
 
     psio->close(PSIF_V2RDM_CHECKPOINT,1);
 }
+
 void v2RDMSolver::ReadFromCheckpointFile() {
 
     std::shared_ptr<PSIO> psio ( new PSIO() );
+
+    if ( !psio->exists(PSIF_V2RDM_CHECKPOINT) ) {
+        return;
+    }
+
+    outfile->Printf("\n");
+    outfile->Printf("    ==> Restarting from checkpoint file <==\n");
+
     psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
-
-    double dume;
-
-    // scf energy
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"SCF ENERGY",(char*)(&dume),sizeof(double));
-    if ( fabs(dume - escf_) > 1e-8 ) {
-        throw PsiException("CHECKPOINT and current SCF energies do not agree",__FILE__,__LINE__);
-    }
-    escf_ = dume;
-
-    int dumn;
-
-    // number of irreps
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"NIRREP",(char*)(&dumn),sizeof(int));
-    if ( dumn != nirrep_) {
-        throw PsiException("CHECKPOINT and current number of irreps do not agree",__FILE__,__LINE__);
-    }
-
-    // is_df_
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"IS DF?",(char*)(&is_df_),sizeof(bool));
-    if ( dumn != nirrep_) {
-        throw PsiException("CHECKPOINT and current integral type do not agree",__FILE__,__LINE__);
-    }
 
     // mu
     psio->read_entry(PSIF_V2RDM_CHECKPOINT,"MU",(char*)(&mu),sizeof(double));
@@ -170,31 +117,79 @@ void v2RDMSolver::ReadFromCheckpointFile() {
     // z
     psio->read_entry(PSIF_V2RDM_CHECKPOINT,"DUAL 2",(char*)z->pointer(),dimx_*sizeof(double));
 
-    // one-electron integrals
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"OEI",(char*)oei_full_sym_,oei_full_dim_*sizeof(double));
+    psio->close(PSIF_V2RDM_CHECKPOINT,1);
+}
 
-    // two-electron integrals (or DF/CD integrals)
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"TEI",(char*)tei_full_sym_,tei_full_dim_*sizeof(double));
+void v2RDMSolver::ReadOrbitalsFromCheckpointFile() {
 
-    // orbital optimization transformation matrix
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"TRANSFORMATION MATRIX",
-        (char*)orbopt_transformation_matrix_,(nmo_-nfrzc_-nfrzv_)*(nmo_-nfrzc_-nfrzv_)*sizeof(double));
+    std::shared_ptr<PSIO> psio ( new PSIO() );
 
-    // energy order to pitzer order mapping array
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER",
-        (char*)energy_to_pitzer_order,(nmo_-nfrzv_)*sizeof(int));
+    if ( !psio->exists(PSIF_V2RDM_CHECKPOINT) ) {
+        return;
+    }
 
-    // energy order to pitzer order mapping array
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER_REALLY_FULL",
-        (char*)energy_to_pitzer_order_really_full,nmo_*sizeof(int));
+    psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
 
-    // orbital symmetries (energy order)
-    psio->read_entry(PSIF_V2RDM_CHECKPOINT,"SYMMETRY_ENERGY_ORDER",
-        (char*)symmetry_energy_order,(nmo_-nfrzv_)*sizeof(int));
+    // mo/mo' transformation matrix
+    psio_address addr = PSIO_ZERO;
+    for (int h = 0; h < nirrep_; h++) {
+        if ( nmopi_[h] == 0 ) continue;
+        double ** np = newMO_->pointer(h);
+        psio->read(PSIF_V2RDM_CHECKPOINT,"MO TO MO' TRANSFORMATION MATRIX",(char*)&(np[0][0]),nmopi_[h]*nmopi_[h]*sizeof(double),addr,&addr);
+    }
+
+    SharedMatrix tempCa ( new Matrix(Ca_));
+    // so/mo transformation matrix ( to check phase )
+    addr = PSIO_ZERO;
+    for (int h = 0; h < nirrep_; h++) {
+        if ( nsopi_[h] == 0 || nmopi_[h] == 0 ) continue;
+        double ** tp = tempCa->pointer(h);
+        psio->read(PSIF_V2RDM_CHECKPOINT,"SO TO MO TRANSFORMATION MATRIX",(char*)&(tp[0][0]),nsopi_[h]*nmopi_[h]*sizeof(double),addr,&addr);
+    }
+
+    // transform mo index to mo' basis
+    SharedMatrix temp (new Matrix(Ca_));
+    for (int h = 0; h < nirrep_; h++) {
+
+        if ( nmopi_[h] == 0 ) continue;
+
+        double ** tp = temp->pointer(h);
+        double ** cp = Ca_->pointer(h);
+        double ** np = newMO_->pointer(h);
+
+        //F_DGEMM('n','t',nmo_,nsopi_[h],nao,1.0,temp,nmo_,&(AO2SO_->pointer(h)[0][0]),nsopi_[h],0.0,&(tp[0][0]),nmo_);
+
+        // check phase:
+        for (int i = 0; i < nmopi_[h]; i++) {
+            double max  = -9e9;
+            int mumax   = 0;
+            for (int mu = 0; mu < nsopi_[h]; mu++) {
+                if ( fabs(cp[mu][i]) > max ) {
+                    mumax = mu;
+                    max = fabs(cp[mu][i]);
+                }
+            }
+            if ( cp[mumax][i] * tempCa->pointer(h)[mumax][i] < 0.0 ) {
+                for (int j = 0; j < nmopi_[h]; j++) {
+                    np[j][i] *= -1;
+                }
+            }
+        }
+
+        for (int mu = 0; mu < nsopi_[h]; mu++) {
+            for (int i = 0; i < nmopi_[h]; i++) {
+                double dum = 0.0;
+                for (int j = 0; j < nmopi_[h]; j++) {
+                    dum += cp[mu][j] * np[i][j];
+                }
+                tp[mu][i] = dum;
+            }
+        }
+    }
+    Ca_->copy(temp);
+    Cb_->copy(temp);
 
     psio->close(PSIF_V2RDM_CHECKPOINT,1);
-
-    RepackIntegrals();
 }
 
 }}

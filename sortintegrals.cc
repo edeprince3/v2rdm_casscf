@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
@@ -28,9 +28,9 @@
 #include <psi4/psi4-dec.h>
 #include <psi4/psifiles.h>
 #include <psi4/libiwl/iwl.h>
-#include <psi4/libpsi4util/PsiOutStream.h>
 #include <psi4/libpsio/psio.hpp>
 #include <psi4/libtrans/integraltransform.h>
+#include <psi4/libpsi4util/PsiOutStream.h>
 
 #include "v2rdm_solver.h"
 
@@ -40,7 +40,7 @@ using namespace psi;
 
 namespace psi{namespace v2rdm_casscf{
 
-void ReadAllIntegrals(iwlbuf *Buf,double*tei,long int nmo) {
+void v2RDMSolver::ReadAllIntegrals(iwlbuf *Buf) {
 
   unsigned long int lastbuf;
   Label *lblptr;
@@ -63,21 +63,23 @@ void ReadAllIntegrals(iwlbuf *Buf,double*tei,long int nmo) {
       r = (unsigned long int) lblptr[idx++];
       s = (unsigned long int) lblptr[idx++];
 
-      pq   = INDEX(p,q);
-      rs   = INDEX(r,s);
-      pqrs = INDEX(pq,rs);
-
       double val = (double)valptr[Buf->idx];
 
-      tei[p*nmo*nmo*nmo+q*nmo*nmo+r*nmo+s] = val;
-      tei[p*nmo*nmo*nmo+q*nmo*nmo+s*nmo+r] = val;
-      tei[q*nmo*nmo*nmo+p*nmo*nmo+r*nmo+s] = val;
-      tei[q*nmo*nmo*nmo+p*nmo*nmo+s*nmo+r] = val;
+      // none of this will work with frozen virtuals ...
 
-      tei[r*nmo*nmo*nmo+s*nmo*nmo+p*nmo+q] = val;
-      tei[s*nmo*nmo*nmo+r*nmo*nmo+p*nmo+q] = val;
-      tei[r*nmo*nmo*nmo+s*nmo*nmo+q*nmo+p] = val;
-      tei[s*nmo*nmo*nmo+r*nmo*nmo+q*nmo+p] = val;
+      int hp = symmetry_full[p];
+      int hq = symmetry_full[q];
+      int hpq = SymmetryPair(hp,hq);
+
+      pq = ibas_really_full_sym[hpq][p][q];
+      rs = ibas_really_full_sym[hpq][r][s];
+
+      long int offset = 0;
+      for (int h = 0; h < hpq; h++) {
+          offset += (long int)gems_full[h] * ( (long int)gems_full[h] + 1 ) / 2;
+      }
+      tei_full_sym_[offset + INDEX(pq,rs)] = val;
+
   }
   /**
     * now do the same for the rest of the buffers
@@ -92,22 +94,20 @@ void ReadAllIntegrals(iwlbuf *Buf,double*tei,long int nmo) {
           r = (unsigned long int) lblptr[idx++];
           s = (unsigned long int) lblptr[idx++];
 
-          pq   = INDEX(p,q);
-          rs   = INDEX(r,s);
-          pqrs = INDEX(pq,rs);
-
           double val = (double)valptr[Buf->idx];
 
-          tei[p*nmo*nmo*nmo+q*nmo*nmo+r*nmo+s] = val;
-          tei[p*nmo*nmo*nmo+q*nmo*nmo+s*nmo+r] = val;
-          tei[q*nmo*nmo*nmo+p*nmo*nmo+r*nmo+s] = val;
-          tei[q*nmo*nmo*nmo+p*nmo*nmo+s*nmo+r] = val;
+          int hp = symmetry_full[p];
+          int hq = symmetry_full[q];
+          int hpq = SymmetryPair(hp,hq);
 
-          tei[r*nmo*nmo*nmo+s*nmo*nmo+p*nmo+q] = val;
-          tei[s*nmo*nmo*nmo+r*nmo*nmo+p*nmo+q] = val;
-          tei[r*nmo*nmo*nmo+s*nmo*nmo+q*nmo+p] = val;
-          tei[s*nmo*nmo*nmo+r*nmo*nmo+q*nmo+p] = val;
+          pq = ibas_really_full_sym[hpq][p][q];
+          rs = ibas_really_full_sym[hpq][r][s];
 
+          long int offset = 0;
+          for (int h = 0; h < hpq; h++) {
+              offset += (long int)gems_full[h] * ( (long int)gems_full[h] + 1 ) / 2;
+          }
+          tei_full_sym_[offset + INDEX(pq,rs)] = val;
       }
 
   }
@@ -115,10 +115,10 @@ void ReadAllIntegrals(iwlbuf *Buf,double*tei,long int nmo) {
 }
 
 
-void v2RDMSolver::ReadIntegrals(double * tei,long int nmo){
+void v2RDMSolver::GetTEIFromDisk(){
   struct iwlbuf Buf;
   iwl_buf_init(&Buf,PSIF_MO_TEI,0.0,1,1);
-  ReadAllIntegrals(&Buf,tei,nmo);
+  ReadAllIntegrals(&Buf);
   iwl_buf_close(&Buf,1);
 }
 

@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,19 +20,22 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
 
 #include"v2rdm_solver.h"
+
 #include <psi4/libpsi4util/process.h>
-#include <psi4/libpsio/psio.hpp>
 #include <psi4/libmints/basisset.h>
+#include <psi4/libpsio/psio.hpp>
 #include <psi4/libmints/sieve.h>
 #include <psi4/psifiles.h>
 #include <psi4/libtrans/integraltransform.h>
+
 #include "blas.h"
+
 
 using namespace psi;
 using namespace fnocc;
@@ -51,20 +54,27 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     // read integrals that were written to disk in the scf
     nQ_ = Process::environment.globals["NAUX (SCF)"];
     if ( options_.get_str("SCF_TYPE") == "DF" ) {
-        std::shared_ptr<BasisSet> primary = reference_wavefunction_->basisset();
+//        std::shared_ptr<BasisSet> primary = BasisSet::pyconstruct_orbital(molecule_,
+//            "BASIS", options_.get_str("BASIS"));
+        std::shared_ptr<BasisSet> primary = reference_wavefunction_->basisset(); 
+//
+//        std::shared_ptr<BasisSet> auxiliary = BasisSet::pyconstruct_auxiliary(molecule_,
+//            "DF_BASIS_SCF", options_.get_str("DF_BASIS_SCF"), "JKFIT",
+//            options_.get_str("BASIS"), primary->has_puream());
+        // JWM: I don't think this is quite what we want (DF_BASIS_MP2)
         std::shared_ptr<BasisSet> auxiliary = reference_wavefunction_->get_basisset("DF_BASIS_SCF");
 
         nQ_ = auxiliary->nbf();
         Process::environment.globals["NAUX (SCF)"] = nQ_;
     }
 
-    // 100 mb extra to account for all mapping arrays already
+    // 100 mb extra to account for all mapping arrays already 
     // allocated. this should be WAY more than necessary.
-    long int extra = 100 * 1024 * 1024;
+    long int extra = 100 * 1024 * 1024;  
     long int ndoubles = (memory_-extra) / 8;
 
-    // orbitals will end up in energy order.
-    // we will want them in pitzer.  for sorting:
+    // orbitals will end up in energy order.  
+    // we will want them in pitzer.  for sorting: 
     long int * reorder  = (long int*)malloc(nmo_*sizeof(long int));
     long int * sym      = (long int*)malloc(nmo_*sizeof(long int));
     bool * skip    = (bool*)malloc(nmo_*sizeof(bool));
@@ -163,7 +173,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->close(PSIF_DFSCF_BJ,1);
 
     // AO->MO transformation matrix:
-    std::shared_ptr<Matrix> myCa (new Matrix(reference_wavefunction_->Ca_subset("AO","ALL")));
+    SharedMatrix myCa (new Matrix(reference_wavefunction_->Ca_subset("AO","ALL")));
 
     // transform first index:
     addr  = PSIO_ZERO;
@@ -229,7 +239,7 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     psio->close(PSIF_DCC_QMO,1);
     psio->close(PSIF_DCC_QSO,1);
 
-    delete[] rowdims;
+    delete rowdims;
 
     //F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp1,nso_,&(myCa->pointer()[0][0]),nso_,0.0,tmp2,nso_*nQ_);
     //F_DGEMM('t','t',nso_*nQ_,nso_,nso_,1.0,tmp2,nso_,&(myCa->pointer()[0][0]),nso_,0.0,tmp1,nso_*nQ_);
@@ -242,12 +252,13 @@ void v2RDMSolver::ThreeIndexIntegrals() {
 
     Qmo_ = (double*)malloc(nn1fv*nQ_*sizeof(double));
     memset((void*)Qmo_,'\0',nn1fv*nQ_*sizeof(double));
-    //psio->open(PSIF_DCC_QMO,PSIO_OPEN_OLD);
-    //psio->read_entry(PSIF_DCC_QMO,"(Q|mn) Integrals",(char*)Qmo_,sizeof(double)*nQ_ * nn1fv);
-    //psio->close(PSIF_DCC_QMO,1);
+    psio->open(PSIF_DCC_QMO,PSIO_OPEN_OLD);
+    psio->read_entry(PSIF_DCC_QMO,"(Q|mn) Integrals",(char*)Qmo_,sizeof(double)*nQ_ * nn1fv);
+    psio->close(PSIF_DCC_QMO,1);
 
     // the following code would transpose the three-index integrals (Q|mn) -> (mn|Q)
 
+/*
     // with 3-index integrals in memory, how much else can we hold?
     ndoubles -= nn1fv*nQ_;
 
@@ -282,9 +293,9 @@ void v2RDMSolver::ThreeIndexIntegrals() {
     }
     psio->close(PSIF_DCC_QMO,1);
 
-    delete[] rowdims2;
+    delete rowdims2;
     free(tmp3);
-
+*/
 }
 
 

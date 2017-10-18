@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,17 +20,21 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
 
 #include"v2rdm_solver.h"
-#include<psi4/libqt/qt.h>
-#include<psi4/psifiles.h>
+//#include<../bin/fnocc/blas.h>
+//#include<psi4/src/psi4/fnocc/blas.h>
 #include "blas.h"
+#include<psi4/libqt/qt.h>
+
+#include<psi4/psifiles.h>
 
 using namespace psi;
+
 using namespace fnocc;
 
 /*================================================================
@@ -118,7 +122,7 @@ void v2RDMSolver::DIIS(double*c,long int nvec,int replace_diis_iter){
     nrhs = 1;
     lda = ldb = nvar;
     info = 0;
-    DGESV(nvar,nrhs,A,lda,ipiv,B,ldb, info);
+    DGESV(nvar,nrhs,A,lda,ipiv,B,ldb,info);
     C_DCOPY(nvec,B,1,c,1);
 
     free(A);

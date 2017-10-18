@@ -1,7 +1,7 @@
 /*
  *@BEGIN LICENSE
  *
- * v2RDM-CASSCF by A. Eugene DePrince III, a plugin to:
+ * v2RDM-CASSCF, a plugin to:
  *
  * Psi4: an open-source quantum chemistry software package
  *
@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (c) 2014, The Florida State University. All rights reserved.
- *
+ * 
  *@END LICENSE
  *
  */
@@ -29,12 +29,14 @@
 #include <psi4/liboptions/liboptions.h>
 #include <psi4/libqt/qt.h>
 
-#include <psi4/libtrans/integraltransform.h>
-#include <psi4/libtrans/mospace.h>
+#include<psi4/libtrans/integraltransform.h>
+#include<psi4/libtrans/mospace.h>
 
 #include<psi4/libmints/wavefunction.h>
+//#include<psi4/libmints/mints.h>
 #include<psi4/libmints/vector.h>
 #include<psi4/libmints/matrix.h>
+//#include<../bin/fnocc/blas.h>
 #include<time.h>
 
 #include"v2rdm_solver.h"
@@ -47,6 +49,7 @@
 #endif
 
 using namespace psi;
+//using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
@@ -88,7 +91,8 @@ void v2RDMSolver::BuildBasis() {
     // orbitals are in pitzer order:
     symmetry               = (int*)malloc(nmo_*sizeof(int));
     symmetry_full          = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
-    symmetry_energy_order  = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
+    //gg-fc modified dimension to include frozen core orbitals
+    symmetry_energy_order  = (int*)malloc((nmo_-nfrzv_+nfrzc_)*sizeof(int));
     energy_to_pitzer_order = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
     full_basis             = (int*)malloc((nmo_-nfrzv_)*sizeof(int));
 
@@ -98,7 +102,8 @@ void v2RDMSolver::BuildBasis() {
 
     memset((void*)symmetry,'\0',nmo_*sizeof(int));
     memset((void*)symmetry_full,'\0',(nmo_-nfrzv_)*sizeof(int));
-    memset((void*)symmetry_energy_order,'\0',(nmo_-nfrzv_)*sizeof(int));
+    //gg-fc modified dimension to include frozen core orbitals
+    memset((void*)symmetry_energy_order,'\0',(nmo_-nfrzv_+nfrzc_)*sizeof(int));
     memset((void*)energy_to_pitzer_order,'\0',(nmo_-nfrzv_)*sizeof(int));
     memset((void*)full_basis,'\0',(nmo_-nfrzv_)*sizeof(int));
 
@@ -146,7 +151,7 @@ void v2RDMSolver::BuildBasis() {
     // when restarting jobs, if the SCF has degenerate orbitals,
     // sometimes their order can change.  How annoying!
 
-    // TODO: the orbital ordering should be according to
+    // TODO: the orbital ordering should be according to 
     // energy within each type of orbital
 
     // frozen core
@@ -232,7 +237,8 @@ void v2RDMSolver::BuildBasis() {
         energy_to_pitzer_order[i] = imin;
     }
     // restricted virtual
-    for (int i = amo_ + nrstc_ + nfrzc_; i < nmo_ - nfrzv_; i++){
+    //gg-fc modified to include frozen core orbitals
+    for (int i = amo_ + nrstc_ + nfrzc_; i < nmo_ - nfrzv_ ; i++){
 
         int me     = 0;
         double min = 1.0e99;
@@ -240,7 +246,7 @@ void v2RDMSolver::BuildBasis() {
         int isym   = -999;
         for (int h = 0; h < nirrep_; h++) {
             me += rstcpi_[h] + frzcpi_[h] + amopi_[h];
-            for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h]; j < nmopi_[h] - frzvpi_[h]; j++){
+            for (int j = rstcpi_[h] + frzcpi_[h] + amopi_[h]; j < nmopi_[h] - frzvpi_[h] ; j++){
                 if ( epsilon_a_->pointer(h)[j] < min ) {
                     if ( !skip[me] ) {
                         min = epsilon_a_->pointer(h)[j];
@@ -422,7 +428,7 @@ void v2RDMSolver::BuildBasis() {
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
         pitzer_offset[h] = count;
-        count += amopi_[h];
+        count += amopi_[h]; 
     }
     count = 0;
     for (int h = 0; h < nirrep_; h++) {
@@ -445,29 +451,31 @@ void v2RDMSolver::BuildBasis() {
         gems.push_back(mygems);
     }
 
-    bas_ab_sym         = (int***)malloc(nirrep_*sizeof(int**));
-    bas_aa_sym         = (int***)malloc(nirrep_*sizeof(int**));
-    bas_00_sym         = (int***)malloc(nirrep_*sizeof(int**));
-    bas_full_sym       = (int***)malloc(nirrep_*sizeof(int**));
-    bas_really_full_sym       = (int***)malloc(nirrep_*sizeof(int**));
+    bas_ab_sym           = (int***)malloc(nirrep_*sizeof(int**));
+    bas_aa_sym           = (int***)malloc(nirrep_*sizeof(int**));
+    bas_00_sym           = (int***)malloc(nirrep_*sizeof(int**));
+    bas_full_sym         = (int***)malloc(nirrep_*sizeof(int**));
+    bas_really_full_sym  = (int***)malloc(nirrep_*sizeof(int**));
 
-    ibas_ab_sym        = (int***)malloc(nirrep_*sizeof(int**));
-    ibas_aa_sym        = (int***)malloc(nirrep_*sizeof(int**));
-    ibas_00_sym        = (int***)malloc(nirrep_*sizeof(int**));
-    ibas_full_sym      = (int***)malloc(nirrep_*sizeof(int**));
+    ibas_ab_sym          = (int***)malloc(nirrep_*sizeof(int**));
+    ibas_aa_sym          = (int***)malloc(nirrep_*sizeof(int**));
+    ibas_00_sym          = (int***)malloc(nirrep_*sizeof(int**));
+    ibas_full_sym        = (int***)malloc(nirrep_*sizeof(int**));
+    ibas_really_full_sym = (int***)malloc(nirrep_*sizeof(int**));
 
-    gems_ab            = (int*)malloc(nirrep_*sizeof(int));
-    gems_aa            = (int*)malloc(nirrep_*sizeof(int));
-    gems_00            = (int*)malloc(nirrep_*sizeof(int));
-    gems_full          = (int*)malloc(nirrep_*sizeof(int));
-    gems_plus_core     = (int*)malloc(nirrep_*sizeof(int));
+    gems_ab              = (int*)malloc(nirrep_*sizeof(int));
+    gems_aa              = (int*)malloc(nirrep_*sizeof(int));
+    gems_00              = (int*)malloc(nirrep_*sizeof(int));
+    gems_full            = (int*)malloc(nirrep_*sizeof(int));
+    gems_plus_core       = (int*)malloc(nirrep_*sizeof(int));
 
     for (int h = 0; h < nirrep_; h++) {
 
-        ibas_ab_sym[h]        = (int**)malloc(amo_*sizeof(int*));
-        ibas_aa_sym[h]        = (int**)malloc(amo_*sizeof(int*));
-        ibas_00_sym[h]        = (int**)malloc(amo_*sizeof(int*));
-        ibas_full_sym[h]      = (int**)malloc(nmo_*sizeof(int*));
+        ibas_ab_sym[h]          = (int**)malloc(amo_*sizeof(int*));
+        ibas_aa_sym[h]          = (int**)malloc(amo_*sizeof(int*));
+        ibas_00_sym[h]          = (int**)malloc(amo_*sizeof(int*));
+        ibas_full_sym[h]        = (int**)malloc(nmo_*sizeof(int*));
+        ibas_really_full_sym[h] = (int**)malloc(nmo_*sizeof(int*));
 
         bas_ab_sym[h]         = (int**)malloc(amo_*amo_*sizeof(int*));
         bas_aa_sym[h]         = (int**)malloc(amo_*amo_*sizeof(int*));
@@ -498,16 +506,18 @@ void v2RDMSolver::BuildBasis() {
         }
         // full space geminals
         for (int i = 0; i < nmo_; i++) {
-            ibas_full_sym[h][i] = (int*)malloc(nmo_*sizeof(int));
+            ibas_full_sym[h][i]        = (int*)malloc(nmo_*sizeof(int));
+            ibas_really_full_sym[h][i] = (int*)malloc(nmo_*sizeof(int));
             for (int j = 0; j < nmo_; j++) {
-                ibas_full_sym[h][i][j] = -999;
+                ibas_full_sym[h][i][j]        = -999;
+                ibas_really_full_sym[h][i][j] = -999;
             }
         }
         for (int i = 0; i < nmo_*nmo_; i++) {
-            bas_full_sym[h][i] = (int*)malloc(2*sizeof(int));
+            bas_full_sym[h][i]        = (int*)malloc(2*sizeof(int));
             bas_really_full_sym[h][i] = (int*)malloc(2*sizeof(int));
             for (int j = 0; j < 2; j++) {
-                bas_full_sym[h][i][j] = -999;
+                bas_full_sym[h][i][j]        = -999;
                 bas_really_full_sym[h][i][j] = -999;
             }
         }
@@ -515,7 +525,6 @@ void v2RDMSolver::BuildBasis() {
         // active space mappings:
         int count_ab = 0;
         int count_aa = 0;
-        int count_00 = 0;
         for (int n = 0; n < gems[h].size(); n++) {
             int i = gems[h][n].first;
             int j = gems[h][n].second;
@@ -524,14 +533,6 @@ void v2RDMSolver::BuildBasis() {
             bas_ab_sym[h][n][0]  = i;
             bas_ab_sym[h][n][1]  = j;
             count_ab++;
-
-            if ( i < j ) continue;
-
-            ibas_00_sym[h][i][j] = count_00;
-            ibas_00_sym[h][j][i] = count_00;
-            bas_00_sym[h][count_00][0] = i;
-            bas_00_sym[h][count_00][1] = j;
-            count_00++;
 
             if ( i <= j ) continue;
 
@@ -543,12 +544,11 @@ void v2RDMSolver::BuildBasis() {
         }
         gems_ab[h] = count_ab;
         gems_aa[h] = count_aa;
-        gems_00[h] = count_00;
 
     }
 
     // if restarting a job, need to read a few energy-order arrays from disk...
-    if ( options_["RESTART_FROM_CHECKPOINT_FILE"].has_changed() ) {
+    /*if ( options_["RESTART_FROM_CHECKPOINT_FILE"].has_changed() ) {
         std::shared_ptr<PSIO> psio (new PSIO() );
         psio->open(PSIF_V2RDM_CHECKPOINT,PSIO_OPEN_OLD);
 
@@ -558,10 +558,10 @@ void v2RDMSolver::BuildBasis() {
 
         // energy order to pitzer order mapping array
         psio->read_entry(PSIF_V2RDM_CHECKPOINT,"ENERGY_TO_PITZER_ORDER_REALLY_FULL",
-            (char*)energy_to_pitzer_order_really_full,nmo_*sizeof(int));
+            (char*)energy_to_pitzer_order_really_full,nmo_*sizeof(int)); 
 
         psio->close(PSIF_V2RDM_CHECKPOINT,1);
-    }
+    }*/
 
     // new way:
     memset((void*)gems_full,'\0',nirrep_*sizeof(int));
@@ -601,11 +601,56 @@ void v2RDMSolver::BuildBasis() {
             //int j     = jfull - pitzer_offset_full[hj];
 
             int hij = SymmetryPair(hi,hj);
+            ibas_really_full_sym[hij][ifull][jfull] = gems_really_full[hij];
+            ibas_really_full_sym[hij][jfull][ifull] = gems_really_full[hij];
             bas_really_full_sym[hij][gems_really_full[hij]][0] = ifull;
             bas_really_full_sym[hij][gems_really_full[hij]][1] = jfull;
             gems_really_full[hij]++;
         }
     }
+    // active only
+    int * pitzer_full_to_active = (int*)malloc(nmo_*sizeof(int));
+    int off_full = 0;
+    int off_act  = 0;
+    for (int i = 0; i < nmo_; i++) {
+        pitzer_full_to_active[i] = -999;
+    }
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < amopi_[h]; i++) {
+            pitzer_full_to_active[off_full + i + frzcpi_[h] + rstcpi_[h]] = off_act + i;
+        }
+        off_full += nmopi_[h] + frzvpi_[h];
+        off_act  += amopi_[h];
+    }
+
+    memset((void*)gems_00,'\0',nirrep_*sizeof(int));
+    for (int ieo = 0; ieo < nmo_ - nfrzv_; ieo++) {
+
+        int ifull = energy_to_pitzer_order[ieo];
+        int hi    = symmetry_full[ifull];
+        int iact  = pitzer_full_to_active[ifull];
+        if ( iact == -999 ) continue;
+
+        for (int jeo = 0; jeo <= ieo; jeo++) {
+
+            int jfull = energy_to_pitzer_order[jeo];
+            int hj    = symmetry_full[jfull];
+            int jact  = pitzer_full_to_active[jfull];
+            if ( jact == -999 ) continue;
+
+            int hij   = SymmetryPair(hi,hj);
+
+            ibas_00_sym[hij][iact][jact] = gems_00[hij];
+            ibas_00_sym[hij][jact][iact] = gems_00[hij];
+
+            bas_00_sym[hij][gems_00[hij]][0] = iact;
+            bas_00_sym[hij][gems_00[hij]][1] = jact;
+
+            gems_00[hij]++;
+
+        }
+    }
+    free(pitzer_full_to_active);
 
     if ( constrain_t1_ || constrain_t2_ || constrain_d3_ ) {
         // make all triplets
@@ -708,154 +753,6 @@ void v2RDMSolver::BuildBasis() {
             trip_aaa[h] = count_aaa;
             trip_aab[h] = count_aab;
             trip_aba[h] = count_aba;
-        }
-    }
-    if ( constrain_d4_ ) {
-        // make all quartets
-        for (int h = 0; h < nirrep_; h++) {
-            std::vector < std::tuple<int,int,int,int> > myquartet;
-            for (int i = 0; i < amo_; i++) {
-                for (int j = 0; j < amo_; j++) {
-                    int s1 = SymmetryPair(symmetry[i],symmetry[j]);
-                    for (int k = 0; k < amo_; k++) {
-                        int s2 = SymmetryPair(s1,symmetry[k]);
-                        for (int l = 0; l < amo_; l++) {
-                            int s3 = SymmetryPair(s2,symmetry[l]);
-                            if (h==s3) {
-                                myquartet.push_back(std::make_tuple(i,j,k,l));
-                            }
-                        }
-                    }
-                }
-            }
-            quartets.push_back(myquartet);
-        }
-        bas_aaaa_sym  = (int***)malloc(nirrep_*sizeof(int**));
-        bas_aaab_sym  = (int***)malloc(nirrep_*sizeof(int**));
-        bas_aabb_sym  = (int***)malloc(nirrep_*sizeof(int**));
-        ibas_aaaa_sym = (int*****)malloc(nirrep_*sizeof(int****));
-        ibas_aaab_sym = (int*****)malloc(nirrep_*sizeof(int****));
-        ibas_aabb_sym = (int*****)malloc(nirrep_*sizeof(int****));
-        quartet_aaaa  = (int*)malloc(nirrep_*sizeof(int));
-        quartet_aaab  = (int*)malloc(nirrep_*sizeof(int));
-        quartet_aabb  = (int*)malloc(nirrep_*sizeof(int));
-        for (int h = 0; h < nirrep_; h++) {
-            ibas_aaaa_sym[h] = (int****)malloc(amo_*sizeof(int***));
-            ibas_aaab_sym[h] = (int****)malloc(amo_*sizeof(int***));
-            ibas_aabb_sym[h] = (int****)malloc(amo_*sizeof(int***));
-            bas_aaaa_sym[h]  = (int**)malloc(amo_*amo_*amo_*amo_*sizeof(int*));
-            bas_aaab_sym[h]  = (int**)malloc(amo_*amo_*amo_*amo_*sizeof(int*));
-            bas_aabb_sym[h]  = (int**)malloc(amo_*amo_*amo_*amo_*sizeof(int*));
-            for (int i = 0; i < amo_; i++) {
-                ibas_aaaa_sym[h][i] = (int***)malloc(amo_*sizeof(int**));
-                ibas_aaab_sym[h][i] = (int***)malloc(amo_*sizeof(int**));
-                ibas_aabb_sym[h][i] = (int***)malloc(amo_*sizeof(int**));
-                for (int j = 0; j < amo_; j++) {
-                    ibas_aaaa_sym[h][i][j] = (int**)malloc(amo_*sizeof(int*));
-                    ibas_aaab_sym[h][i][j] = (int**)malloc(amo_*sizeof(int*));
-                    ibas_aabb_sym[h][i][j] = (int**)malloc(amo_*sizeof(int*));
-                    for (int k = 0; k < amo_; k++) {
-                        ibas_aaaa_sym[h][i][j][k] = (int*)malloc(amo_*sizeof(int));
-                        ibas_aaab_sym[h][i][j][k] = (int*)malloc(amo_*sizeof(int));
-                        ibas_aabb_sym[h][i][j][k] = (int*)malloc(amo_*sizeof(int));
-                        for (int l = 0; l < amo_; l++) {
-                            ibas_aaaa_sym[h][i][j][k][l] = -999;
-                            ibas_aaab_sym[h][i][j][k][l] = -999;
-                            ibas_aabb_sym[h][i][j][k][l] = -999;
-                        }
-                    }
-                }
-            }
-            for (int i = 0; i < amo_*amo_*amo_*amo_; i++) {
-                bas_aaaa_sym[h][i] = (int*)malloc(4*sizeof(int));
-                bas_aaab_sym[h][i] = (int*)malloc(4*sizeof(int));
-                bas_aabb_sym[h][i] = (int*)malloc(4*sizeof(int));
-                for (int j = 0; j < 4; j++) {
-                    bas_aaaa_sym[h][i][j] = -999;
-                    bas_aaab_sym[h][i][j] = -999;
-                    bas_aabb_sym[h][i][j] = -999;
-                    bas_aabb_sym[h][i][j] = -999;
-                }
-            }
-
-            // mappings:
-            int count_aaaa = 0;
-            int count_aaab = 0;
-            int count_aabb = 0;
-            for (int n = 0; n < quartets[h].size(); n++) {
-                int i = std::get<0>(quartets[h][n]);
-                int j = std::get<1>(quartets[h][n]);
-                int k = std::get<2>(quartets[h][n]);
-                int l = std::get<3>(quartets[h][n]);
-
-                if ( i < j && k < l ) {
-
-                    ibas_aabb_sym[h][i][j][k][l] = count_aabb;
-                    ibas_aabb_sym[h][j][i][k][l] = count_aabb;
-                    ibas_aabb_sym[h][i][j][l][k] = count_aabb;
-                    ibas_aabb_sym[h][j][i][l][k] = count_aabb;
-
-                    bas_aabb_sym[h][count_aabb][0]  = i;
-                    bas_aabb_sym[h][count_aabb][1]  = j;
-                    bas_aabb_sym[h][count_aabb][2]  = k;
-                    bas_aabb_sym[h][count_aabb][3]  = l;
-                    count_aabb++;
-                }
-                if ( i < j && j < k ) {
-
-                    ibas_aaab_sym[h][i][j][k][l] = count_aaab;
-                    ibas_aaab_sym[h][i][k][j][l] = count_aaab;
-                    ibas_aaab_sym[h][j][i][k][l] = count_aaab;
-                    ibas_aaab_sym[h][j][k][i][l] = count_aaab;
-                    ibas_aaab_sym[h][k][i][j][l] = count_aaab;
-                    ibas_aaab_sym[h][k][j][i][l] = count_aaab;
-
-                    bas_aaab_sym[h][count_aaab][0]  = i;
-                    bas_aaab_sym[h][count_aaab][1]  = j;
-                    bas_aaab_sym[h][count_aaab][2]  = k;
-                    bas_aaab_sym[h][count_aaab][3]  = l;
-                    count_aaab++;
-                }
-                if ( i < j && j < k  && k < l) {
-
-                    ibas_aaaa_sym[h][i][j][k][l] = count_aaaa;
-                    ibas_aaaa_sym[h][i][k][j][l] = count_aaaa;
-                    ibas_aaaa_sym[h][j][i][k][l] = count_aaaa;
-                    ibas_aaaa_sym[h][j][k][i][l] = count_aaaa;
-                    ibas_aaaa_sym[h][k][i][j][l] = count_aaaa;
-                    ibas_aaaa_sym[h][k][j][i][l] = count_aaaa;
-
-                    ibas_aaaa_sym[h][i][j][l][k] = count_aaaa;
-                    ibas_aaaa_sym[h][i][k][l][j] = count_aaaa;
-                    ibas_aaaa_sym[h][j][i][l][k] = count_aaaa;
-                    ibas_aaaa_sym[h][j][k][l][i] = count_aaaa;
-                    ibas_aaaa_sym[h][k][i][l][j] = count_aaaa;
-                    ibas_aaaa_sym[h][k][j][l][i] = count_aaaa;
-
-                    ibas_aaaa_sym[h][i][l][j][k] = count_aaaa;
-                    ibas_aaaa_sym[h][i][l][k][j] = count_aaaa;
-                    ibas_aaaa_sym[h][j][l][i][k] = count_aaaa;
-                    ibas_aaaa_sym[h][j][l][k][i] = count_aaaa;
-                    ibas_aaaa_sym[h][k][l][i][j] = count_aaaa;
-                    ibas_aaaa_sym[h][k][l][j][i] = count_aaaa;
-
-                    ibas_aaaa_sym[h][l][i][j][k] = count_aaaa;
-                    ibas_aaaa_sym[h][l][i][k][j] = count_aaaa;
-                    ibas_aaaa_sym[h][l][j][i][k] = count_aaaa;
-                    ibas_aaaa_sym[h][l][j][k][i] = count_aaaa;
-                    ibas_aaaa_sym[h][l][k][i][j] = count_aaaa;
-                    ibas_aaaa_sym[h][l][k][j][i] = count_aaaa;
-
-                    bas_aaaa_sym[h][count_aaaa][0]  = i;
-                    bas_aaaa_sym[h][count_aaaa][1]  = j;
-                    bas_aaaa_sym[h][count_aaaa][2]  = k;
-                    bas_aaaa_sym[h][count_aaaa][3]  = l;
-                    count_aaaa++;
-                }
-            }
-            quartet_aaaa[h] = count_aaaa;
-            quartet_aaab[h] = count_aaab;
-            quartet_aabb[h] = count_aabb;
         }
     }
 
