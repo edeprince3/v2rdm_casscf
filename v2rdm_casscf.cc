@@ -148,7 +148,7 @@ int read_options(std::string name, Options& options)
 }
 
 extern "C" 
-SharedWavefunction v2rdm_casscf_private(SharedWavefunction ref_wfn, Options& options)
+SharedWavefunction v2rdm_casscf(SharedWavefunction ref_wfn, Options& options)
 {
     tstart();
 
