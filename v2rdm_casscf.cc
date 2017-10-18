@@ -46,7 +46,7 @@ namespace psi{ namespace v2rdm_casscf {
 extern "C" 
 int read_options(std::string name, Options& options)
 {
-    if (name == "V2RDM_CASSCF_PRIVATE"|| options.read_globals()) {
+    if (name == "V2RDM_CASSCF"|| options.read_globals()) {
         /* Do v2RDM-CASSCF gradient? !expert */
         options.add_str("DERTYPE", "NONE", "NONE FIRST");
         /*- Do optimize orbitals? -*/
@@ -116,7 +116,7 @@ int read_options(std::string name, Options& options)
         /*- do rotate active/active orbital pairs? -*/
         options.add_bool("ORBOPT_ACTIVE_ACTIVE_ROTATIONS",false);
         /*- convergence in gradient norm -*/
-        options.add_double("ORBOPT_GRADIENT_CONVERGENCE",1.0e-4);
+        options.add_double("ORBOPT_GRADIENT_CONVERGENCE",1.0e-6);
         /*- convergence in energy for rotations -*/
         options.add_double("ORBOPT_ENERGY_CONVERGENCE",1.0e-8);
         /*- flag for using exact expresions for diagonal Hessian element -*/

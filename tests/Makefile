@@ -3,7 +3,9 @@
 SHELL := /bin/bash
 
 # add new tests here
-subdirs := v2rdm1 v2rdm2 v2rdm3 
+#subdirs := v2rdm1 v2rdm2 v2rdm3 
+#subdirs := v2rdm1 v2rdm2 v2rdm3 v2rdm4 v2rdm5 v2rdm6 
+subdirs := v2rdm2 v2rdm3 v2rdm4 v2rdm5 v2rdm6 
 
 # long test: v2rdm4
 
@@ -21,6 +23,6 @@ quick: $(quick-tests)
 	@echo ""
 	@echo "    $(basename $@):"
 	@echo ""
-	@cd $(basename $@); psi4
+	@cd $(basename $@); psi4 #-d
 	@echo ""
 
