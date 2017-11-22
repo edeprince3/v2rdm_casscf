@@ -46,27 +46,34 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES Intel)
 endif()
 
 add_psi4_plugin(v2rdm_casscf
+    backtransform_tpdm.cc
     basis.cc
     cg_solver.cc
     checkpoint.cc
     d2.cc
     d3.cc
-    d4.cc
     diis.cc
+    exponentiate_step.cc
     g2.cc
+    gpu_transform_3index_teint.cc
+    integraltransform_sort_so_tpdm.cc
+    integraltransform_tpdm_unrestricted.cc
     oei.cc
+    orbital_lagrangian.cc
     q2.cc
     sortintegrals.cc
     t1.cc
     t2.cc
     tei.cc
     threeindexintegrals.cc
+    transform_ints.cc
     update_primal.cc
     update_transformation_matrix.cc
     v2rdm_casscf.cc
     v2rdm_solver.cc
     write_3pdm.cc
     write_tpdm.cc
+    write_tpdm_iwl.cc
     focas_data.F90
     focas_diis.F90
     focas_driver.F90
@@ -74,6 +81,7 @@ add_psi4_plugin(v2rdm_casscf
     focas_exponential.F90
     focas_genfock.F90
     focas_gradient.F90
+    focas_gradient_hessian.F90
     focas_hessian.F90
     focas_interface.F90
     focas_redundant.F90
