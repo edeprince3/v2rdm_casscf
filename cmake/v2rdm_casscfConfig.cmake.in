@@ -1,0 +1,55 @@
+# v2rdm_casscfConfig.cmake
+# -----------------------
+#
+# v2rdm_casscf cmake module.
+# This module sets the following variables in your project::
+#
+#   v2rdm_casscf_FOUND - true if v2rdm_casscf and all required components found on the system
+#   v2rdm_casscf_VERSION - v2rdm_casscf version in format Major.Minor.Release
+#   v2rdm_casscf_LIBRARIES - v2rdm_casscf library to link against.
+#   v2rdm_casscf_LIBRARY - same as LIBRARIES
+#
+#
+# Available components: None
+#
+#
+# Exported targets::
+#
+# If v2rdm_casscf is found, this module defines the following :prop_tgt:`IMPORTED`
+# target. ::
+#
+#   v2rdm_casscf::v2rdm_casscf - the main v2rdm_casscf library
+#
+#
+# Suggested usage::
+#
+#   find_package(v2rdm_casscf)
+#   find_package(v2rdm_casscf 0.5 EXACT CONFIG REQUIRED)
+#
+#
+# The following variables can be set to guide the search for this package::
+#
+#   v2rdm_casscf_DIR - CMake variable, set to directory containing this Config file
+#   CMAKE_PREFIX_PATH - CMake variable, set to root directory of this package
+##   PATH - environment variable, set to bin directory of this package
+#   CMAKE_DISABLE_FIND_PACKAGE_v2rdm_casscf - CMake variable, disables
+#     find_package(v2rdm_casscf) when not REQUIRED, perhaps to force internal build
+
+@PACKAGE_INIT@
+
+set(PN v2rdm_casscf)
+
+check_required_components(${PN})
+
+#-----------------------------------------------------------------------------
+# Don't include targets if this file is being picked up by another
+# project which has already built this as a subproject
+#-----------------------------------------------------------------------------
+if(NOT TARGET ${PN}::v2rdm_casscf)
+    include("${CMAKE_CURRENT_LIST_DIR}/${PN}Targets.cmake")
+
+    get_property(_loc TARGET ${PN}::v2rdm_casscf PROPERTY LOCATION)
+    set(${PN}_LIBRARY ${_loc})
+    set(${PN}_LIBRARIES ${_loc})
+endif()
+

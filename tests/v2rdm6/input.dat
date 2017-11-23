@@ -1,7 +1,7 @@
 #! cc-pvdz N2 (6,6) active space Test DQG
 
 # job description:
-print '        N2 / cc-pVDZ / DQG(6,6), geometry optimization'
+print('        N2 / cc-pVDZ / DQG(6,6), geometry optimization')
 
 sys.path.insert(0, '../../..')
 import v2rdm_casscf
