@@ -1,6 +1,6 @@
 cmake_policy(SET CMP0048 NEW)  # project_VERSION* variables populated from project(... VERSION x.x.x) string
 project(v2rdm_casscf
-        VERSION 0.1
+        VERSION 0.5
         LANGUAGES CXX Fortran)
 set(v2rdm_casscf_AUTHORS      "A. Eugene DePrince III")
 set(v2rdm_casscf_DESCRIPTION  "Variational 2-RDM-driven CASSCF plugin to Psi4")
@@ -25,19 +25,34 @@ else ()
                       "-xHost" "-march=native")
 endif()
 
-#   install alongside psi4 Py module by default, but overrideable
-get_filename_component(_tmp ${psi4_LIBRARY} DIRECTORY)
-get_filename_component(psi4_PYMOD_INSTALL_FULL_LIBDIR ${_tmp} DIRECTORY)
+set(PN ${PROJECT_NAME})
+
+# PYMOD_INSTALL_LIBDIR If set, installs python modules to
+#                      ${CMAKE_INSTALL_LIBDIR}${PYMOD_INSTALL_LIBDIR}/v2rdm_casscf rather than
+#                      the default read off parent Psi4
+
+#   install alongside psi4 module by default, but overrideable
+get_filename_component(psi4_CMAKE_INSTALL_PREFIX ${psi4_INCLUDE_DIR} DIRECTORY)
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX ${psi4_PYMOD_INSTALL_FULL_LIBDIR} CACHE PATH "Install path" FORCE)
+    set(CMAKE_INSTALL_PREFIX ${psi4_CMAKE_INSTALL_PREFIX} CACHE PATH "Install path" FORCE)
 endif()
-message(STATUS "Plugin install: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "Plugin install prefix: ${CMAKE_INSTALL_PREFIX}")
+
+if(PYMOD_INSTALL_LIBDIR)
+    set(PYMOD_INSTALL_FULLDIR "${CMAKE_INSTALL_LIBDIR}${PYMOD_INSTALL_LIBDIR}/${PN}")
+else()
+    file(RELATIVE_PATH _tmp ${psi4_CMAKE_INSTALL_PREFIX} ${psi4_LIBRARY})
+    #   e.g., _tmp = lib/psi4/core.so
+    get_filename_component(_tmp2 ${_tmp} DIRECTORY)
+    get_filename_component(_tmp3 ${_tmp2} DIRECTORY)
+    get_filename_component(PYMOD_INSTALL_FULLDIR "${_tmp3}/${PN}")
+endif()
+message(STATUS "Plugin module install: ${PYMOD_INSTALL_FULLDIR}")
+
 
 include(custom_cxxstandard)
 include(autocmake_omp)
 include(custom_static_library)
-
-set(PN ${PROJECT_NAME})
 
 # <<<  Build  >>>
 
@@ -95,14 +110,35 @@ target_link_libraries(v2rdm_casscf PRIVATE ${LIBC_INTERJECT})
 
 # <<<  Install  >>>
 
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 install(TARGETS v2rdm_casscf
-        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/${PN})
+        EXPORT "${PN}Targets"
+        LIBRARY DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
 install(FILES __init__.py pymodule.py LICENSE README.md
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${PN})
+        DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
 install(DIRECTORY tests/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${PN}/tests
+        DESTINATION ${PYMOD_INSTALL_FULLDIR}/tests
         FILES_MATCHING PATTERN "v2rdm*/input.dat"
         PATTERN "old-tests" EXCLUDE)
+
+# <<< Export Config >>>
+
+# GNUInstallDirs "DATADIR" wrong here; CMake search path wants "share".
+set(CMAKECONFIG_INSTALL_DIR "share/cmake/${PN}")
+configure_package_config_file(cmake/${PN}Config.cmake.in
+                              "${CMAKE_CURRENT_BINARY_DIR}/${PN}Config.cmake"
+                              INSTALL_DESTINATION ${CMAKECONFIG_INSTALL_DIR})
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PN}ConfigVersion.cmake
+                                 VERSION ${${PN}_VERSION}
+                                 COMPATIBILITY AnyNewerVersion)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PN}Config.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/${PN}ConfigVersion.cmake
+        DESTINATION ${CMAKECONFIG_INSTALL_DIR})
+install(EXPORT "${PN}Targets"
+        NAMESPACE "${PN}::"
+        DESTINATION ${CMAKECONFIG_INSTALL_DIR})
 
