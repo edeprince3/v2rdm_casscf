@@ -25,6 +25,9 @@ else ()
                       "-xHost" "-march=native")
 endif()
 
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 set(PN ${PROJECT_NAME})
 
 # PYMOD_INSTALL_LIBDIR If set, installs python modules to
@@ -45,7 +48,7 @@ else()
     #   e.g., _tmp = lib/psi4/core.so
     get_filename_component(_tmp2 ${_tmp} DIRECTORY)
     get_filename_component(_tmp3 ${_tmp2} DIRECTORY)
-    get_filename_component(PYMOD_INSTALL_FULLDIR "${_tmp3}/${PN}")
+    set(PYMOD_INSTALL_FULLDIR "${_tmp3}/${PN}")
 endif()
 message(STATUS "Plugin module install: ${PYMOD_INSTALL_FULLDIR}")
 
@@ -109,9 +112,6 @@ add_psi4_plugin(v2rdm_casscf
 target_link_libraries(v2rdm_casscf PRIVATE ${LIBC_INTERJECT})
 
 # <<<  Install  >>>
-
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
 
 install(TARGETS v2rdm_casscf
         EXPORT "${PN}Targets"
