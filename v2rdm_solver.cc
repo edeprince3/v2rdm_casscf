@@ -215,7 +215,7 @@ void  v2RDMSolver::common_init(){
     nmo_      = reference_wavefunction_->nmo();
     nsopi_    = reference_wavefunction_->nsopi();
     molecule_ = reference_wavefunction_->molecule();
-    enuc_     = molecule_->nuclear_repulsion_energy();
+    enuc_     = molecule_->nuclear_repulsion_energy({0.0,0.0,0.0});
 
     // need somewhere to store gradient, if required
     gradient_ =  reference_wavefunction_->matrix_factory()->create_shared_matrix("Total gradient", molecule_->natom(), 3);
