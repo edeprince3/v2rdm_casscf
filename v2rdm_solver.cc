@@ -1387,8 +1387,9 @@ void  v2RDMSolver::common_init(){
         double start = omp_get_wtime();
         std::vector<std::shared_ptr<MOSpace> > spaces;
         spaces.push_back(MOSpace::all);
-        std::shared_ptr<IntegralTransform> ints(new IntegralTransform(reference_wavefunction_, spaces, IntegralTransform::Restricted,
-            				      IntegralTransform::IWLOnly, IntegralTransform::PitzerOrder, IntegralTransform::None, false));
+        std::shared_ptr<IntegralTransform> ints(new IntegralTransform(reference_wavefunction_, spaces, 
+            IntegralTransform::TransformationType::Restricted, IntegralTransform::IWLOnly, 
+            IntegralTransform::PitzerOrder, IntegralTransform::None, false));
         ints->set_dpd_id(0);
         ints->set_keep_iwl_so_ints(true);
         ints->set_keep_dpd_so_ints(true);
