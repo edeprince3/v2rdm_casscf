@@ -295,7 +295,7 @@ TPDMBackTransform::backtransform_density()
 
     // This limitation can be remedied by accounting for the fact that Pitzer orbital numbering is not
     // dense, so certain quantities must be alloc'd for the full MO space.  It's no limitation, though
-    if(frozenOrbitals_ != None)
+    if(frozenOrbitals_ != FrozenOrbitals::None)
         throw SanityCheckError("No orbitals can be frozen in density matrix transformations\n",
                                __FILE__, __LINE__);
     // The full MO space must be in the list of spaces used, let's check

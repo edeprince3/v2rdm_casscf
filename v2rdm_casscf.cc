@@ -165,10 +165,10 @@ SharedWavefunction v2rdm_casscf(SharedWavefunction ref_wfn, Options& options)
         std::shared_ptr<TPDMBackTransform> transform = std::shared_ptr<TPDMBackTransform>(
         new TPDMBackTransform(ref_wfn,
                         spaces,
-                        IntegralTransform::Unrestricted, // Transformation type
-                        IntegralTransform::DPDOnly,      // Output buffer
-                        IntegralTransform::QTOrder,      // MO ordering
-                        IntegralTransform::None));       // Frozen orbitals?
+                        IntegralTransform::TransformationType::Unrestricted, // Transformation type
+                        IntegralTransform::OutputType::DPDOnly,              // Output buffer
+                        IntegralTransform::MOOrdering::QTOrder,              // MO ordering
+                        IntegralTransform::FrozenOrbitals::None));           // Frozen orbitals?
         transform->backtransform_density();
         transform.reset();
     }

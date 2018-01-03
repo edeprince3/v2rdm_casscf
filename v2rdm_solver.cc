@@ -1388,8 +1388,8 @@ void  v2RDMSolver::common_init(){
         std::vector<std::shared_ptr<MOSpace> > spaces;
         spaces.push_back(MOSpace::all);
         std::shared_ptr<IntegralTransform> ints(new IntegralTransform(reference_wavefunction_, spaces, 
-            IntegralTransform::TransformationType::Restricted, IntegralTransform::IWLOnly, 
-            IntegralTransform::PitzerOrder, IntegralTransform::None, false));
+            IntegralTransform::TransformationType::Restricted, IntegralTransform::OutputType::IWLOnly, 
+            IntegralTransform::MOOrdering::PitzerOrder, IntegralTransform::FrozenOrbitals::None, false));
         ints->set_dpd_id(0);
         ints->set_keep_iwl_so_ints(true);
         ints->set_keep_dpd_so_ints(true);

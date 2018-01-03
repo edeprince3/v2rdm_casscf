@@ -71,10 +71,10 @@ class TPDMBackTransform: public IntegralTransform{
      */
     TPDMBackTransform(SharedWavefunction wfn,
                       SpaceVec spaces,
-                      TransformationType transformationType = Restricted,
-                      OutputType outputType = DPDOnly,
-                      MOOrdering moOrdering = QTOrder,
-                      FrozenOrbitals frozenOrbitals = OccAndVir,
+                      TransformationType transformationType = IntegralTransform::TransformationType::Restricted,
+                      OutputType outputType = IntegralTransform::OutputType::DPDOnly,
+                      MOOrdering moOrdering = IntegralTransform::MOOrdering::QTOrder,
+                      FrozenOrbitals frozenOrbitals = IntegralTransform::FrozenOrbitals::OccAndVir,
                       bool initialize = true);
     ~TPDMBackTransform();
 
