@@ -24,7 +24,7 @@ set {
 set v2rdm_casscf {
   positivity dqg
   #r_convergence  1e-7
-  r_convergence  1e-5
+  r_convergence  1e-6
   e_convergence  1e-5
   orbopt_gradient_convergence 1e-8
   maxiter 20000
