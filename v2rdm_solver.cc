@@ -1755,6 +1755,9 @@ double v2RDMSolver::compute_energy() {
         WriteTPDM();
         //ReadTPDM();
     }
+    if ( options_.get_bool("OPDM_WRITE_FULL") ) {
+        WriteOPDM();
+    }
     // write 3-particle density matrix to disk?
     if ( options_.get_bool("3PDM_WRITE") && options_.get_bool("CONSTRAIN_D3")) {
         WriteActive3PDM();

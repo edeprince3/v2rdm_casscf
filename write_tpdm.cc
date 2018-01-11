@@ -46,7 +46,6 @@ struct tpdm {
     double val;
 };
 
-
 void v2RDMSolver::WriteTPDM(){
 
     double * x_p = x->pointer();

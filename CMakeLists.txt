@@ -21,8 +21,8 @@ option_with_print(ENABLE_GENERIC "Enable mostly static linking in shared library
 if (APPLE AND (CMAKE_CXX_COMPILER_ID MATCHES GNU))
     option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" OFF)
 else ()
-    option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" ON
-                      "-xHost" "-march=native")
+    option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" ON)
+                      #"-xHost") # "-march=native")
 endif()
 
 include(GNUInstallDirs)
@@ -91,6 +91,7 @@ add_psi4_plugin(v2rdm_casscf
     v2rdm_solver.cc
     write_3pdm.cc
     write_tpdm.cc
+    write_opdm.cc
     write_tpdm_iwl.cc
     focas_data.F90
     focas_diis.F90
