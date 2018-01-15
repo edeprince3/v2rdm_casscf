@@ -98,27 +98,19 @@ void v2RDMSolver::WriteOPDM(){
 
             int ifull      = i + pitzer_offset_full[hi];
 
-            for (int hj = 0; hj < nirrep_; hj++) {
+            opdm d1;
 
-                for (int j = 0; j < rstcpi_[hj] + frzcpi_[hj]; j++) {
+            d1.i   = ifull;
+            d1.j   = ifull;
 
-                    int jfull      = j + pitzer_offset_full[hj];
+            d1.val = 1.0;
 
-                    opdm d1;
+            psio->write(PSIF_V2RDM_D1A,"D1a",(char*)&d1,sizeof(opdm),addr_a,&addr_a);
+            counta++;
 
-                    d1.i   = ifull;
-                    d1.j   = jfull;
+            psio->write(PSIF_V2RDM_D1B,"D1b",(char*)&d1,sizeof(opdm),addr_b,&addr_b);
+            countb++;
 
-                    d1.val = 1.0;
-
-                    psio->write(PSIF_V2RDM_D1A,"D1a",(char*)&d1,sizeof(opdm),addr_a,&addr_a);
-                    counta++;
-
-                    psio->write(PSIF_V2RDM_D1B,"D1b",(char*)&d1,sizeof(opdm),addr_b,&addr_b);
-                    countb++;
-
-                }
-            }
         }
     }
 
