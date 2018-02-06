@@ -55,7 +55,10 @@ int read_options(std::string name, Options& options)
         options.add_bool("SEMICANONICALIZE_ORBITALS",false);
         /*- Type of guess -*/
         options.add_str("TPDM_GUESS","RANDOM", "RANDOM HF");
-        /*- Do write the 1-RDM to disk? All nonzero elements of the 2-RDM will be written.  -*/
+        /*- Do compute natural orbitals and transform 1- and 2-RDM to the natural orbital basis? 
+        The OPDM and Ca/Cb matrices pushed onto the wavefunction will correspond to the natural orbital basis -*/
+        options.add_bool("NAT_ORBS",false);
+        /*- Do write the 1-RDM to disk? All nonzero elements of the 1-RDM will be written.  -*/
         options.add_bool("OPDM_WRITE_FULL",false);
         /*- Do write the 2-RDM to disk? All nonzero elements of the 2-RDM will be written.  -*/
         options.add_bool("TPDM_WRITE_FULL",false);

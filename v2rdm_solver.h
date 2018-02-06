@@ -337,9 +337,14 @@ class v2RDMSolver: public Wavefunction{
     void Update_xz();
     void Update_xz_nonsymmetric();
 
-    void NaturalOrbitals();
-    void MullikenPopulations();
+    /// compute natural orbitals and transform OPDM and TPDM to natural orbital basis
+    void ComputeNaturalOrbitals();
 
+    /// compute and print natural orbital occupation numbers
+    void PrintNaturalOrbitalOccupations();
+
+    /// push OPDM onto the wavefunction
+    void FinalizeOPDM();
 
     // multiplicity
     int multiplicity_;

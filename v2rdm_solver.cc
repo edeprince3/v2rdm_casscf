@@ -1764,13 +1764,23 @@ double v2RDMSolver::compute_energy() {
         //Read3PDM();
     }
 
-    // compute and print natural orbital occupation numbers
-    MullikenPopulations();
-    NaturalOrbitals();
+    // compute and natural orbitals and transform 1-RDM/2-RDM to the NO basis
+    if ( options_.get_bool("NAT_ORBS") ) {
+        ComputeNaturalOrbitals();
+    }
 
+    // compute and print natural orbital occupation numbers 
+    PrintNaturalOrbitalOccupations();
+
+    // push OPDM onto wavefunction object
+    FinalizeOPDM();
 
     // for derivatives:
     if ( options_.get_str("DERTYPE") == "FIRST" ) {
+
+        if ( options_.get_bool("NAT_ORBS") ) {
+            throw PsiException("analytic gradients require nat_orbs false",__FILE__,__LINE__);
+        }
 
         // write checkpoint file for next step in optimization
         WriteCheckpointFile();
@@ -1926,84 +1936,7 @@ void v2RDMSolver::WriteMoldenFile() {
     molden->write(filename,Cno,Cno,zero, zero,eigval,eigval,true);
 }
 
-void v2RDMSolver::NaturalOrbitals() {
-    SharedMatrix Da (new Matrix(nirrep_,nmopi_,nmopi_));
-    SharedMatrix eigveca (new Matrix(nirrep_,nmopi_,nmopi_));
-    SharedVector eigvala (new Vector("Natural Orbital Occupation Numbers (alpha)",nirrep_,nmopi_));
-    for (int h = 0; h < nirrep_; h++) {
-        for (int i = 0; i < frzcpi_[h] + rstcpi_[h]; i++) {
-            Da->pointer(h)[i][i] = 1.0;
-        }
-        for (int i = rstcpi_[h] + frzcpi_[h]; i < nmopi_[h] - rstvpi_[h] - frzvpi_[h]; i++) {
-            for (int j = rstcpi_[h] + frzcpi_[h]; j < nmopi_[h]-rstvpi_[h]-frzvpi_[h]; j++) {
-                Da->pointer(h)[i][j] = x->pointer()[d1aoff[h]+(i-rstcpi_[h]-frzcpi_[h])*amopi_[h]+(j-rstcpi_[h]-frzcpi_[h])];
-            }
-        }
-    }
-    SharedMatrix saveda ( new Matrix(Da) );
-    Da->diagonalize(eigveca,eigvala,descending);
-    eigvala->print();
-
-    //Ca_->print();
-    // build AO/NO transformation matrix (Ca_)
-    /*for (int h = 0; h < nirrep_; h++) {
-        for (int mu = 0; mu < nsopi_[h]; mu++) {
-            double *  temp = (double*)malloc(nmopi_[h]*sizeof(double));
-            double ** cp   = Ca_->pointer(h);
-            double ** ep   = eigveca->pointer(h);
-            for (int i = 0; i < nmopi_[h]; i++) {
-                double dum = 0.0;
-                for (int j = 0; j < nmopi_[h]; j++) {
-                    dum += cp[mu][j] * ep[j][i];
-                }
-                temp[i] = dum;
-            }
-            for (int i = 0; i < nmopi_[h]; i++) {
-                cp[mu][i] = temp[i];
-            }
-            free(temp);
-        }
-    }*/
-    //Ca_->print();
-
-    SharedMatrix Db (new Matrix(nirrep_,nmopi_,nmopi_));
-    SharedMatrix eigvecb (new Matrix(nirrep_,nmopi_,nmopi_));
-    SharedVector eigvalb (new Vector("Natural Orbital Occupation Numbers (beta)",nirrep_,nmopi_));
-    for (int h = 0; h < nirrep_; h++) {
-        for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
-            Db->pointer(h)[i][i] = 1.0;
-        }
-        for (int i = rstcpi_[h] + frzcpi_[h]; i < nmopi_[h]-rstvpi_[h]-frzvpi_[h]; i++) {
-            for (int j = rstcpi_[h] + frzcpi_[h]; j < nmopi_[h]-rstvpi_[h]-frzvpi_[h]; j++) {
-                Db->pointer(h)[i][j] = x->pointer()[d1boff[h]+(i-rstcpi_[h]-frzcpi_[h])*amopi_[h]+(j-rstcpi_[h]-frzcpi_[h])];
-            }
-        }
-    }
-    Db->diagonalize(eigvecb,eigvalb,descending);
-    eigvalb->print();
-    // build AO/NO transformation matrix (Cb_)
-    /*for (int h = 0; h < nirrep_; h++) {
-        for (int mu = 0; mu < nsopi_[h]; mu++) {
-            double * temp  = (double*)malloc(nmopi_[h]*sizeof(double));
-            double ** cp   = Cb_->pointer(h);
-            double ** ep   = eigvecb->pointer(h);
-            for (int i = 0; i < nmopi_[h]; i++) {
-                double dum = 0.0;
-                for (int j = 0; j < nmopi_[h]; j++) {
-                    dum += cp[mu][j] * ep[j][i];
-                }
-                temp[i] = dum;
-            }
-            for (int i = 0; i < nmopi_[h]; i++) {
-                cp[mu][i] = temp[i];
-            }
-            free(temp);
-        }
-    }*/
-
-}
-
-void v2RDMSolver::MullikenPopulations() {
+void v2RDMSolver::FinalizeOPDM() {
     // nee
 
     std::stringstream ss;

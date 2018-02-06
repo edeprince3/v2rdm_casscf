@@ -76,6 +76,7 @@ add_psi4_plugin(v2rdm_casscf
     gpu_transform_3index_teint.cc
     integraltransform_sort_so_tpdm.cc
     integraltransform_tpdm_unrestricted.cc
+    natural_orbitals.cc
     oei.cc
     orbital_lagrangian.cc
     q2.cc
