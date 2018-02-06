@@ -1747,6 +1747,19 @@ double v2RDMSolver::compute_energy() {
     
         }
     } 
+
+    // compute and natural orbitals and transform 1-RDM/2-RDM to the NO basis
+    if ( options_.get_bool("NAT_ORBS") ) {
+        ComputeNaturalOrbitals();
+    }
+
+    // compute and print natural orbital occupation numbers 
+    PrintNaturalOrbitalOccupations();
+
+    // push OPDM onto wavefunction object
+    FinalizeOPDM();
+
+
     // write tpdm to disk?
     if ( options_.get_bool("TPDM_WRITE") ) {
         WriteActiveTPDM();
@@ -1763,17 +1776,6 @@ double v2RDMSolver::compute_energy() {
         WriteActive3PDM();
         //Read3PDM();
     }
-
-    // compute and natural orbitals and transform 1-RDM/2-RDM to the NO basis
-    if ( options_.get_bool("NAT_ORBS") ) {
-        ComputeNaturalOrbitals();
-    }
-
-    // compute and print natural orbital occupation numbers 
-    PrintNaturalOrbitalOccupations();
-
-    // push OPDM onto wavefunction object
-    FinalizeOPDM();
 
     // for derivatives:
     if ( options_.get_str("DERTYPE") == "FIRST" ) {

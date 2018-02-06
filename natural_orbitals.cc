@@ -77,7 +77,6 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
 
             // Cb_
-
             cp = Cb_->pointer(h);
             for (int i = rstcpi_[h] + frzcpi_[h]; i < nmopi_[h]-rstvpi_[h]-frzvpi_[h]; i++) {
                 double dum = 0.0;
