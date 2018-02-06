@@ -75,7 +75,7 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
                 cp[mu][i] = temp[i];
             }
 
-
+/*
             // Cb_
             cp = Cb_->pointer(h);
             for (int i = rstcpi_[h] + frzcpi_[h]; i < nmopi_[h]-rstvpi_[h]-frzvpi_[h]; i++) {
@@ -88,6 +88,7 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
             for (int i = rstcpi_[h] + frzcpi_[h]; i < nmopi_[h]-rstvpi_[h]-frzvpi_[h]; i++) {
                 cp[mu][i] = temp[i];
             }
+*/
 
             free(temp);
         }
