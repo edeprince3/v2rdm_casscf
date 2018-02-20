@@ -275,6 +275,24 @@ void v2RDMSolver::WriteTPDM(){
     psio->write_entry(PSIF_V2RDM_D2BB,"length",(char*)&countbb,sizeof(long int));
     psio->write_entry(PSIF_V2RDM_D2AB,"length",(char*)&countab,sizeof(long int));
 
+    // it might be nice for post CASSCF codes to know what orbitals are active:
+    psio->write_entry(PSIF_V2RDM_D2AA,"NUMBER ACTIVE ORBITALS",(char*)&amo_,sizeof(long int));
+    psio->write_entry(PSIF_V2RDM_D2BB,"NUMBER ACTIVE ORBITALS",(char*)&amo_,sizeof(long int));
+    psio->write_entry(PSIF_V2RDM_D2AB,"NUMBER ACTIVE ORBITALS",(char*)&amo_,sizeof(long int));
+
+    addr_aa = PSIO_ZERO;
+    addr_bb = PSIO_ZERO;
+    addr_ab = PSIO_ZERO;
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < amopi_[h]; i++) {
+            int ifull = full_basis[i + pitzer_offset[h]];
+            psio->write(PSIF_V2RDM_D2AA,"ACTIVE ORBITALS",(char*)&ifull,sizeof(int),addr_aa,&addr_aa);
+            psio->write(PSIF_V2RDM_D2BB,"ACTIVE ORBITALS",(char*)&ifull,sizeof(int),addr_bb,&addr_bb);
+            psio->write(PSIF_V2RDM_D2AB,"ACTIVE ORBITALS",(char*)&ifull,sizeof(int),addr_ab,&addr_ab);
+        }
+    }
+    
+
     // close files
     psio->close(PSIF_V2RDM_D2AA,1);
     psio->close(PSIF_V2RDM_D2BB,1);
