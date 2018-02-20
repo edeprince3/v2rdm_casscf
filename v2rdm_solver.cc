@@ -1759,7 +1759,6 @@ double v2RDMSolver::compute_energy() {
     // push OPDM onto wavefunction object
     FinalizeOPDM();
 
-
     // write tpdm to disk?
     if ( options_.get_bool("TPDM_WRITE") ) {
         WriteActiveTPDM();

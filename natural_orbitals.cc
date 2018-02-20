@@ -294,9 +294,39 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
     // now transform the aa and bb blocks of the 2-RDM to natural orbital basis
 
-    // D2aa(ij,kl): transform index 4
+    // first, unpack D2aa/bb into full antisymmetrized D2aa/D2bb
+    std::shared_ptr<Vector> tempx2 (new Vector(dimx_));
     for (int h = 0; h < nirrep_; h++) {
         for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i = bas_aa_sym[h][ij][0];
+            int j = bas_aa_sym[h][ij][1];
+
+            int ij_ab = ibas_ab_sym[h][i][j];
+            int ji_ab = ibas_ab_sym[h][j][i];
+
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int k = bas_aa_sym[h][kl][0];
+                int l = bas_aa_sym[h][kl][1];
+
+                int kl_ab = ibas_ab_sym[h][k][l];
+                int lk_ab = ibas_ab_sym[h][l][k];
+
+                tempx2->pointer()[d2aboff[h]+ij_ab*gems_ab[h]+kl_ab] =  x->pointer()[d2aaoff[h] + ij*gems_aa[h] + kl];
+                tempx2->pointer()[d2aboff[h]+ji_ab*gems_ab[h]+kl_ab] = -x->pointer()[d2aaoff[h] + ij*gems_aa[h] + kl];
+                tempx2->pointer()[d2aboff[h]+ij_ab*gems_ab[h]+lk_ab] = -x->pointer()[d2aaoff[h] + ij*gems_aa[h] + kl];
+                tempx2->pointer()[d2aboff[h]+ji_ab*gems_ab[h]+lk_ab] =  x->pointer()[d2aaoff[h] + ij*gems_aa[h] + kl];
+
+                tempx2->pointer()[q2aboff[h]+ij_ab*gems_ab[h]+kl_ab] =  x->pointer()[d2bboff[h] + ij*gems_aa[h] + kl];
+                tempx2->pointer()[q2aboff[h]+ji_ab*gems_ab[h]+kl_ab] = -x->pointer()[d2bboff[h] + ij*gems_aa[h] + kl];
+                tempx2->pointer()[q2aboff[h]+ij_ab*gems_ab[h]+lk_ab] = -x->pointer()[d2bboff[h] + ij*gems_aa[h] + kl];
+                tempx2->pointer()[q2aboff[h]+ji_ab*gems_ab[h]+lk_ab] =  x->pointer()[d2bboff[h] + ij*gems_aa[h] + kl];
+            }
+        }
+    }
+
+    // D2aa(ij,kl): transform index 4
+    for (int h = 0; h < nirrep_; h++) {
+        for (int ij = 0; ij < gems_ab[h]; ij++) {
 
             for (int hk = 0; hk < nirrep_; hk++) {
                 for (int kk = 0; kk < amopi_[hk]; kk++) {
@@ -311,31 +341,24 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
                         for (int ll = 0; ll < amopi_[hl]; ll++) {
                             int l = ll + pitzer_offset[hl];
-
-                            if ( k <= l ) continue; // TODO: check basis.cc to be sure we shouldn't be skipping k >= l
     
                             double duma = 0.0;
                             double dumb = 0.0;
-
                             for (int pp = 0; pp < amopi_[hl]; pp++) {
 
                                 int p = pp + pitzer_offset[hl];
-                                if ( p == k ) continue;
 
-                                int kp = ibas_aa_sym[h][k][p];
+                                int kp = ibas_ab_sym[h][k][p];
 
-                                int sg = 1;
-                                if ( p > k ) sg = -1;
-
-                                duma += sg * x->pointer()[d2aaoff[h]+ij*gems_aa[h]+kp] * ep[pp][ll];
-                                dumb += sg * x->pointer()[d2bboff[h]+ij*gems_aa[h]+kp] * ep[pp][ll];
+                                duma += tempx2->pointer()[d2aboff[h]+ij*gems_ab[h]+kp] * ep[pp][ll];
+                                dumb += tempx2->pointer()[q2aboff[h]+ij*gems_ab[h]+kp] * ep[pp][ll];
 
                             }
 
-                            int kl = ibas_aa_sym[h][k][l];
+                            int kl = ibas_ab_sym[h][k][l];
 
-                            tempx->pointer()[d2aaoff[h]+ij*gems_aa[h]+kl] = duma;
-                            tempx->pointer()[d2bboff[h]+ij*gems_aa[h]+kl] = dumb;
+                            tempx->pointer()[d2aboff[h]+ij*gems_ab[h]+kl] = duma;
+                            tempx->pointer()[q2aboff[h]+ij*gems_ab[h]+kl] = dumb;
 
                         }
                     }
@@ -346,7 +369,7 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
     // D2aa(ij,lk): transform index 3
     for (int h = 0; h < nirrep_; h++) {
-        for (int ij = 0; ij < gems_aa[h]; ij++) {
+        for (int ij = 0; ij < gems_ab[h]; ij++) {
 
             for (int hk = 0; hk < nirrep_; hk++) {
                 for (int kk = 0; kk < amopi_[hk]; kk++) {
@@ -361,30 +384,24 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
                         for (int ll = 0; ll < amopi_[hl]; ll++) {
                             int l = ll + pitzer_offset[hl];
-
-                            if ( l <= k ) continue; 
     
                             double duma = 0.0;
                             double dumb = 0.0;
                             for (int pp = 0; pp < amopi_[hl]; pp++) {
 
                                 int p = pp + pitzer_offset[hl];
-                                if ( p == k ) continue;
 
-                                int pk = ibas_aa_sym[h][p][k];
+                                int pk = ibas_ab_sym[h][p][k];
 
-                                int sg = 1;
-                                if ( k > p ) sg = -1;
-
-                                duma += sg * tempx->pointer()[d2aaoff[h]+ij*gems_aa[h]+pk] * ep[pp][ll];
-                                dumb += sg * tempx->pointer()[d2bboff[h]+ij*gems_aa[h]+pk] * ep[pp][ll];
+                                duma += tempx->pointer()[d2aboff[h]+ij*gems_ab[h]+pk] * ep[pp][ll];
+                                dumb += tempx->pointer()[q2aboff[h]+ij*gems_ab[h]+pk] * ep[pp][ll];
 
                             }
 
-                            int lk = ibas_aa_sym[h][l][k];
+                            int lk = ibas_ab_sym[h][l][k];
 
-                            x->pointer()[d2aaoff[h]+ij*gems_aa[h]+lk] = duma;
-                            x->pointer()[d2bboff[h]+ij*gems_aa[h]+lk] = dumb;
+                            tempx2->pointer()[d2aboff[h]+ij*gems_ab[h]+lk] = duma;
+                            tempx2->pointer()[q2aboff[h]+ij*gems_ab[h]+lk] = dumb;
 
                         }
                     }
@@ -395,7 +412,7 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
     // D2aa(kl,ij): transform index 2
     for (int h = 0; h < nirrep_; h++) {
-        for (int ij = 0; ij < gems_aa[h]; ij++) {
+        for (int ij = 0; ij < gems_ab[h]; ij++) {
 
             for (int hk = 0; hk < nirrep_; hk++) {
                 for (int kk = 0; kk < amopi_[hk]; kk++) {
@@ -410,8 +427,6 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
                         for (int ll = 0; ll < amopi_[hl]; ll++) {
                             int l = ll + pitzer_offset[hl];
-
-                            if ( k <= l ) continue; // TODO: check basis.cc to be sure we shouldn't be skipping k >= l
     
                             double duma = 0.0;
                             double dumb = 0.0;
@@ -419,22 +434,17 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
                                 int p = pp + pitzer_offset[hl];
 
-                                if ( p == k ) continue;
+                                int kp = ibas_ab_sym[h][k][p];
 
-                                int kp = ibas_aa_sym[h][k][p];
-
-                                int sg = 1;
-                                if ( p > k ) sg = -1;
-
-                                duma += sg * x->pointer()[d2aaoff[h]+kp*gems_aa[h]+ij] * ep[pp][ll];
-                                dumb += sg * x->pointer()[d2bboff[h]+kp*gems_aa[h]+ij] * ep[pp][ll];
+                                duma += tempx2->pointer()[d2aboff[h]+kp*gems_ab[h]+ij] * ep[pp][ll];
+                                dumb += tempx2->pointer()[q2aboff[h]+kp*gems_ab[h]+ij] * ep[pp][ll];
 
                             }
 
-                            int kl = ibas_aa_sym[h][k][l];
+                            int kl = ibas_ab_sym[h][k][l];
 
-                            tempx->pointer()[d2aaoff[h]+kl*gems_aa[h]+ij] = duma;
-                            tempx->pointer()[d2bboff[h]+kl*gems_aa[h]+ij] = dumb;
+                            tempx->pointer()[d2aboff[h]+kl*gems_ab[h]+ij] = duma;
+                            tempx->pointer()[q2aboff[h]+kl*gems_ab[h]+ij] = dumb;
 
                         }
                     }
@@ -445,7 +455,7 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
     // D2aa(lk,ij): transform index 1
     for (int h = 0; h < nirrep_; h++) {
-        for (int ij = 0; ij < gems_aa[h]; ij++) {
+        for (int ij = 0; ij < gems_ab[h]; ij++) {
 
             for (int hk = 0; hk < nirrep_; hk++) {
                 for (int kk = 0; kk < amopi_[hk]; kk++) {
@@ -460,8 +470,6 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
                         for (int ll = 0; ll < amopi_[hl]; ll++) {
                             int l = ll + pitzer_offset[hl];
-
-                            if ( l <= k ) continue; 
     
                             double duma = 0.0;
                             double dumb = 0.0;
@@ -469,26 +477,44 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
                                 int p = pp + pitzer_offset[hl];
 
-                                if ( p == k ) continue;
+                                int pk = ibas_ab_sym[h][p][k];
 
-                                int pk = ibas_aa_sym[h][p][k];
-
-                                int sg = 1;
-                                if ( k > p ) sg = -1;
-
-                                duma += sg * tempx->pointer()[d2aaoff[h]+pk*gems_aa[h]+ij] * ep[pp][ll];
-                                dumb += sg * tempx->pointer()[d2bboff[h]+pk*gems_aa[h]+ij] * ep[pp][ll];
+                                duma += tempx->pointer()[d2aboff[h]+pk*gems_ab[h]+ij] * ep[pp][ll];
+                                dumb += tempx->pointer()[q2aboff[h]+pk*gems_ab[h]+ij] * ep[pp][ll];
 
                             }
 
-                            int lk = ibas_aa_sym[h][l][k];
+                            int lk = ibas_ab_sym[h][l][k];
 
-                            x->pointer()[d2aaoff[h]+lk*gems_aa[h]+ij] = duma;
-                            x->pointer()[d2bboff[h]+lk*gems_aa[h]+ij] = dumb;
+                            tempx2->pointer()[d2aboff[h]+lk*gems_ab[h]+ij] = duma;
+                            tempx2->pointer()[q2aboff[h]+lk*gems_ab[h]+ij] = dumb;
 
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // lastly, repack D2aa/bb from full antisymmetrized D2aa/D2bb
+    for (int h = 0; h < nirrep_; h++) {
+        for (int ij = 0; ij < gems_aa[h]; ij++) {
+            int i = bas_aa_sym[h][ij][0];
+            int j = bas_aa_sym[h][ij][1];
+
+            int ij_ab = ibas_ab_sym[h][i][j];
+            int ji_ab = ibas_ab_sym[h][j][i];
+
+            for (int kl = 0; kl < gems_aa[h]; kl++) {
+                int k = bas_aa_sym[h][kl][0];
+                int l = bas_aa_sym[h][kl][1];
+
+                int kl_ab = ibas_ab_sym[h][k][l];
+                int lk_ab = ibas_ab_sym[h][l][k];
+
+                x->pointer()[d2aaoff[h] + ij*gems_aa[h] + kl] = tempx2->pointer()[d2aboff[h]+ij_ab*gems_ab[h]+kl_ab];
+                x->pointer()[d2bboff[h] + ij*gems_aa[h] + kl] = tempx2->pointer()[q2aboff[h]+ij_ab*gems_ab[h]+kl_ab];
+
             }
         }
     }
