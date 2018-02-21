@@ -296,9 +296,9 @@ void v2RDMSolver::WriteTPDM(){
     // it might be nice for post CASSCF codes to know what orbitals are inactive:
 
     int inact = nfrzc_ + nrstc_;
-    psio->write_entry(PSIF_V2RDM_D2AA,"NUMBER ACTIVE ORBITALS",(char*)&inact,sizeof(int));
-    psio->write_entry(PSIF_V2RDM_D2BB,"NUMBER ACTIVE ORBITALS",(char*)&inact,sizeof(int));
-    psio->write_entry(PSIF_V2RDM_D2AB,"NUMBER ACTIVE ORBITALS",(char*)&inact,sizeof(int));
+    psio->write_entry(PSIF_V2RDM_D2AA,"NUMBER INACTIVE ORBITALS",(char*)&inact,sizeof(int));
+    psio->write_entry(PSIF_V2RDM_D2BB,"NUMBER INACTIVE ORBITALS",(char*)&inact,sizeof(int));
+    psio->write_entry(PSIF_V2RDM_D2AB,"NUMBER INACTIVE ORBITALS",(char*)&inact,sizeof(int));
 
     addr_aa = PSIO_ZERO;
     addr_bb = PSIO_ZERO;
