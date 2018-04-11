@@ -43,7 +43,7 @@ using namespace psi;
 
 namespace psi{ namespace v2rdm_casscf {
 
-extern "C" 
+extern "C" PSI_API
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
@@ -152,7 +152,7 @@ int read_options(std::string name, Options& options)
     return true;
 }
 
-extern "C" 
+extern "C" PSI_API
 SharedWavefunction v2rdm_casscf(SharedWavefunction ref_wfn, Options& options)
 {
     tstart();
