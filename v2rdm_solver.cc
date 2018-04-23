@@ -1720,6 +1720,9 @@ double v2RDMSolver::compute_energy() {
     Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc_+efzc_;
     Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc_+efzc_;
 
+    // set energy for wavefunction
+    energy_ = energy_primal+enuc_+efzc_;
+
     // push final transformation matrix onto Ca_ and Cb_
     UpdateTransformationMatrix();
 
