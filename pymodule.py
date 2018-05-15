@@ -62,11 +62,6 @@ def run_v2rdm_casscf(name, **kwargs):
     # needs to be in scratch with the correct name
     filename = psi4.core.get_option("V2RDM_CASSCF","RESTART_FROM_CHECKPOINT_FILE")
 
-    # todo PSIF_V2RDM_CHECKPOINT should be definied in psifiles.h
-    if ( filename != "" and psi4.core.get_global_option('DERTYPE') != 'FIRST' ):
-        molname = psi4.wavefunction().molecule().name()
-        p4util.copy_file_to_scratch(filename,'psi',molname,269,False)
-
     # Ensure IWL files have been written when not using DF/CD
     scf_type = psi4.core.get_option('SCF', 'SCF_TYPE')
     if ( scf_type == 'PK' or scf_type == 'DIRECT' ):

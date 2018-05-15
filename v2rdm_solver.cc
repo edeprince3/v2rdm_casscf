@@ -1800,7 +1800,12 @@ double v2RDMSolver::compute_energy() {
 
         // push dual corresponding to D1/Q1 mapping onto S_ in the wave function
         DualD1Q1();
+    }else if ( options_.get_bool("WRITE_CHECKPOINT_FILE") ) {
+
+        WriteCheckpointFile();
+
     }
+
 
     double end_total_time = omp_get_wtime();
 
