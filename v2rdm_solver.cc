@@ -1099,7 +1099,7 @@ void  v2RDMSolver::common_init(){
     outfile->Printf("\n\n");
     outfile->Printf( "        ****************************************************\n");
     outfile->Printf( "        *                                                  *\n");
-    outfile->Printf( "        *    v2RDM-CASSCF (PRIVATE)                        *\n");
+    outfile->Printf( "        *    v2RDM-CASSCF                                  *\n");
     outfile->Printf( "        *                                                  *\n");
     outfile->Printf( "        *    A variational 2-RDM-driven approach to the    *\n");
     outfile->Printf( "        *    active space self-consistent field method     *\n");
