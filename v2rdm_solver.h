@@ -392,6 +392,9 @@ class v2RDMSolver: public Wavefunction{
     char * orbopt_outfile_;
     bool orbopt_converged_;
 
+    /// is this a v2RDM-DOCI computation?
+    bool is_doci_;
+
     /// are we using 3-index integrals?
     bool is_df_;
 

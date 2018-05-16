@@ -193,6 +193,8 @@ v2RDMSolver::~v2RDMSolver()
 
 void  v2RDMSolver::common_init(){
 
+    is_doci_ = false;
+
     is_df_ = false;
     if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD" ) {
         is_df_ = true;
