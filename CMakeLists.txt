@@ -70,6 +70,7 @@ add_psi4_plugin(v2rdm_casscf
     checkpoint.cc
     d2.cc
     d3.cc
+    d4.cc
     diis.cc
     exponentiate_step.cc
     g2.cc

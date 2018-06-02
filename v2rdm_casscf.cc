@@ -79,6 +79,8 @@ int read_options(std::string name, Options& options)
         options.add_int("MU_UPDATE_FREQUENCY",500);
         /*- The type of 2-positivity computation -*/
         options.add_str("POSITIVITY", "DQG", "DQG D DQ DG DQGT1 DQGT2 DQGT1T2");
+        /*- Do constrain D4 to D3 mapping? -*/
+        options.add_bool("CONSTRAIN_D4",false);
         /*- Do constrain D3 to D2 mapping? -*/
         options.add_bool("CONSTRAIN_D3",false);
         /*- Do spin adapt G2 condition? -*/

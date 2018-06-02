@@ -52,11 +52,11 @@
 #endif
 
 using namespace psi;
-//using namespace fnocc;
 
 namespace psi{ namespace v2rdm_casscf{
 
 SharedMatrix v2RDMSolver::GetOEI() {
+
     std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
     SharedMatrix K1 (new Matrix(mints->so_potential()));
     K1->add(mints->so_kinetic());

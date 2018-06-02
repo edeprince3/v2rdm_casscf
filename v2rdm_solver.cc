@@ -186,6 +186,13 @@ v2RDMSolver::~v2RDMSolver()
         free(d3aaboff);
         free(d3bbaoff);
     }
+    if ( constrain_d4_ ) {
+        free(d4aaaaoff);
+        free(d4aaaboff);
+        free(d4aabboff);
+        free(d4bbbaoff);
+        free(d4bbbboff);
+    }
 
     free(X_);
 
@@ -429,6 +436,7 @@ void  v2RDMSolver::common_init(){
     constrain_t1_ = false;
     constrain_t2_ = false;
     constrain_d3_ = false;
+    constrain_d4_ = false;
     if (options_.get_str("POSITIVITY")=="D") {
         constrain_q2_ = false;
         constrain_g2_ = false;
@@ -460,6 +468,12 @@ void  v2RDMSolver::common_init(){
 
     if ( options_.get_bool("CONSTRAIN_D3") ) {
         constrain_d3_ = true;
+    }
+    if ( options_.get_bool("CONSTRAIN_D4") ) {
+        constrain_d4_ = true;
+        if ( !constrain_d3_ ) {
+            constrain_d3_ = true;
+        }
     }
 
     spin_adapt_g2_  = options_.get_bool("SPIN_ADAPT_G2");
@@ -606,6 +620,23 @@ void  v2RDMSolver::common_init(){
         }
         for ( int h = 0; h < nirrep_; h++) {
             dimx_ += trip_aab[h]*trip_aab[h]; // D3bba
+        }
+    }
+    if ( constrain_d4_ ) {
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += quartet_aaaa[h] * quartet_aaaa[h]; // D4aaaa
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += quartet_aaab[h] * quartet_aaab[h]; // D4aaab
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += quartet_aabb[h] * quartet_aabb[h]; // D4aabb
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += quartet_aaab[h] * quartet_aaab[h]; // D4bbba
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            dimx_ += quartet_aaaa[h] * quartet_aaaa[h]; // D4bbbb
         }
     }
 
@@ -775,6 +806,29 @@ void  v2RDMSolver::common_init(){
             d3bbaoff[h] = offset; offset += trip_aab[h]*trip_aab[h]; // D3bba
         }
     }
+    if ( constrain_d4_ ) {
+        d4aaaaoff = (int*)malloc(nirrep_*sizeof(int));
+        d4aaaboff = (int*)malloc(nirrep_*sizeof(int));
+        d4aabboff = (int*)malloc(nirrep_*sizeof(int));
+        d4bbbaoff = (int*)malloc(nirrep_*sizeof(int));
+        d4bbbboff = (int*)malloc(nirrep_*sizeof(int));
+        for (int h = 0; h < nirrep_; h++) {
+            d4aaaaoff[h] = offset; offset += quartet_aaaa[h]*quartet_aaaa[h]; // D4aaaa
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            d4aaaboff[h] = offset; offset += quartet_aaab[h]*quartet_aaab[h]; // D4aaab
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            d4aabboff[h] = offset; offset += quartet_aabb[h]*quartet_aabb[h]; // D4aabb
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            d4bbbaoff[h] = offset; offset += quartet_aaab[h]*quartet_aaab[h]; // D4bbba
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            d4bbbboff[h] = offset; offset += quartet_aaaa[h]*quartet_aaaa[h]; // D4bbbb
+        }
+    }
+
     // constraints:
     nconstraints_ = 0;
 
@@ -955,6 +1009,50 @@ void  v2RDMSolver::common_init(){
             }
         }
     }
+    if ( constrain_d4_ ) {
+        if ( nalpha_ - nrstc_ - nfrzc_ > 3 ) {
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aaa[h]*trip_aaa[h]; // D4aaaa -> D3aaa
+            }
+        }
+        if ( nalpha_ - nrstc_ - nfrzc_ > 2 && nbeta_ - nrstc_ - nfrzc_ > 0 ) {
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aaa[h]*trip_aaa[h]; // D4aaab -> D3aaa
+            }
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aab[h]*trip_aab[h]; // D4aaab -> D3aab
+            }
+        }
+        if ( nalpha_ - nrstc_ - nfrzc_ > 1  && nbeta_ - nrstc_ - nfrzc_ > 1) {
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aab[h]*trip_aab[h]; // D4aabb -> D3aab
+            }
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aab[h]*trip_aab[h]; // D4aabb -> D3abb
+            }
+        }
+        if ( nalpha_ - nrstc_ - nfrzc_ > 1  && nbeta_ - nrstc_ - nfrzc_ > 1) {
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aab[h]*trip_aab[h]; // D4aabb -> D3aab
+            }
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aab[h]*trip_aab[h]; // D4aabb -> D3abb
+            }
+        }
+        if ( nalpha_ - nrstc_ - nfrzc_ > 0 && nbeta_ - nrstc_ - nfrzc_ > 2 ) {
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aab[h]*trip_aab[h]; // D4abbb -> D3abb
+            }
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aaa[h]*trip_aaa[h]; // D4abbb -> D3bbb
+            }
+        }
+        if ( nbeta_ - nrstc_ - nfrzc_ > 3 ) {
+            for (int h = 0; h < nirrep_; h++) {
+                nconstraints_ += trip_aaa[h]*trip_aaa[h]; // D4bbbb -> D3bbb
+            }
+        }
+    }
 
     // list of dimensions_
     for (int h = 0; h < nirrep_; h++) {
@@ -1079,6 +1177,23 @@ void  v2RDMSolver::common_init(){
         }
         for (int h = 0; h < nirrep_; h++) {
             dimensions_.push_back(trip_aab[h]); // D3bba
+        }
+    }
+    if ( constrain_d4_ ) {
+        for (int h = 0; h < nirrep_; h++) {
+            dimensions_.push_back(quartet_aaaa[h]); // D4aaaa
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            dimensions_.push_back(quartet_aaab[h]); // D4aaab
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            dimensions_.push_back(quartet_aabb[h]); // D4aabb
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            dimensions_.push_back(quartet_aaab[h]); // D4bbba
+        }
+        for (int h = 0; h < nirrep_; h++) {
+            dimensions_.push_back(quartet_aaaa[h]); // D4bbbb
         }
     }
 
@@ -1271,6 +1386,9 @@ void  v2RDMSolver::common_init(){
     }
     if ( constrain_d3_ ) {
         outfile->Printf("        D3:                       %7.2lf mb\n",nt1 * 8.0 / 1024.0 / 1024.0);
+    }
+    if ( constrain_d4_ ) {
+        outfile->Printf("        D4:                       %7.2lf mb\n",nt1 * 8.0 / 1024.0 / 1024.0);
     }
     if ( constrain_t1_ ) {
         outfile->Printf("        T1:                       %7.2lf mb\n",nt1 * 8.0 / 1024.0 / 1024.0);
@@ -3046,6 +3164,50 @@ void v2RDMSolver::BuildConstraints(){
             }
         }
     }
+    if ( constrain_d4_ ) {
+        if (  nalpha_ - nrstc_ - nfrzc_ > 3 ) {
+            // D4aaaa -> D3aaa
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aaa[h]*trip_aaa[h];
+            }
+        }
+        if (  nalpha_ - nrstc_ - nfrzc_ > 2 && nbeta_ - nrstc_ - nfrzc_ > 0) {
+            // D4aaab -> D3aaa
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aaa[h]*trip_aaa[h];
+            }
+            // D4aaab -> D3aab
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aab[h]*trip_aab[h];
+            }
+        }
+        if (  nalpha_ - nrstc_ - nfrzc_ > 1 && nbeta_ - nrstc_ - nfrzc_ > 1) {
+            // D4aabb -> D3aab
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aab[h]*trip_aab[h];
+            }
+            // D4aabb -> D3abb
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aab[h]*trip_aab[h];
+            }
+        }
+        if (  nalpha_ - nrstc_ - nfrzc_ > 0 && nbeta_ - nrstc_ - nfrzc_ > 2) {
+            // D4abbb -> D3bbb
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aaa[h]*trip_aaa[h];
+            }
+            // D4abbb -> D3aab
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aab[h]*trip_aab[h];
+            }
+        }
+        if (  nbeta_ - nrstc_ - nfrzc_ > 3) {
+            // D4bbbb -> D3bbb
+            for (int h = 0; h < nirrep_; h++) {
+                offset += trip_aaa[h]*trip_aaa[h];
+            }
+        }
+    }
 
 }
 
@@ -3087,6 +3249,10 @@ void v2RDMSolver::bpsdp_Au(SharedVector A, SharedVector u){
         D3_constraints_Au(A,u);
     }
 
+    if ( constrain_d4_ ) {
+        D4_constraints_Au(A,u);
+    }
+
 } // end Au
 
 void v2RDMSolver::bpsdp_Au_slow(SharedVector A, SharedVector u){
@@ -3123,6 +3289,10 @@ void v2RDMSolver::bpsdp_Au_slow(SharedVector A, SharedVector u){
     }
     if ( constrain_d3_ ) {
         D3_constraints_Au(A,u);
+    }
+
+    if ( constrain_d4_ ) {
+        D4_constraints_Au(A,u);
     }
 
 } // end Au
@@ -3164,6 +3334,10 @@ void v2RDMSolver::bpsdp_ATu(SharedVector A, SharedVector u){
         D3_constraints_ATu(A,u);
     }
 
+    if ( constrain_d4_ ) {
+        D4_constraints_ATu(A,u);
+    }
+
 }//end ATu
 
 void v2RDMSolver::bpsdp_ATu_slow(SharedVector A, SharedVector u){
@@ -3201,6 +3375,10 @@ void v2RDMSolver::bpsdp_ATu_slow(SharedVector A, SharedVector u){
 
     if ( constrain_d3_ ) {
         D3_constraints_ATu(A,u);
+    }
+
+    if ( constrain_d4_ ) {
+        D4_constraints_ATu(A,u);
     }
 
 }//end ATu

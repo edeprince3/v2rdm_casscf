@@ -73,6 +73,144 @@ void v2RDMSolver::D2_constraints_ATu(SharedVector A,SharedVector u){
         offset++;
     }
 
+/*
+    if ( constrain_l2_ ) {
+        // Lx^2
+        for (int hp = 0; hp < nirrep_; hp++) {
+            int hq = hp ^ h_lx_;
+            for (int hr = 0; hr < nirrep_; hr++) {
+                int hs = hr ^ h_lx_;
+
+                int hpr = SymmetryPair(hp,hr);
+                int hqs = SymmetryPair(hq,hs);
+                if ( hpr != hqs ) continue;
+                for (int pp = 0; pp < amopi_[hp]; pp++) {
+                    int p = pp + pitzer_offset[hp];
+                    for (int qq = 0; qq < amopi_[hq]; qq++) {
+                        int q = qq + pitzer_offset[hq];
+                        for (int rr = 0; rr < amopi_[hr]; rr++) {
+                            int r = rr + pitzer_offset[hr];
+                            for (int ss = 0; ss < amopi_[hs]; ss++) {
+                                int s = ss + pitzer_offset[hs];
+
+                                int pr = ibas_ab_sym[hpr][p][r];
+                                int qs = ibas_ab_sym[hpr][q][s];
+
+                                // don't forget, there is an extra factor of -1 on <Lx>*<Lx>
+
+                                A_p[d2aboff[hpr] + pr * gems_ab[hpr] + qs] -= 2.0 * angular_momentum_[0]->pointer(hp)[pp][qq] * angular_momentum_[0]->pointer(hr)[rr][ss] * u_p[offset];
+                                if ( p!=r && q!=s ) {
+                                    pr = ibas_aa_sym[hpr][p][r];
+                                    qs = ibas_aa_sym[hpr][q][s];
+                                    int sg = 1;
+                                    if ( p > r ) sg = -sg;
+                                    if ( q > s ) sg = -sg;
+                                     A_p[d2aaoff[hpr] + pr * gems_aa[hpr] + qs] -= sg * angular_momentum_[0]->pointer(hp)[pp][qq] * angular_momentum_[0]->pointer(hr)[rr][ss] * u_p[offset];
+                                     A_p[d2bboff[hpr] + pr * gems_aa[hpr] + qs] -= sg * angular_momentum_[0]->pointer(hp)[pp][qq] * angular_momentum_[0]->pointer(hr)[rr][ss] * u_p[offset];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Ly^2
+        for (int hp = 0; hp < nirrep_; hp++) {
+            int hq = hp ^ h_ly_;
+            for (int hr = 0; hr < nirrep_; hr++) {
+                int hs = hr ^ h_ly_;
+
+                int hpr = SymmetryPair(hp,hr);
+                int hqs = SymmetryPair(hq,hs);
+                if ( hpr != hqs ) continue;
+                for (int pp = 0; pp < amopi_[hp]; pp++) {
+                    int p = pp + pitzer_offset[hp];
+                    for (int qq = 0; qq < amopi_[hq]; qq++) {
+                        int q = qq + pitzer_offset[hq];
+                        for (int rr = 0; rr < amopi_[hr]; rr++) {
+                            int r = rr + pitzer_offset[hr];
+                            for (int ss = 0; ss < amopi_[hs]; ss++) {
+                                int s = ss + pitzer_offset[hs];
+
+                                int pr = ibas_ab_sym[hpr][p][r];
+                                int qs = ibas_ab_sym[hpr][q][s];
+
+                                // don't forget, there is an extra factor of -1 on <Ly>*<Ly>
+
+                                A_p[d2aboff[hpr] + pr * gems_ab[hpr] + qs] -= 2.0 * angular_momentum_[1]->pointer(hp)[pp][qq] * angular_momentum_[1]->pointer(hr)[rr][ss] * u_p[offset];
+                                if ( p!=r && q!=s ) {
+                                    pr = ibas_aa_sym[hpr][p][r];
+                                    qs = ibas_aa_sym[hpr][q][s];
+                                    int sg = 1;
+                                    if ( p > r ) sg = -sg;
+                                    if ( q > s ) sg = -sg;
+                                     A_p[d2aaoff[hpr] + pr * gems_aa[hpr] + qs] -= sg * angular_momentum_[1]->pointer(hp)[pp][qq] * angular_momentum_[1]->pointer(hr)[rr][ss] * u_p[offset];
+                                     A_p[d2bboff[hpr] + pr * gems_aa[hpr] + qs] -= sg * angular_momentum_[1]->pointer(hp)[pp][qq] * angular_momentum_[1]->pointer(hr)[rr][ss] * u_p[offset];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Lz^2
+        for (int hp = 0; hp < nirrep_; hp++) {
+            int hq = hp ^ h_lz_;
+            for (int hr = 0; hr < nirrep_; hr++) {
+                int hs = hr ^ h_lz_;
+
+                int hpr = SymmetryPair(hp,hr);
+                int hqs = SymmetryPair(hq,hs);
+                if ( hpr != hqs ) continue;
+                for (int pp = 0; pp < amopi_[hp]; pp++) {
+                    int p = pp + pitzer_offset[hp];
+                    for (int qq = 0; qq < amopi_[hq]; qq++) {
+                        int q = qq + pitzer_offset[hq];
+                        for (int rr = 0; rr < amopi_[hr]; rr++) {
+                            int r = rr + pitzer_offset[hr];
+                            for (int ss = 0; ss < amopi_[hs]; ss++) {
+                                int s = ss + pitzer_offset[hs];
+
+                                int pr = ibas_ab_sym[hpr][p][r];
+                                int qs = ibas_ab_sym[hpr][q][s];
+
+                                // don't forget, there is an extra factor of -1 on <Lz>*<Lz>
+
+                                A_p[d2aboff[hpr] + pr * gems_ab[hpr] + qs] -= 2.0 * angular_momentum_[2]->pointer(hp)[pp][qq] * angular_momentum_[2]->pointer(hr)[rr][ss] * u_p[offset];
+                                if ( p!=r && q!=s ) {
+                                    pr = ibas_aa_sym[hpr][p][r];
+                                    qs = ibas_aa_sym[hpr][q][s];
+                                    int sg = 1;
+                                    if ( p > r ) sg = -sg;
+                                    if ( q > s ) sg = -sg;
+                                     A_p[d2aaoff[hpr] + pr * gems_aa[hpr] + qs] -= sg * angular_momentum_[2]->pointer(hp)[pp][qq] * angular_momentum_[2]->pointer(hr)[rr][ss] * u_p[offset];
+                                     A_p[d2bboff[hpr] + pr * gems_aa[hpr] + qs] -= sg * angular_momentum_[2]->pointer(hp)[pp][qq] * angular_momentum_[2]->pointer(hr)[rr][ss] * u_p[offset];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // diagonal part of L^2 
+        for (int hp = 0; hp < nirrep_; hp++) {
+            for (int pp = 0; pp < amopi_[hp]; pp++) {
+                for (int qq = 0; qq < amopi_[hp]; qq++) {
+                     A_p[d1aoff[hp] + pp * amopi_[hp] + qq] += angular_momentum_squared_[0]->pointer(hp)[pp][qq] * u_p[offset];
+                     A_p[d1aoff[hp] + pp * amopi_[hp] + qq] += angular_momentum_squared_[1]->pointer(hp)[pp][qq] * u_p[offset];
+                     A_p[d1aoff[hp] + pp * amopi_[hp] + qq] += angular_momentum_squared_[2]->pointer(hp)[pp][qq] * u_p[offset];
+
+                     A_p[d1boff[hp] + pp * amopi_[hp] + qq] += angular_momentum_squared_[0]->pointer(hp)[pp][qq] * u_p[offset];
+                     A_p[d1boff[hp] + pp * amopi_[hp] + qq] += angular_momentum_squared_[1]->pointer(hp)[pp][qq] * u_p[offset];
+                     A_p[d1boff[hp] + pp * amopi_[hp] + qq] += angular_momentum_squared_[2]->pointer(hp)[pp][qq] * u_p[offset];
+                }
+            }
+        }
+        offset++;
+
+    }
+*/
+
     // Traces
     // Tr(D2ab)
     for (int i = 0; i < amo_; i++){
@@ -399,6 +537,155 @@ void v2RDMSolver::D2_constraints_Au(SharedVector A,SharedVector u){
         A_p[offset] = s2;
         offset++;
     }
+
+/*
+    if ( constrain_l2_ ) {
+        // evaluate angular momentum squared
+        double l2 = 0.0;
+
+        // Lx^2
+        for (int hp = 0; hp < nirrep_; hp++) {
+            int hq = hp ^ h_lx_;
+            for (int hr = 0; hr < nirrep_; hr++) {
+                int hs = hr ^ h_lx_;
+
+                int hpr = SymmetryPair(hp,hr);
+                int hqs = SymmetryPair(hq,hs);
+
+                if ( hpr != hqs ) continue;
+
+                for (int pp = 0; pp < amopi_[hp]; pp++) {
+                    int p = pp + pitzer_offset[hp];
+                    for (int qq = 0; qq < amopi_[hq]; qq++) {
+                        int q = qq + pitzer_offset[hq];
+                        for (int rr = 0; rr < amopi_[hr]; rr++) {
+                            int r = rr + pitzer_offset[hr];
+                            for (int ss = 0; ss < amopi_[hs]; ss++) {
+                                int s = ss + pitzer_offset[hs];
+
+                                int pr = ibas_ab_sym[hpr][p][r];
+                                int qs = ibas_ab_sym[hpr][q][s];
+
+                                // don't forget, there is an extra factor of -1 on <Lx>*<Lx>
+
+                                l2 -= 2.0 * angular_momentum_[0]->pointer(hp)[pp][qq] * angular_momentum_[0]->pointer(hr)[rr][ss] * u_p[d2aboff[hpr] + pr * gems_ab[hpr] + qs];
+                                if ( p!=r && q!=s ) {
+                                    pr = ibas_aa_sym[hpr][p][r];
+                                    qs = ibas_aa_sym[hpr][q][s];
+                                    int sg = 1;
+                                    if ( p > r ) sg = -sg;
+                                    if ( q > s ) sg = -sg;
+                                    l2 -= sg * angular_momentum_[0]->pointer(hp)[pp][qq] * angular_momentum_[0]->pointer(hr)[rr][ss] * u_p[d2aaoff[hpr] + pr * gems_aa[hpr] + qs];
+                                    l2 -= sg * angular_momentum_[0]->pointer(hp)[pp][qq] * angular_momentum_[0]->pointer(hr)[rr][ss] * u_p[d2bboff[hpr] + pr * gems_aa[hpr] + qs];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Ly^2
+        for (int hp = 0; hp < nirrep_; hp++) {
+            int hq = hp ^ h_ly_;
+            for (int hr = 0; hr < nirrep_; hr++) {
+                int hs = hr ^ h_ly_;
+
+                int hpr = SymmetryPair(hp,hr);
+                int hqs = SymmetryPair(hq,hs);
+
+                if ( hpr != hqs ) continue;
+
+                for (int pp = 0; pp < amopi_[hp]; pp++) {
+                    int p = pp + pitzer_offset[hp];
+                    for (int qq = 0; qq < amopi_[hq]; qq++) {
+                        int q = qq + pitzer_offset[hq];
+                        for (int rr = 0; rr < amopi_[hr]; rr++) {
+                            int r = rr + pitzer_offset[hr];
+                            for (int ss = 0; ss < amopi_[hs]; ss++) {
+                                int s = ss + pitzer_offset[hs];
+
+                                int pr = ibas_ab_sym[hpr][p][r];
+                                int qs = ibas_ab_sym[hpr][q][s];
+
+                                // don't forget, there is an extra factor of -1 on <Ly>*<Ly>
+
+                                l2 -= 2.0 * angular_momentum_[1]->pointer(hp)[pp][qq] * angular_momentum_[1]->pointer(hr)[rr][ss] * u_p[d2aboff[hpr] + pr * gems_ab[hpr] + qs];
+                                if ( p!=r && q!=s ) {
+                                    pr = ibas_aa_sym[hpr][p][r];
+                                    qs = ibas_aa_sym[hpr][q][s];
+                                    int sg = 1;
+                                    if ( p > r ) sg = -sg;
+                                    if ( q > s ) sg = -sg;
+                                    l2 -= sg * angular_momentum_[1]->pointer(hp)[pp][qq] * angular_momentum_[1]->pointer(hr)[rr][ss] * u_p[d2aaoff[hpr] + pr * gems_aa[hpr] + qs];
+                                    l2 -= sg * angular_momentum_[1]->pointer(hp)[pp][qq] * angular_momentum_[1]->pointer(hr)[rr][ss] * u_p[d2bboff[hpr] + pr * gems_aa[hpr] + qs];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Lz^2
+        for (int hp = 0; hp < nirrep_; hp++) {
+            int hq = hp ^ h_lz_;
+            for (int hr = 0; hr < nirrep_; hr++) {
+                int hs = hr ^ h_lz_;
+
+                int hpr = SymmetryPair(hp,hr);
+                int hqs = SymmetryPair(hq,hs);
+
+                if ( hpr != hqs ) continue;
+
+                for (int pp = 0; pp < amopi_[hp]; pp++) {
+                    int p = pp + pitzer_offset[hp];
+                    for (int qq = 0; qq < amopi_[hq]; qq++) {
+                        int q = qq + pitzer_offset[hq];
+                        for (int rr = 0; rr < amopi_[hr]; rr++) {
+                            int r = rr + pitzer_offset[hr];
+                            for (int ss = 0; ss < amopi_[hs]; ss++) {
+                                int s = ss + pitzer_offset[hs];
+
+                                int pr = ibas_ab_sym[hpr][p][r];
+                                int qs = ibas_ab_sym[hpr][q][s];
+
+                                // don't forget, there is an extra factor of -1 on <Lz>*<Lz>
+
+                                l2 -= 2.0 * angular_momentum_[2]->pointer(hp)[pp][qq] * angular_momentum_[2]->pointer(hr)[rr][ss] * u_p[d2aboff[hpr] + pr * gems_ab[hpr] + qs];
+                                if ( p!=r && q!=s ) {
+                                    pr = ibas_aa_sym[hpr][p][r];
+                                    qs = ibas_aa_sym[hpr][q][s];
+                                    int sg = 1;
+                                    if ( p > r ) sg = -sg;
+                                    if ( q > s ) sg = -sg;
+                                    l2 -= sg * angular_momentum_[2]->pointer(hp)[pp][qq] * angular_momentum_[2]->pointer(hr)[rr][ss] * u_p[d2aaoff[hpr] + pr * gems_aa[hpr] + qs];
+                                    l2 -= sg * angular_momentum_[2]->pointer(hp)[pp][qq] * angular_momentum_[2]->pointer(hr)[rr][ss] * u_p[d2bboff[hpr] + pr * gems_aa[hpr] + qs];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // diagonal part of L^2 
+        for (int hp = 0; hp < nirrep_; hp++) {
+            for (int pp = 0; pp < amopi_[hp]; pp++) {
+                for (int qq = 0; qq < amopi_[hp]; qq++) {
+                    l2 += angular_momentum_squared_[0]->pointer(hp)[pp][qq] * u_p[d1aoff[hp] + pp * amopi_[hp] + qq];
+                    l2 += angular_momentum_squared_[1]->pointer(hp)[pp][qq] * u_p[d1aoff[hp] + pp * amopi_[hp] + qq];
+                    l2 += angular_momentum_squared_[2]->pointer(hp)[pp][qq] * u_p[d1aoff[hp] + pp * amopi_[hp] + qq];
+
+                    l2 += angular_momentum_squared_[0]->pointer(hp)[pp][qq] * u_p[d1boff[hp] + pp * amopi_[hp] + qq];
+                    l2 += angular_momentum_squared_[1]->pointer(hp)[pp][qq] * u_p[d1boff[hp] + pp * amopi_[hp] + qq];
+                    l2 += angular_momentum_squared_[2]->pointer(hp)[pp][qq] * u_p[d1boff[hp] + pp * amopi_[hp] + qq];
+                }
+            }
+        }
+
+        A_p[offset] = l2;
+        offset++;
+
+    }
+*/
 
     // Traces
     // Tr(D2ab)
