@@ -113,18 +113,21 @@ add_psi4_plugin(v2rdm_casscf
 
 target_link_libraries(v2rdm_casscf PRIVATE ${LIBC_INTERJECT})
 
+configure_file(__init__.py.in __init__.py @ONLY)
+
 # <<<  Install  >>>
 
 install(TARGETS v2rdm_casscf
         EXPORT "${PN}Targets"
         LIBRARY DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
-install(FILES __init__.py pymodule.py LICENSE README.md
+install(FILES __init__.py extras.py pymodule.py LICENSE README.md
         DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
 install(DIRECTORY tests/
         DESTINATION ${PYMOD_INSTALL_FULLDIR}/tests
         FILES_MATCHING PATTERN "v2rdm*/input.dat"
+                       PATTERN "*.py"
         PATTERN "old-tests" EXCLUDE)
 
 # <<< Export Config >>>
