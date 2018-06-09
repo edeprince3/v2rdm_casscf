@@ -25,8 +25,8 @@
 """Plugin docstring.
 
 """
-__version__ = '0.1'
-__author__  = 'Psi4 Developer'
+__version__ = '0.7'
+__author__  = 'A. Eugene DePrince III'
 
 # Load Python modules
 from .pymodule import *

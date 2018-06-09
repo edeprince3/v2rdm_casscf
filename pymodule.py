@@ -22,20 +22,15 @@
 #@END LICENSE
 #
 
-import psi4
 import re
 import os
-#import inputparser
 import math
 import warnings
-#import driver
-#from molutil import *
-#from psi4.driver.procedures import proc_util
-from psi4.driver.procrouting import proc_util
 
+import psi4
+from psi4.driver.procrouting import proc_util
 import psi4.driver.p4util as p4util
-#from p4util.exceptions import *
-#from procedures import *
+
 
 def run_v2rdm_casscf(name, **kwargs):
     r"""Function encoding sequence of PSI module and plugin calls so that
