@@ -59,17 +59,42 @@ void v2RDMSolver::Spin_constraints_ATu(SharedVector A,SharedVector u){
     double* A_p = A->pointer();
     double* u_p = u->pointer();
 
-    // spin
-    for (int i = 0; i < amo_; i++){
-        for (int j = 0; j < amo_; j++){
-            int h = SymmetryPair(symmetry[i],symmetry[j]);
-            if ( gems_ab[h] == 0 ) continue;
-            int ij = ibas_ab_sym[h][i][j];
-            int ji = ibas_ab_sym[h][j][i];
-            A_p[d2aboff[h] + ij*gems_ab[h]+ji] += u_p[offset];
+    //if ( !constrain_g2_ ) {
+        // spin 
+        for (int i = 0; i < amo_; i++){
+            for (int j = 0; j < amo_; j++){
+                int h = SymmetryPair(symmetry[i],symmetry[j]);
+                if ( gems_ab[h] == 0 ) continue;
+                int ij = ibas_ab_sym[h][i][j];
+                int ji = ibas_ab_sym[h][j][i];
+                A_p[d2aboff[h] + ij*gems_ab[h]+ji] += u_p[offset];
+            }
         }
-    }
-    offset++;
+        offset++;
+    //}else {
+    //    // spin (in terms of G2)
+    //    double dum = u_p[offset];
+    //    for (int h = 0; h < nirrep_; h++) {
+    //        for (int i = 0; i < amopi_[h]; i++) {
+    //            A_p[d1aoff[h] + i * amopi_[h] + i] += 0.5 * dum;
+    //            A_p[d1boff[h] + i * amopi_[h] + i] -= 0.5 * dum;
+    //        }
+    //    }
+    //    for (int i = 0; i < amo_; i++) {
+    //        int ii = ibas_ab_sym[0][i][i];
+    //        for (int j = 0; j < amo_; j++) {
+    //            int jj = ibas_ab_sym[0][j][j];
+
+    //            A_p[g2aaoff[0] + (ii             ) * 2*gems_ab[0] + jj             ] += 0.25 * dum;
+    //            A_p[g2aaoff[0] + (ii             ) * 2*gems_ab[0] + jj + gems_ab[0]] -= 0.25 * dum;
+    //            A_p[g2aaoff[0] + (ii + gems_ab[0]) * 2*gems_ab[0] + jj             ] -= 0.25 * dum;
+    //            A_p[g2aaoff[0] + (ii + gems_ab[0]) * 2*gems_ab[0] + jj + gems_ab[0]] += 0.25 * dum;
+
+    //            A_p[g2baoff[0] + ii * gems_ab[0] + jj] += dum;
+    //        }
+    //    }
+    //    offset++;
+    //}
 
     // additional spin constraints for singlets:
     if ( nalpha_ == nbeta_ ) {
@@ -231,19 +256,45 @@ void v2RDMSolver::Spin_constraints_Au(SharedVector A,SharedVector u){
     double* A_p = A->pointer();
     double* u_p = u->pointer();
 
-    // spin
-    double s2 = 0.0;
-    for (int i = 0; i < amo_; i++){
-        for (int j = 0; j < amo_; j++){
-            int h = SymmetryPair(symmetry[i],symmetry[j]);
-            if ( gems_ab[h] == 0 ) continue;
-            int ij = ibas_ab_sym[h][i][j];
-            int ji = ibas_ab_sym[h][j][i];
-            s2 += u_p[d2aboff[h] + ij*gems_ab[h]+ji];
+    //if ( !constrain_g2_ ) {
+        // spin
+        double s2 = 0.0;
+        for (int i = 0; i < amo_; i++){
+            for (int j = 0; j < amo_; j++){
+                int h = SymmetryPair(symmetry[i],symmetry[j]);
+                if ( gems_ab[h] == 0 ) continue;
+                int ij = ibas_ab_sym[h][i][j];
+                int ji = ibas_ab_sym[h][j][i];
+                s2 += u_p[d2aboff[h] + ij*gems_ab[h]+ji];
+            }
         }
-    }
-    A_p[offset] = s2;
-    offset++;
+        A_p[offset] = s2;
+        offset++;
+    //}else {
+    //    // spin (in terms of G2)
+    //    double s2 = 0.0;
+    //    for (int h = 0; h < nirrep_; h++) {
+    //        for (int i = 0; i < amopi_[h]; i++) {
+    //            s2 += 0.5 * u_p[d1aoff[h] + i * amopi_[h] + i];
+    //            s2 -= 0.5 * u_p[d1boff[h] + i * amopi_[h] + i];
+    //        }
+    //    }
+    //    for (int i = 0; i < amo_; i++) {
+    //        int ii = ibas_ab_sym[0][i][i];
+    //        for (int j = 0; j < amo_; j++) {
+    //            int jj = ibas_ab_sym[0][j][j];
+
+    //            s2 += 0.25 * u_p[g2aaoff[0] + (ii             ) * 2*gems_ab[0] + jj             ];
+    //            s2 -= 0.25 * u_p[g2aaoff[0] + (ii             ) * 2*gems_ab[0] + jj + gems_ab[0]];
+    //            s2 -= 0.25 * u_p[g2aaoff[0] + (ii + gems_ab[0]) * 2*gems_ab[0] + jj             ];
+    //            s2 += 0.25 * u_p[g2aaoff[0] + (ii + gems_ab[0]) * 2*gems_ab[0] + jj + gems_ab[0]];
+
+    //            s2 += u_p[g2baoff[0] + ii * gems_ab[0] + jj];
+    //        }
+    //    }
+    //    A_p[offset] = s2;
+    //    offset++;
+    //}
 
     // additional spin constraints for singlets:
     if ( nalpha_ == nbeta_ ) {

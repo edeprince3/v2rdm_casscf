@@ -939,6 +939,10 @@ void  v2RDMSolver::common_init(){
                 nconstraints_ += gems_ab[h]*gems_ab[h]; // G2t_m1
             }
         }
+        if ( constrain_spin_ ) {
+            nconstraints_ += gems_ab[0];
+            nconstraints_ += gems_ab[0];
+        }
     }
     if ( constrain_t1_ ) {
         for (int h = 0; h < nirrep_; h++) {
@@ -1614,7 +1618,7 @@ double v2RDMSolver::compute_energy() {
     // hartree-fock guess
     Guess();
 
-    tau = 1.0;
+    tau = 1.6;
     mu  = 1.0;
 
     // checkpoint file
@@ -1775,7 +1779,7 @@ double v2RDMSolver::compute_energy() {
 
         //energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
 
-        outfile->Printf("      %5i %5i %11.6lf %11.6lf %11.6lf %7.3lf %10.5lf %10.5lf\n",
+        outfile->Printf("      %5i %5i %11.6lf %11.6lf %11.6le %7.3lf %10.5le %10.5le\n",
                     oiter,iiter,current_energy+enuc_+efzc_,energy_dual+efzc_+enuc_,fabs(current_energy-energy_dual),mu,ep,ed);
         oiter++;
 
@@ -2347,7 +2351,11 @@ void v2RDMSolver::BuildConstraints(){
 
         // funny ab trace with spin: N/2 + Ms^2 - S(S+1)
         double ms = (multiplicity_-1.0)/2.0;
-        b_p[offset++] = (0.5 * (na + nb) + ms*ms - ms*(ms+1.0));
+        //if ( !constrain_g2_ ) {
+            b_p[offset++] = (0.5 * (na + nb) + ms*ms - ms*(ms+1.0));
+        //}else {
+        //    b_p[offset++] = ms*(ms+1.0);
+        //}
 
         // additional spin constraints for singlets:
         if ( nalpha_ == nbeta_ ) {
@@ -2524,6 +2532,14 @@ void v2RDMSolver::BuildConstraints(){
                     }
                 }
                 offset += gems_ab[h]*gems_ab[h];
+            }
+        }
+        if ( constrain_spin_ ) {
+            for (int i = 0; i < gems_ab[0]; i++){
+                b_p[offset++] = 0.0;
+            }
+            for (int i = 0; i < gems_ab[0]; i++){
+                b_p[offset++] = 0.0;
             }
         }
     }
