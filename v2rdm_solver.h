@@ -309,6 +309,7 @@ class v2RDMSolver: public Wavefunction{
 
     void bpsdp_Au(SharedVector A, SharedVector u);
     void bpsdp_Au_slow(SharedVector A, SharedVector u);
+    void Spin_constraints_Au(SharedVector A,SharedVector u);
     void D2_constraints_Au(SharedVector A,SharedVector u);
     void Q2_constraints_Au(SharedVector A,SharedVector u);
     void Q2_constraints_Au_spin_adapted(SharedVector A,SharedVector u);
@@ -323,6 +324,7 @@ class v2RDMSolver: public Wavefunction{
 
     void bpsdp_ATu(SharedVector A, SharedVector u);
     void bpsdp_ATu_slow(SharedVector A, SharedVector u);
+    void Spin_constraints_ATu(SharedVector A,SharedVector u);
     void D2_constraints_ATu(SharedVector A,SharedVector u);
     void Q2_constraints_ATu(SharedVector A,SharedVector u);
     void Q2_constraints_ATu_spin_adapted(SharedVector A,SharedVector u);
@@ -479,7 +481,6 @@ class v2RDMSolver: public Wavefunction{
 
     void OrbitalLagrangian();
     void DualD1Q1();
-    void PrintDual();
 
     /// memory available beyond what is allocated for v2RDM-CASSCF
     long int available_memory_;

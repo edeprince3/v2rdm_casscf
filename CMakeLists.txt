@@ -82,6 +82,7 @@ add_psi4_plugin(v2rdm_casscf
     orbital_lagrangian.cc
     q2.cc
     sortintegrals.cc
+    spin.cc
     t1.cc
     t2.cc
     tei.cc

@@ -832,9 +832,6 @@ void  v2RDMSolver::common_init(){
     // constraints:
     nconstraints_ = 0;
 
-    if ( constrain_spin_ ) {
-        nconstraints_ += 1;               // spin
-    }
     nconstraints_ += 1;                   // Tr(D2ab)
     nconstraints_ += 1;                   // Tr(D2aa)
     nconstraints_ += 1;                   // Tr(D2bb)
@@ -860,6 +857,13 @@ void  v2RDMSolver::common_init(){
     for ( int h = 0; h < nirrep_; h++) {
         nconstraints_ += amopi_[h]*amopi_[h]; // contract D2aa        -> D1 a
     }
+    for ( int h = 0; h < nirrep_; h++) {
+        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2bb        -> D1 b
+    }
+
+    if ( constrain_spin_ ) {
+        nconstraints_ += 1;               // spin
+    }
     // additional spin constraints for singlets:
     if ( constrain_spin_ && nalpha_ == nbeta_ ) {
         for ( int h = 0; h < nirrep_; h++) {
@@ -883,9 +887,6 @@ void  v2RDMSolver::common_init(){
         }
     }
 
-    for ( int h = 0; h < nirrep_; h++) {
-        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2bb        -> D1 b
-    }
     if ( constrain_q2_ ) {
         if ( ! spin_adapt_q2_ ) {
             for ( int h = 0; h < nirrep_; h++) {
@@ -938,10 +939,6 @@ void  v2RDMSolver::common_init(){
                 nconstraints_ += gems_ab[h]*gems_ab[h]; // G2t_m1
             }
         }
-        //if ( constrain_spin_ ) {
-        //    nconstraints_ += gems_ab[0];
-        //    nconstraints_ += gems_ab[0];
-        //}
     }
     if ( constrain_t1_ ) {
         for (int h = 0; h < nirrep_; h++) {
@@ -1833,10 +1830,6 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("    * v2RDM total energy:        %20.12lf\n",energy_primal+enuc_+efzc_);
     outfile->Printf("\n");
 
-    // print out the dual parts that could contribute to the gradient (D1/Q1, D2/Q2)
-    //PrintDual();
-    //y->print();
-
     Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc_+efzc_;
     Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc_+efzc_;
 
@@ -2239,6 +2232,7 @@ void v2RDMSolver::Guess(){
         for (int i = 0; i < nconstraints_; i++) {
             y_p[i] = ( (double)rand()/RAND_MAX - 1.0 ) * 2.0;
         }
+        return;
 
     }
 
@@ -2267,484 +2261,6 @@ void v2RDMSolver::Guess(){
 
 }
 
-void v2RDMSolver::PrintDual(){
-
-    //constraint on the Trace of D2(s=0,ms=0)
-
-    int na = nalpha_ - nfrzc_ - nrstc_;
-    int nb = nbeta_ - nfrzc_ - nrstc_;
-    double trdab = na * nb;
-
-    //constraint on the Trace of D2(s=1,ms=0)
-    double trdaa  = na*(na-1.0);
-    double trdbb  = nb*(nb-1.0);
-
-    double* y_p = y->pointer();
-
-    offset = 0;
-
-    // funny ab trace with spin: N/2 + Ms^2 - S(S+1)
-    double en = 0.0;
-    if ( constrain_spin_ ) {
-        double ms = (multiplicity_-1.0)/2.0;
-        en += y_p[offset] * b->pointer()[offset];
-        printf("spin: %20.12lf\n",y_p[offset++]);
-    }
-
-    ///Trace of D2(s=0,ms=0) and D2(s=1,ms=0)
-    en += y_p[offset] * b->pointer()[offset];
-    printf("Tr(D2ab) %20.12lf\n",y_p[offset++]);
-    en += y_p[offset] * b->pointer()[offset];
-    printf("Tr(D2aa) %20.12lf\n",y_p[offset++]);
-    en += y_p[offset] * b->pointer()[offset];
-    printf("Tr(D2bb) %20.12lf\n",y_p[offset++]);
-
-    // d1 / q1 a
-    double q1a_sum = 0.0;
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                //printf("D1a/Q1a %5i %5i %5i %20.12lf\n",h,i,j,y_p[offset + i*amopi_[h]+j]);
-                q1a_sum += y_p[offset + i*amopi_[h]+j] * b->pointer()[offset + i*amopi_[h]+j];
-            }
-        }
-        offset += amopi_[h]*amopi_[h];
-    }
-    printf("q1a sum:  %20.12lf\n",q1a_sum);
-
-    // d1 / q1 b
-    double q1b_sum = 0.0;
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                //printf("D1b/Q1b %5i %5i %5i %20.12lf\n",h,i,j,y_p[offset + i*amopi_[h]+j]);
-                q1b_sum += y_p[offset + i*amopi_[h]+j] * b->pointer()[offset + i*amopi_[h]+j];
-            }
-        }
-        offset += amopi_[h]*amopi_[h];
-    }
-    printf("q1b sum:  %20.12lf\n",q1b_sum);
-
-    //contract D2ab -> D1a
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                //printf("D2ab->D1a %5i %5i %5i %20.12lf\n",h,i,j,y_p[offset + i*amopi_[h]+j]);
-            }
-        }
-        offset += amopi_[h]*amopi_[h];
-    }
-
-    //contract D2ab -> D1b
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                //printf("D2ab->D1b %5i %5i %5i %20.12lf\n",h,i,j,y_p[offset + i*amopi_[h]+j]);
-            }
-        }
-        offset += amopi_[h]*amopi_[h];
-    }
-
-    //contract D2aa -> D1a
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                //printf("D2aa->D1a %5i %5i %5i %20.12lf\n",h,i,j,y_p[offset + i*amopi_[h]+j]);
-            }
-        }
-        offset += amopi_[h]*amopi_[h];
-    }
-    //contract D2bb -> D1b
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                //printf("D2bb->D1b %5i %5i %5i %20.12lf\n",h,i,j,y_p[offset + i*amopi_[h]+j]);
-            }
-        }
-        offset += amopi_[h]*amopi_[h];
-    }
-    // additional spin constraints for singlets:
-    if ( constrain_spin_ && nalpha_ == nbeta_ ) {
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += amopi_[h]*amopi_[h]; // D1a = D1b
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += gems_aa[h]*gems_aa[h]; // D2aa = D2bb
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += gems_aa[h]*gems_aa[h]; // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr])
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += gems_aa[h]*gems_aa[h]; // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr]))
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += gems_ab[h]*gems_ab[h]; // D200[pq][rs] = 1/(sqrt(1+dpq)sqrt(1+drs))(D2ab[pq][rs] + D2ab[pq][sr] + D2ab[qp][rs] + D2ab[qp][sr])
-        }
-    }else if ( constrain_spin_ ) { // nonsinglets
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += 4*gems_ab[h]*gems_ab[h]; // D200_0, D210_0, D201_0, D211_0
-        }
-    }
-
-     printf("%20.12lf %20.12lf\n",en,C_DDOT(dimx_,x->pointer(),1,c->pointer(),1));
-    if ( constrain_q2_ ) {
-        if ( !spin_adapt_q2_ ) {
-            // map d2ab to q2ab
-            double q2ab_sum = 0.0;
-            for (int h = 0; h < nirrep_; h++) {
-                for(int ij = 0; ij < gems_ab[h]; ij++){
-                    int i = bas_ab_sym[h][ij][0];
-                    int j = bas_ab_sym[h][ij][1];
-                    for(int kl = 0; kl < gems_ab[h]; kl++){
-                        int k = bas_ab_sym[h][kl][0];
-                        int l = bas_ab_sym[h][kl][1];
-                        //printf("Q2ab->D2ab %5i %5i %5i %5i %5i %20.12lf\n",h,i,j,k,l,y_p[offset + ij*gems_ab[h] + kl]);
-                        //printf("Q2ab->D2ab %5i %5i %5i %5i %5i %20.12lf\n",h,i,j,k,l,b->pointer()[offset + ij*gems_ab[h] + kl]);
-                        q2ab_sum += y_p[offset + ij*gems_ab[h] + kl]*b->pointer()[offset + ij*gems_ab[h] + kl];
-                    }
-                }
-                offset += gems_ab[h]*gems_ab[h];
-            }
-            printf("q2ab sum: %20.12lf\n",q2ab_sum);
-
-            // map d2aa to q2aa
-            double q2aa_sum = 0.0;
-            for (int h = 0; h < nirrep_; h++) {
-                for(int ij = 0; ij < gems_aa[h]; ij++){
-                    int i = bas_aa_sym[h][ij][0];
-                    int j = bas_aa_sym[h][ij][1];
-                    for(int kl = 0; kl < gems_aa[h]; kl++){
-                        int k = bas_aa_sym[h][kl][0];
-                        int l = bas_aa_sym[h][kl][1];
-                        //printf("Q2aa->D2aa %5i %5i %5i %5i %5i %20.12lf\n",h,i,j,k,l,y_p[offset + ij*gems_aa[h] + kl]);
-                        //printf("Q2aa->D2aa %5i %5i %5i %5i %5i %20.12lf\n",h,i,j,k,l,b->pointer()[offset + ij*gems_aa[h] + kl]);
-                        q2aa_sum += y_p[offset + ij*gems_aa[h] + kl]*b->pointer()[offset + ij*gems_aa[h] + kl];
-                    }
-                }
-                offset += gems_aa[h]*gems_aa[h];
-            }
-            printf("q2aa sum: %20.12lf\n",q2aa_sum);
-
-            // map d2bb to q2bb
-            double q2bb_sum = 0.0;
-            for (int h = 0; h < nirrep_; h++) {
-                for(int ij = 0; ij < gems_aa[h]; ij++){
-                    int i = bas_aa_sym[h][ij][0];
-                    int j = bas_aa_sym[h][ij][1];
-                    for(int kl = 0; kl < gems_aa[h]; kl++){
-                        int k = bas_aa_sym[h][kl][0];
-                        int l = bas_aa_sym[h][kl][1];
-                        //printf("Q2bb->D2bb %5i %5i %5i %5i %5i %20.12lf\n",h,i,j,k,l,y_p[offset + ij*gems_aa[h] + kl]);
-                        //printf("Q2bb->D2bb %5i %5i %5i %5i %5i %20.12lf\n",h,i,j,k,l,b->pointer()[offset + ij*gems_aa[h] + kl]);
-                        q2bb_sum += y_p[offset + ij*gems_aa[h] + kl]*b->pointer()[offset + ij*gems_aa[h] + kl];
-                    }
-                }
-                offset += gems_aa[h]*gems_aa[h];
-            }
-            printf("q2bb sum: %20.12lf\n",q2bb_sum);
-            printf("%20.12lf %20.12lf %20.12lf %20.12lf\n",en,q2aa_sum+q2bb_sum+q2ab_sum,en+q2aa_sum+q2bb_sum+q2ab_sum,C_DDOT(dimx_,x->pointer(),1,c->pointer(),1));
-        }else {
-/*
-            // map d2ab to q2s
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_00[h]; i++){
-                    for(int j = 0; j < gems_00[h]; j++){
-                        b_p[offset + INDEX(i,j)] = 0.0;
-                    }
-                }
-                offset += gems_00[h]*gems_00[h];
-            }
-            // map d2ab to q2t
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_aa[h]; i++){
-                    for(int j = 0; j < gems_aa[h]; j++){
-                        b_p[offset + INDEX(i,j)] = 0.0;
-                    }
-                }
-                offset += gems_aa[h]*gems_aa[h];
-            }
-            // map d2aa to q2t_p1
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_aa[h]; i++){
-                    for(int j = 0; j < gems_aa[h]; j++){
-                        b_p[offset + INDEX(i,j)] = 0.0;
-                    }
-                }
-                offset += gems_aa[h]*gems_aa[h];
-            }
-            // map d2bb to q2t_m1
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_aa[h]; i++){
-                    for(int j = 0; j < gems_aa[h]; j++){
-                        b_p[offset + INDEX(i,j)] = 0.0;
-                    }
-                }
-                offset += gems_aa[h]*gems_aa[h];
-            }
-*/
-        }
-    }
-/*
-    if ( constrain_g2_ ) {
-        if ( ! spin_adapt_g2_ ) {
-            // map d2 and d1 to g2ab
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_ab[h]; i++){
-                    for(int j = 0; j < gems_ab[h]; j++){
-                        b_p[offset + i*gems_ab[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_ab[h]*gems_ab[h];
-            }
-
-            // map d2 and d1 to g2ba
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_ab[h]; i++){
-                    for(int j = 0; j < gems_ab[h]; j++){
-                        b_p[offset + i*gems_ab[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_ab[h]*gems_ab[h];
-            }
-
-            // map d2 and d1 to g2aa
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < 2*gems_ab[h]; i++){
-                    for(int j = 0; j < 2*gems_ab[h]; j++){
-                        b_p[offset + i*2*gems_ab[h]+j] = 0.0;
-                    }
-                }
-                offset += 2*gems_ab[h]*2*gems_ab[h];
-            }
-        }else {
-            // map d2 and d1 to g2s
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_ab[h]; i++){
-                    for(int j = 0; j < gems_ab[h]; j++){
-                        b_p[offset + i*gems_ab[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_ab[h]*gems_ab[h];
-            }
-            // map d2 and d1 to g2t
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_ab[h]; i++){
-                    for(int j = 0; j < gems_ab[h]; j++){
-                        b_p[offset + i*gems_ab[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_ab[h]*gems_ab[h];
-            }
-            // map d2 and d1 to g2t_p1
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_ab[h]; i++){
-                    for(int j = 0; j < gems_ab[h]; j++){
-                        b_p[offset + i*gems_ab[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_ab[h]*gems_ab[h];
-            }
-            // map d2 and d1 to g2t_m1
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_ab[h]; i++){
-                    for(int j = 0; j < gems_ab[h]; j++){
-                        b_p[offset + i*gems_ab[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_ab[h]*gems_ab[h];
-            }
-        }
-        //if ( constrain_spin_ ) {
-        //    offset += gems_ab[0];
-        //    offset += gems_ab[0];
-        //}
-    }
-
-    if ( constrain_t1_ ) {
-        // T1aaa
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aaa[h]; i++){
-                for(int j = 0; j < trip_aaa[h]; j++){
-                    b_p[offset + i*trip_aaa[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aaa[h]*trip_aaa[h];
-        }
-        // T1bbb
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aaa[h]; i++){
-                for(int j = 0; j < trip_aaa[h]; j++){
-                    b_p[offset + i*trip_aaa[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aaa[h]*trip_aaa[h];
-        }
-        // T1aab
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aab[h]; i++){
-                for(int j = 0; j < trip_aab[h]; j++){
-                    b_p[offset + i*trip_aab[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aab[h]*trip_aab[h];
-        }
-        // T1bba
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aab[h]; i++){
-                for(int j = 0; j < trip_aab[h]; j++){
-                    b_p[offset + i*trip_aab[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aab[h]*trip_aab[h];
-        }
-    }
-
-    if ( constrain_t2_ ) {
-        // T2aaa
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aba[h]+trip_aab[h]; i++){
-                for(int j = 0; j < trip_aba[h] + trip_aab[h]; j++){
-                    b_p[offset + i*(trip_aab[h]+trip_aba[h])+j] = 0.0;
-                }
-            }
-            offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
-            //for(int i = 0; i < trip_aab[h]; i++){
-            //    for(int j = 0; j < trip_aab[h]; j++){
-            //        b_p[offset + i*trip_aab[h]+j] = 0.0;
-            //    }
-            //}
-            //offset += trip_aab[h]*trip_aab[h];
-        }
-        // T2bbb
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aba[h]+trip_aab[h]; i++){
-                for(int j = 0; j < trip_aba[h] + trip_aab[h]; j++){
-                    b_p[offset + i*(trip_aab[h]+trip_aba[h])+j] = 0.0;
-                }
-            }
-            offset += (trip_aba[h]+trip_aab[h])*(trip_aba[h]+trip_aab[h]);
-            //for(int i = 0; i < trip_aaa[h]; i++){
-            //    for(int j = 0; j < trip_aaa[h]; j++){
-            //        b_p[offset + i*trip_aaa[h]+j] = 0.0;
-            //    }
-            //}
-            //offset += trip_aaa[h]*trip_aaa[h];
-        }
-        // T2aab
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aab[h]; i++){
-                for(int j = 0; j < trip_aab[h]; j++){
-                    b_p[offset + i*trip_aab[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aab[h]*trip_aab[h];
-        }
-        // T2bba
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aab[h]; i++){
-                for(int j = 0; j < trip_aab[h]; j++){
-                    b_p[offset + i*trip_aab[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aab[h]*trip_aab[h];
-        }
-        // T2aba
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aba[h]; i++){
-                for(int j = 0; j < trip_aba[h]; j++){
-                    b_p[offset + i*trip_aba[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aba[h]*trip_aba[h];
-        }
-        // T2bab
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < trip_aba[h]; i++){
-                for(int j = 0; j < trip_aba[h]; j++){
-                    b_p[offset + i*trip_aba[h]+j] = 0.0;
-                }
-            }
-            offset += trip_aba[h]*trip_aba[h];
-        }
-    }
-    if ( constrain_d3_ ) {
-        if (  nalpha_ - nrstc_ - nfrzc_ > 2 ) {
-            // D3aaa -> D2aa
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_aa[h]; i++){
-                    for(int j = 0; j < gems_aa[h]; j++){
-                        b_p[offset + i*gems_aa[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_aa[h]*gems_aa[h];
-            }
-        }
-        if (  nbeta_ - nrstc_ - nfrzc_ > 2 ) {
-            // D3bbb -> D2bb
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_aa[h]; i++){
-                    for(int j = 0; j < gems_aa[h]; j++){
-                        b_p[offset + i*gems_aa[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_aa[h]*gems_aa[h];
-            }
-        }
-        // D3aab -> D2aa
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < gems_aa[h]; i++){
-                for(int j = 0; j < gems_aa[h]; j++){
-                    b_p[offset + i*gems_aa[h]+j] = 0.0;
-                }
-            }
-            offset += gems_aa[h]*gems_aa[h];
-        }
-        // D3bba -> D2bb
-        for (int h = 0; h < nirrep_; h++) {
-            for(int i = 0; i < gems_aa[h]; i++){
-                for(int j = 0; j < gems_aa[h]; j++){
-                    b_p[offset + i*gems_aa[h]+j] = 0.0;
-                }
-            }
-            offset += gems_aa[h]*gems_aa[h];
-        }
-        if (  nalpha_ - nrstc_ - nfrzc_ > 1 ) {
-            // D3aab -> D2ab
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_ab[h]; i++){
-                    for(int j = 0; j < gems_ab[h]; j++){
-                        b_p[offset + i*gems_ab[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_ab[h]*gems_ab[h];
-            }
-        }
-        if (  nbeta_ - nrstc_ - nfrzc_ > 1 ) {
-            // D3bba -> D2ab
-            for (int h = 0; h < nirrep_; h++) {
-                for(int i = 0; i < gems_ab[h]; i++){
-                    for(int j = 0; j < gems_ab[h]; j++){
-                        b_p[offset + i*gems_ab[h]+j] = 0.0;
-                    }
-                }
-                offset += gems_ab[h]*gems_ab[h];
-            }
-        }
-        // additional spin constraints for singlets:
-        if ( constrain_spin_ && nalpha_ == nbeta_ ) {
-            for (int h = 0; h < nirrep_; h++) {
-                offset += trip_aab[h]*trip_aab[h]; // D3aab = D3bba
-            }
-            for (int h = 0; h < nirrep_; h++) {
-                offset += trip_aaa[h]*trip_aaa[h]; // D3aab -> D3aaa
-                offset += trip_aaa[h]*trip_aaa[h]; // D3bba -> D3bbb
-            }
-        }
-    }
-*/
-
-}
-
 void v2RDMSolver::BuildConstraints(){
 
     //constraint on the Trace of D2(s=0,ms=0)
@@ -2762,17 +2278,10 @@ void v2RDMSolver::BuildConstraints(){
 
     offset = 0;
 
-    // funny ab trace with spin: N/2 + Ms^2 - S(S+1)
-    if ( constrain_spin_ ) {
-        double ms = (multiplicity_-1.0)/2.0;
-        b_p[offset++] = (0.5 * (na + nb) + ms*ms - ms*(ms+1.0));
-    }
-
     ///Trace of D2(s=0,ms=0) and D2(s=1,ms=0)
     b_p[offset++] = trdab;
     b_p[offset++] = trdaa;
     b_p[offset++] = trdbb;
-
 
     // d1 / q1 a
     for (int h = 0; h < nirrep_; h++) {
@@ -2832,27 +2341,37 @@ void v2RDMSolver::BuildConstraints(){
         }
         offset += amopi_[h]*amopi_[h];
     }
-    // additional spin constraints for singlets:
-    if ( constrain_spin_ && nalpha_ == nbeta_ ) {
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += amopi_[h]*amopi_[h]; // D1a = D1b
+
+
+    if ( constrain_spin_ ) {
+
+        // funny ab trace with spin: N/2 + Ms^2 - S(S+1)
+        double ms = (multiplicity_-1.0)/2.0;
+        b_p[offset++] = (0.5 * (na + nb) + ms*ms - ms*(ms+1.0));
+
+        // additional spin constraints for singlets:
+        if ( nalpha_ == nbeta_ ) {
+            for ( int h = 0; h < nirrep_; h++) {
+                offset += amopi_[h]*amopi_[h]; // D1a = D1b
+            }
+            for ( int h = 0; h < nirrep_; h++) {
+                offset += gems_aa[h]*gems_aa[h]; // D2aa = D2bb
+            }
+            for ( int h = 0; h < nirrep_; h++) {
+                offset += gems_aa[h]*gems_aa[h]; // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr])
+            }
+            for ( int h = 0; h < nirrep_; h++) {
+                offset += gems_aa[h]*gems_aa[h]; // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr]))
+            }
+            for ( int h = 0; h < nirrep_; h++) {
+                offset += gems_ab[h]*gems_ab[h]; // D200[pq][rs] = 1/(sqrt(1+dpq)sqrt(1+drs))(D2ab[pq][rs] + D2ab[pq][sr] + D2ab[qp][rs] + D2ab[qp][sr])
+            }
+        }else { // nonsinglets
+            for ( int h = 0; h < nirrep_; h++) {
+                offset += 4*gems_ab[h]*gems_ab[h]; // D200_0, D210_0, D201_0, D211_0
+            }
         }
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += gems_aa[h]*gems_aa[h]; // D2aa = D2bb
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += gems_aa[h]*gems_aa[h]; // D2aa[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr])
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += gems_aa[h]*gems_aa[h]; // D2bb[pq][rs] = 1/2(D2ab[pq][rs] - D2ab[pq][sr] - D2ab[qp][rs] + D2ab[qp][sr]))
-        }
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += gems_ab[h]*gems_ab[h]; // D200[pq][rs] = 1/(sqrt(1+dpq)sqrt(1+drs))(D2ab[pq][rs] + D2ab[pq][sr] + D2ab[qp][rs] + D2ab[qp][sr])
-        }
-    }else if ( constrain_spin_ ) { // nonsinglets
-        for ( int h = 0; h < nirrep_; h++) {
-            offset += 4*gems_ab[h]*gems_ab[h]; // D200_0, D210_0, D201_0, D211_0
-        }
+
     }
 
     if ( constrain_q2_ ) {
@@ -3007,10 +2526,6 @@ void v2RDMSolver::BuildConstraints(){
                 offset += gems_ab[h]*gems_ab[h];
             }
         }
-        //if ( constrain_spin_ ) {
-        //    offset += gems_ab[0];
-        //    offset += gems_ab[0];
-        //}
     }
 
     if ( constrain_t1_ ) {
@@ -3220,6 +2735,10 @@ void v2RDMSolver::bpsdp_Au(SharedVector A, SharedVector u){
     offset = 0;
     D2_constraints_Au(A,u);
 
+    if ( constrain_spin_ ) {
+        Spin_constraints_Au(A,u);
+    }
+
     if ( constrain_q2_ ) {
         if ( !spin_adapt_q2_ ) {
             Q2_constraints_Au(A,u);
@@ -3262,6 +2781,10 @@ void v2RDMSolver::bpsdp_Au_slow(SharedVector A, SharedVector u){
 
     offset = 0;
     D2_constraints_Au(A,u);
+
+    if ( constrain_spin_ ) {
+        Spin_constraints_Au(A,u);
+    }
 
     if ( constrain_q2_ ) {
         if ( !spin_adapt_q2_ ) {
@@ -3306,6 +2829,10 @@ void v2RDMSolver::bpsdp_ATu(SharedVector A, SharedVector u){
     offset = 0;
     D2_constraints_ATu(A,u);
 
+    if ( constrain_spin_ ) {
+        Spin_constraints_ATu(A,u);
+    }
+
     if ( constrain_q2_ ) {
         if ( !spin_adapt_q2_ ) {
             Q2_constraints_ATu(A,u);
@@ -3347,6 +2874,10 @@ void v2RDMSolver::bpsdp_ATu_slow(SharedVector A, SharedVector u){
 
     offset = 0;
     D2_constraints_ATu(A,u);
+
+    if ( constrain_spin_ ) {
+        Spin_constraints_ATu(A,u);
+    }
 
     if ( constrain_q2_ ) {
         if ( !spin_adapt_q2_ ) {
@@ -3421,13 +2952,12 @@ void v2RDMSolver::Update_xz() {
                 double dum = 0.5 * ( A_p[myoffset + p * dimensions_[i] + q] +
                                      A_p[myoffset + q * dimensions_[i] + p] );
                 mat_p[p][q] = mat_p[q][p] = dum;
-
             }
         }
 
         mat->diagonalize(eigvec,eigval);
         //for (int p = 0; p < dimensions_[i]; p++) {
-        //    if ( fabs(eigval->pointer()[p]) < r_convergence_*0.1 ) eigval->pointer()[p] = 0.0;
+        //    if ( fabs(eigval->pointer()[p]) < r_convergence_ ) eigval->pointer()[p] = 0.0;
         //}
 
         // separate U+ and U-, transform back to nondiagonal basis
