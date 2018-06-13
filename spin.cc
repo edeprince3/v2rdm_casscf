@@ -248,6 +248,26 @@ void v2RDMSolver::Spin_constraints_ATu(SharedVector A,SharedVector u){
         }
     }
 
+    if ( constrain_g2_ ) {
+        // maximal spin constraint (sum_i G2(kl,ii) = 0)
+        for (int kl = 0; kl < gems_ab[0]; kl++) {
+            double dum = u_p[offset + kl];
+            for (int i = 0; i < amo_; i++) {
+                int ii = ibas_ab_sym[0][i][i];
+                A_p[g2baoff[0] + kl*gems_ab[0]+ii] += dum;
+            }
+        }
+        offset += gems_ab[0];
+        for (int kl = 0; kl < gems_ab[0]; kl++) {
+            double dum = u_p[offset + kl];
+            for (int i = 0; i < amo_; i++) {
+                int ii = ibas_ab_sym[0][i][i];
+                A_p[g2baoff[0] + ii*gems_ab[0]+kl] += dum;
+            }
+        }
+        offset += gems_ab[0];
+    }
+
 }
 
 // D2 portion of A.x (and D1/Q1)
@@ -446,6 +466,28 @@ void v2RDMSolver::Spin_constraints_Au(SharedVector A,SharedVector u){
             }
             offset += 4*gems_ab[h]*gems_ab[h];
         }
+    }
+
+    if ( constrain_g2_ ) {
+        // maximal spin constraint (sum_i G2(kl,ii) = 0)
+        for (int kl = 0; kl < gems_ab[0]; kl++) {
+            double dum = 0.0; 
+            for (int i = 0; i < amo_; i++) {
+                int ii = ibas_ab_sym[0][i][i];
+                dum += u_p[g2baoff[0] + kl*gems_ab[0]+ii];
+            }
+            A_p[offset + kl] = dum;
+        }
+        offset += gems_ab[0];
+        for (int kl = 0; kl < gems_ab[0]; kl++) {
+            double dum = 0.0;
+            for (int i = 0; i < amo_; i++) {
+                int ii = ibas_ab_sym[0][i][i];
+                dum += u_p[g2baoff[0] + ii*gems_ab[0]+kl];
+            }
+            A_p[offset + kl] = dum;
+        }
+        offset += gems_ab[0];
     }
 
 }
