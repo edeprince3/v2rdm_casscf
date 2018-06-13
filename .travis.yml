@@ -39,10 +39,10 @@ script:
   - cd ..
   - python -c "import v2rdm_casscf; print(v2rdm_casscf.__version__)"
   # v2 source: full test & codecov
-  - python -c "import v2rdm_casscf as v2; v2.test(extras=['--cov', '--durations=5'])"
+  - python -c "import v2rdm_casscf as v2; rc = v2.test(extras=['--cov', '--durations=5']); import sys; sys.exit(rc)"
   # v2 install: quick test
   - cd v2rdm_casscf && make install && cd .. && rm -rf v2rdm_casscf
-  - python -c "import v2rdm_casscf as v2; v2.test('quick')"
+  - python -c "import v2rdm_casscf as v2; rc = v2.test('quick'); import sys; sys.exit(rc)"
 
 notifications:
   email: false
