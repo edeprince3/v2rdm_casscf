@@ -51,7 +51,9 @@ int read_options(std::string name, Options& options)
         options.add_str("DERTYPE", "NONE", "NONE FIRST");
         /*- Do optimize orbitals? -*/
         options.add_bool("OPTIMIZE_ORBITALS",true);
-        /*- Do semicanonicalize orbitals? -*/
+        /*- Rotate guess orbitals -*/
+        options.add("MCSCF_ROTATE", new ArrayType());
+		/*- Do semicanonicalize orbitals? -*/
         options.add_bool("SEMICANONICALIZE_ORBITALS",false);
         /*- Type of guess -*/
         options.add_str("TPDM_GUESS","RANDOM", "RANDOM HF");
@@ -140,6 +142,11 @@ int read_options(std::string name, Options& options)
         (if set), or else by the name of the output file plus the name of
         the current molecule. -*/
         options.add_bool("MOLDEN_WRITE", false);
+        /*- Do write a MOLDEN file for guess orbitals?  If so, the filename will
+        end in .guess.molden, and the prefix is determined by 
+        |globals__writer_file_label| (if set), or else by the name of the output
+        file plus the name of the current molecule. -*/
+        options.add_bool("GUESS_ORBITALS_WRITE", false);
         /*- Do write a ORBOPT output file?  If so, the filename will end in
         .molden, and the prefix is determined by |globals__writer_file_label|
         (if set), or else by the name of the output file plus the name of

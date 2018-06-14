@@ -1616,6 +1616,34 @@ double v2RDMSolver::compute_energy() {
 
     double start_total_time = omp_get_wtime();
 
+
+    // print guess orbitals in molden format
+    if ( options_.get_bool("GUESS_ORBITALS_WRITE") ) {
+
+        std::shared_ptr<MoldenWriter> molden(new MoldenWriter(reference_wavefunction_));
+        std::shared_ptr<Vector> zero (new Vector("",nirrep_,nmopi_));
+        zero->zero();
+        std::string filename = get_writer_file_prefix(reference_wavefunction_->molecule()->name()) + ".guess.molden";
+
+        Ca_ = SharedMatrix(reference_wavefunction_->Ca());
+        Cb_ = SharedMatrix(reference_wavefunction_->Cb());
+
+        SharedVector occupation_a= SharedVector(new Vector(nirrep_, nmopi_));
+		SharedVector occupation_b= SharedVector(new Vector(nirrep_, nmopi_));
+
+		for (int h = 0; h < nirrep_; h++) {
+			for (int i = 0; i < nalphapi_[h]; i++) {
+				occupation_a->set(h, i, 1.0);
+			}
+			for (int i = 0; i < nbetapi_[h]; i++) {
+				occupation_b->set(h, i, 1.0);
+			}
+		}
+
+        molden->write(filename, Ca_, Cb_, zero, zero, occupation_a, occupation_b, true);
+
+    }
+
     // hartree-fock guess
     Guess();
 
