@@ -1647,7 +1647,7 @@ double v2RDMSolver::compute_energy() {
     // hartree-fock guess
     Guess();
 
-    tau = 1.6;
+    tau = options_.get_double("TAU_PARAMETER");
     mu  = 1.0;
 
     // checkpoint file
