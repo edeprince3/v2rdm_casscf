@@ -28,7 +28,6 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 set(TargetOpenMP_FIND_COMPONENTS "CXX Fortran")
-message("TargetOpenMP_FIND_COMPONENTS A ${TargetOpenMP_FIND_COMPONENTS}")
 find_package(psi4 1.0 REQUIRED)
 
 set(PN ${PROJECT_NAME})
