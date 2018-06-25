@@ -43,3 +43,6 @@ def test_v2rdm5(workspace):
 
 def test_v2rdm6(workspace):
     exe_psi(workspace, 'v2rdm6', 'input.dat')
+
+def test_v2rdm7(workspace):
+    exe_psi(workspace, 'v2rdm7', 'input.dat')
