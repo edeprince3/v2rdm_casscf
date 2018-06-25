@@ -25,7 +25,7 @@
 """Plugin docstring.
 
 """
-__version__ = '0.7'
+__version__ = '0.8'
 __author__  = 'A. Eugene DePrince III'
 
 # Load Psi4
