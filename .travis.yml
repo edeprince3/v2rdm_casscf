@@ -1,0 +1,51 @@
+language: cpp
+sudo: false
+matrix:
+  include:
+
+  - env:
+    - PYTHON_VER='2.7'
+
+  - env:
+    - PYTHON_VER='3.6'
+
+install:
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+
+  - conda create -q -n tenv python=$PYTHON_VER psi4 psi4-dev ci-psi4 -c psi4/label/dev
+  - source activate tenv
+  - conda install pytest pytest-cov codecov -c conda-forge
+  - pip install pytest-shutil
+  - conda list
+
+before_script:
+  - python -V
+  - psi4 --version
+  - cd ${TRAVIS_BUILD_DIR}
+  - >
+      cmake -H. -B.
+      -C${HOME}/miniconda/envs/tenv/share/cmake/psi4/psi4PluginCache.cmake
+      -DCMAKE_BUILD_TYPE=Debug
+  - make -j2
+
+script:
+  - PYTHONPATH=../:$PYTHONPATH psi4 --test
+  - cd ..
+  - python -c "import v2rdm_casscf; print(v2rdm_casscf.__version__)"
+  # v2 source: full test & codecov
+  - python -c "import sys, v2rdm_casscf as v2; sys.exit(v2.test(extras=['--cov', '--durations=5']))"
+  # v2 install: quick test
+  - cd v2rdm_casscf && make install && cd .. && rm -rf v2rdm_casscf
+  - python -c "import sys, v2rdm_casscf as v2; sys.exit(v2.test('quick'))"
+
+notifications:
+  email: true
+
+#after_success:
+#  - codecov

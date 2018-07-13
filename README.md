@@ -1,15 +1,29 @@
+<p align="center">
+<br>
+<a href="https://travis-ci.org/edeprince3/v2rdm_casscf"><img src="https://travis-ci.org/edeprince3/v2rdm_casscf.svg?branch=master"></a>
+<!--<a href="https://codecov.io/gh/edeprince3/v2rdm_casscf"> <img src="https://codecov.io/gh/edeprince3/v2rdm_casscf/branch/master/graph/badge.svg" /></a>-->
+<a href="https://conda.anaconda.org/psi4"> <img src="https://anaconda.org/psi4/v2rdm_casscf/badges/installer/conda.svg" /> </a>
+<a href="https://opensource.org/licenses/GPL-2.0"><img src="https://img.shields.io/github/license/edeprince3/v2rdm_casscf.svg" /></a>
+<br>
+<a href="#"> <img src="https://img.shields.io/github/release/edeprince3/v2rdm_casscf.svg" /></a>
+<a href="#"> <img src="https://img.shields.io/github/commits-since/edeprince3/v2rdm_casscf/latest.svg" /></a>
+<a href="#"> <img src="https://img.shields.io/github/release-date/edeprince3/v2rdm_casscf.svg" /></a>
+<a href="#"> <img src="https://img.shields.io/github/commit-activity/y/edeprince3/v2rdm_casscf.svg" /></a>
+<br>
+</p>
+
 # v2rdm_casscf
 A variational 2-RDM-driven CASSCF plugin to Psi4
 
-##OVERVIEW
+## OVERVIEW
 
 This plugin to Psi4[1] performs variational two-electron reduced-density-matrix (2-RDM)-driven complete active space self consistent field (CASSCF) computations.  In principle, because  variational 2-RDM (v2RDM) methods scale only polynomially with system size, vRDM-driven CASSCF computations can be performed using active spaces that are larger than can be used within conventional configuration-interaction-driven CASSCF methods.  For more information regarding the performance of the method, see Refs. 2-4.
 
-##INSTALLATION
+## INSTALLATION
 
 To run the Psi4 plugin v2rdm_casscf:
 
-* Download Psi4 (1.1a2.dev200 or later) from github.com: https://github.com/psi4/psi4, and follow the installation instructions given here: http://psicode.org/psi4manual/master/build_planning.html . Make sure to keep the name of the plugin directory v2rdm_casscf.
+* Download Psi4 (1.2rc2 or later) from github.com: https://github.com/psi4/psi4, and follow the installation instructions given here: http://psicode.org/psi4manual/master/build_planning.html . Make sure to keep the name of the plugin directory v2rdm_casscf.
 
 *  Configure with CMake to generate a Makefile. Run `psi4 --plugin-compile` to get a CMake command. Modify it as needed with `-D` for compiler, libraries, and options.
 
@@ -25,9 +39,15 @@ To run the Psi4 plugin v2rdm_casscf:
 
 * The test directories (tests/v2rdm1, etc.) contain input files that can help you get started using v2rdm-casscf.
 
-##INPUT OPTIONS
+* Or run tests through pytest
 
-###N-representability conditions
+  > pytest -rws -v tests/
+
+  > python -c "import v2rdm_casscf; v2rdm_casscf.test('quick')"
+
+## INPUT OPTIONS
+
+### N-representability conditions
 
 * **POSITIVITY** (string):
 
@@ -44,7 +64,7 @@ To run the Psi4 plugin v2rdm_casscf:
 
     Do constrain the expectation value of spin squared? Default true.
 
-###Convergence
+### Convergence
 
 * **E_CONVERGENCE** (double):
 
@@ -58,7 +78,7 @@ To run the Psi4 plugin v2rdm_casscf:
 
     The maximum number of outer iterations.  Default 10000.
 
-###Active space specification
+### Active space specification
 
 * **FROZEN_DOCC** (array):
 
@@ -98,7 +118,7 @@ To run the Psi4 plugin v2rdm_casscf:
     from the **ACTIVE**, **RESTRICTED_DOCC**, **FROZEN_DOCC**, and
     **FROZEN_UOCC** arrays.
 
-###Restarting jobs
+### Restarting jobs
 
 * **WRITE_CHECKPOINT_FILE** (bool):
 
@@ -114,7 +134,7 @@ To run the Psi4 plugin v2rdm_casscf:
 
     File containing previous primal/dual solutions and integrals.
 
-###Integrals and SCF type
+### Integrals and SCF type
 
 * **DF_BASIS_SCF** (string):
 
@@ -129,7 +149,7 @@ To run the Psi4 plugin v2rdm_casscf:
 
     Tolerance for Cholesky decomposition of the ERI tensor.  Default 1e-4.
 
-###Orbital optimization
+### Orbital optimization
 
 * **ORBOPT_ONE_STEP** (int):
 
@@ -156,7 +176,7 @@ To run the Psi4 plugin v2rdm_casscf:
 
     Do rotate active/active orbital pairs? Default false.
 
-###Additional files
+### Additional files
 
 * **MOLDEN_WRITE** (bool):
 
@@ -178,12 +198,12 @@ To run the Psi4 plugin v2rdm_casscf:
     the name of the output file plus the name of the current molecule.
 
 
-##KNOWN ISSUES
+## KNOWN ISSUES
 
 * For large jobs, when running with multiple threads, sometimes a thread will hang and the job will stall.
 * For large jobs, add "ulimit -s unlimited" to .bashrc to avoid segfault when calling the fortran orbital optimization routines.
 
-##REFERENCES
+## REFERENCES
 
 [1] J. M. Turney, A. C. Simmonett, R. M. Parrish, E. G. Hohenstein, F. A. Evangelista, J. T. Fermann, B. J.  Mintz, L. A. Burns, J. J. Wilke, M. L. Abrams, N. J. Russ, M. L. Leininger, C. L. Janssen, E. T. Seidl, W. D. Allen, H. F. Schaefer, R. A. King, E. F. Valeev, C. D. Sherrill, and T. D. Crawford, *WIREs: Comp. Molec. Sci.* **2**, 556 (2012). "Psi4: an open-source ab initio electronic structure program"
 

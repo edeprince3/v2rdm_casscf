@@ -22,20 +22,16 @@
 #@END LICENSE
 #
 
-import psi4
 import re
 import os
-#import inputparser
 import math
 import warnings
-#import driver
-#from molutil import *
-#from psi4.driver.procedures import proc_util
-from psi4.driver.procrouting import proc_util
+import numpy
 
+import psi4
+from psi4.driver.procrouting import proc_util
 import psi4.driver.p4util as p4util
-#from p4util.exceptions import *
-#from procedures import *
+
 
 def run_v2rdm_casscf(name, **kwargs):
     r"""Function encoding sequence of PSI module and plugin calls so that
@@ -66,6 +62,48 @@ def run_v2rdm_casscf(name, **kwargs):
     scf_type = psi4.core.get_option('SCF', 'SCF_TYPE')
     if ( scf_type == 'PK' or scf_type == 'DIRECT' ):
         proc_util.check_iwl_file_from_scf_type(psi4.core.get_option('SCF', 'SCF_TYPE'), ref_wfn)
+
+    # reorder wavefuntions based on user input
+    # apply a list of 2x2 rotation matrices to the orbitals in the form of [irrep, orbital1, orbital2, theta]
+    # where an angle of 0 would do nothing and an angle of 90 would switch the two orbitals.
+    # the indices of irreps and orbitals start from 0
+    reorder_orbitals = psi4.core.get_option("V2RDM_CASSCF","MCSCF_ROTATE")
+    for orbord in reorder_orbitals:
+        if type(orbord) != list :
+            raise psi4.p4util.PsiException("Each element of the orbtial rotate list requires 4 arguements (irrep, orb1, orb2, theta).")
+        if len(orbord) != 4:
+            raise psi4.p4util.PsiException("Each element of the orbtial rotate list requires 4 arguements (irrep, orb1, orb2, theta).")
+
+        irrep, orb1, orb2, theta = orbord
+
+        if irrep > ref_wfn.Ca().nirrep():
+            raise psi4.p4util.PsiException("REORDER_ORBITALS: Expression %s irrep number is larger than the number of irreps" %
+                                    (str(orbord)))
+
+        if max(orb1, orb2) > ref_wfn.Ca().coldim()[irrep]:
+            raise psi4.p4util.PsiException("REORDER_ORBITALS: Expression %s orbital number exceeds number of orbitals in irrep" %
+                                    (str(orbord)))
+
+        theta = numpy.deg2rad(theta)
+
+        x_a = ref_wfn.Ca().nph[irrep][:, orb1].copy()
+        y_a = ref_wfn.Ca().nph[irrep][:, orb2].copy()
+
+        xp_a = numpy.cos(theta) * x_a - numpy.sin(theta) * y_a
+        yp_a = numpy.sin(theta) * x_a + numpy.cos(theta) * y_a
+
+        ref_wfn.Ca().nph[irrep][:, orb1] = xp_a
+        ref_wfn.Ca().nph[irrep][:, orb2] = yp_a
+
+        x_b = ref_wfn.Ca().nph[irrep][:, orb1].copy()
+        y_b = ref_wfn.Ca().nph[irrep][:, orb2].copy()
+
+        xp_b = numpy.cos(theta) * x_b - numpy.sin(theta) * y_b
+        yp_b = numpy.sin(theta) * x_b + numpy.cos(theta) * y_b
+
+        ref_wfn.Ca().nph[irrep][:, orb1] = xp_b
+        ref_wfn.Ca().nph[irrep][:, orb2] = yp_b
+
 
     returnvalue = psi4.core.plugin('v2rdm_casscf.so', ref_wfn)
 

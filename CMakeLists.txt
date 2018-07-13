@@ -1,32 +1,34 @@
 cmake_policy(SET CMP0048 NEW)  # project_VERSION* variables populated from project(... VERSION x.x.x) string
 project(v2rdm_casscf
-        VERSION 0.5
+        VERSION 0.8
         LANGUAGES CXX Fortran)
 set(v2rdm_casscf_AUTHORS      "A. Eugene DePrince III")
 set(v2rdm_casscf_DESCRIPTION  "Variational 2-RDM-driven CASSCF plugin to Psi4")
 set(v2rdm_casscf_URL          "github.com/edeprince3/v2rdm_casscf")
 set(v2rdm_casscf_LICENSE      "GPL 2+")
 
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-
-find_package(psi4 1.0 REQUIRED)
 
 # <<<  Options  >>>
 
 include(psi4OptionsTools)
 
 option_with_print(ENABLE_OPENMP "Enable threadsafe linking to OpenMP parallelized programs." ON)
-option_with_print(ENABLE_GENERIC "Enable mostly static linking in shared library" OFF)
-if (APPLE AND (CMAKE_CXX_COMPILER_ID MATCHES GNU))
-    option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" OFF)
-else ()
-    option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" ON)
-                      #"-xHost") # "-march=native")
-endif()
+#if (APPLE AND (CMAKE_CXX_COMPILER_ID MATCHES GNU))
+#    option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" OFF)
+#else ()
+#    option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" ON)
+#                      #"-xHost") # "-march=native")
+#endif()
+
+# <<<  Prepare  >>>
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+
+set(TargetOpenMP_FIND_COMPONENTS "CXX Fortran")
+find_package(psi4 1.0 REQUIRED)
 
 set(PN ${PROJECT_NAME})
 
@@ -54,7 +56,6 @@ message(STATUS "Plugin module install: ${PYMOD_INSTALL_FULLDIR}")
 
 
 include(custom_cxxstandard)
-include(autocmake_omp)
 include(custom_static_library)
 
 # <<<  Build  >>>
@@ -70,6 +71,7 @@ add_psi4_plugin(v2rdm_casscf
     checkpoint.cc
     d2.cc
     d3.cc
+    d4.cc
     diis.cc
     exponentiate_step.cc
     g2.cc
@@ -81,6 +83,7 @@ add_psi4_plugin(v2rdm_casscf
     orbital_lagrangian.cc
     q2.cc
     sortintegrals.cc
+    spin.cc
     t1.cc
     t2.cc
     tei.cc
@@ -113,18 +116,22 @@ add_psi4_plugin(v2rdm_casscf
 
 target_link_libraries(v2rdm_casscf PRIVATE ${LIBC_INTERJECT})
 
+configure_file(__init__.py.in __init__.py @ONLY)
+
 # <<<  Install  >>>
 
 install(TARGETS v2rdm_casscf
         EXPORT "${PN}Targets"
         LIBRARY DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
-install(FILES __init__.py pymodule.py LICENSE README.md
+install(FILES extras.py pymodule.py LICENSE README.md
+              ${CMAKE_CURRENT_BINARY_DIR}/__init__.py
         DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
 install(DIRECTORY tests/
         DESTINATION ${PYMOD_INSTALL_FULLDIR}/tests
         FILES_MATCHING PATTERN "v2rdm*/input.dat"
+                       PATTERN "*.py"
         PATTERN "old-tests" EXCLUDE)
 
 # <<< Export Config >>>

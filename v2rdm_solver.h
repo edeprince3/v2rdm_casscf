@@ -96,6 +96,9 @@ class v2RDMSolver: public Wavefunction{
     /// keep d3 positive semidefinite and constrain D3->D2 mapping?
     bool constrain_d3_;
 
+    /// keep d4 positive semidefinite and constrain D4->D3 mapping?
+    bool constrain_d4_;
+
     /// constrain spin?
     bool constrain_spin_;
 
@@ -209,6 +212,11 @@ class v2RDMSolver: public Wavefunction{
     int * d3bbboff;
     int * d3aaboff;
     int * d3bbaoff;
+    int * d4aaaaoff;
+    int * d4aaaboff;
+    int * d4aabboff;
+    int * d4bbbaoff;
+    int * d4bbbboff;
 
     /// convergence in primal energy
     double e_convergence_;
@@ -263,6 +271,18 @@ class v2RDMSolver: public Wavefunction{
     int **** ibas_aab_sym;
     int **** ibas_aba_sym;
 
+    /// quartets for each irrep:
+    std::vector < std::vector < std::tuple<int,int,int,int> > > quartets;
+    int * quartet_aaaa;
+    int * quartet_aaab;
+    int * quartet_aabb;
+    int  ***  bas_aaaa_sym;
+    int  ***  bas_aaab_sym;
+    int  ***  bas_aabb_sym;
+    int ***** ibas_aaaa_sym;
+    int ***** ibas_aaab_sym;
+    int ***** ibas_aabb_sym;
+
     void PrintHeader();
 
     /// grab one- and two-electron integrals
@@ -289,6 +309,7 @@ class v2RDMSolver: public Wavefunction{
 
     void bpsdp_Au(SharedVector A, SharedVector u);
     void bpsdp_Au_slow(SharedVector A, SharedVector u);
+    void Spin_constraints_Au(SharedVector A,SharedVector u);
     void D2_constraints_Au(SharedVector A,SharedVector u);
     void Q2_constraints_Au(SharedVector A,SharedVector u);
     void Q2_constraints_Au_spin_adapted(SharedVector A,SharedVector u);
@@ -299,9 +320,11 @@ class v2RDMSolver: public Wavefunction{
     void T2_constraints_Au_slow(SharedVector A,SharedVector u);
     void T2_tilde_constraints_Au(SharedVector A,SharedVector u);
     void D3_constraints_Au(SharedVector A,SharedVector u);
+    void D4_constraints_Au(SharedVector A,SharedVector u);
 
     void bpsdp_ATu(SharedVector A, SharedVector u);
     void bpsdp_ATu_slow(SharedVector A, SharedVector u);
+    void Spin_constraints_ATu(SharedVector A,SharedVector u);
     void D2_constraints_ATu(SharedVector A,SharedVector u);
     void Q2_constraints_ATu(SharedVector A,SharedVector u);
     void Q2_constraints_ATu_spin_adapted(SharedVector A,SharedVector u);
@@ -312,6 +335,7 @@ class v2RDMSolver: public Wavefunction{
     void T2_constraints_ATu_slow(SharedVector A,SharedVector u);
     void T2_tilde_constraints_ATu(SharedVector A,SharedVector u);
     void D3_constraints_ATu(SharedVector A,SharedVector u);
+    void D4_constraints_ATu(SharedVector A,SharedVector u);
 
     /// SCF energy
     double escf_;
@@ -392,6 +416,9 @@ class v2RDMSolver: public Wavefunction{
     char * orbopt_outfile_;
     bool orbopt_converged_;
 
+    /// is this a v2RDM-DOCI computation?
+    bool is_doci_;
+
     /// are we using 3-index integrals?
     bool is_df_;
 
@@ -454,7 +481,6 @@ class v2RDMSolver: public Wavefunction{
 
     void OrbitalLagrangian();
     void DualD1Q1();
-    void PrintDual();
 
     /// memory available beyond what is allocated for v2RDM-CASSCF
     long int available_memory_;
