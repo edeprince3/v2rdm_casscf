@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <math.h>
 
+
 #include <psi4/libmints/writer.h>
 #include <psi4/libmints/writer_file_prefix.h>
 
@@ -1859,18 +1860,77 @@ double v2RDMSolver::compute_energy() {
     int na = nalpha_ - nfrzc_ - nrstc_;
     int nb = nbeta_ - nfrzc_ - nrstc_;
     double ms = (multiplicity_ - 1.0)/2.0;
-    outfile->Printf("      v2RDM total spin [S(S+1)]: %20.6lf\n", 0.5 * (na + nb) + ms*ms - s2);
-    outfile->Printf("    * v2RDM total energy:        %20.12lf\n",energy_primal+enuc_+efzc_);
-    outfile->Printf("\n");
-
-    Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc_+efzc_;
-    Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc_+efzc_;
 
     // set energy for wavefunction
     energy_ = energy_primal+enuc_+efzc_;
 
     // push final transformation matrix onto Ca_ and Cb_
     UpdateTransformationMatrix();
+
+    // break down energy into one- and two-electron components
+
+    T_->transform(Ca_);
+    V_->transform(Ca_);
+
+    double kinetic = 0.0;
+    double potential = 0.0;
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < amopi_[h]; i++) {
+            int ii = i + rstcpi_[h] + frzcpi_[h];
+            for (int j = 0; j < amopi_[h]; j++) {
+                int jj = j + rstcpi_[h] + frzcpi_[h];
+
+                kinetic   += T_->pointer()[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j];
+                kinetic   += T_->pointer()[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j];
+
+                potential += V_->pointer()[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j];
+                potential += V_->pointer()[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j];
+            }
+        }
+    }
+    double two_electron_energy = efzc_;
+    // remove one-electron parts of frozen core energy
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
+            two_electron_energy -= 2.0 * T_->pointer()[i][i];
+            two_electron_energy -= 2.0 * V_->pointer()[i][i];
+        }
+    }
+    for (int h = 0; h < nirrep_; h++) {
+        two_electron_energy += C_DDOT(gems_ab[h] * gems_ab[h], x_p + d2aboff[h],1, c->pointer() + d2aboff[h], 1);
+        two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2aaoff[h],1, c->pointer() + d2aaoff[h], 1);
+        two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2bboff[h],1, c->pointer() + d2bboff[h], 1);
+    }
+
+    // core-active part of two-electron energy
+    double core_active = 0.0;
+    for (int h = 0; h < nirrep_; h++) {
+        core_active += C_DDOT(amopi_[h] * amopi_[h], x_p + d1aoff[h],1, c->pointer() + d1aoff[h], 1);
+        core_active += C_DDOT(amopi_[h] * amopi_[h], x_p + d1boff[h],1, c->pointer() + d1boff[h], 1);
+    }
+    core_active -= kinetic;
+    core_active -= potential;
+
+    // lastly, don't forget core contribution to kinetic and potential energy
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
+            kinetic   += 2.0 * T_->pointer()[i][i];
+            potential += 2.0 * V_->pointer()[i][i];
+        }
+    }
+    outfile->Printf("      v2RDM total spin [S(S+1)]: %20.6lf\n", 0.5 * (na + nb) + ms*ms - s2);
+    outfile->Printf("\n");
+    outfile->Printf("      Nuclear Repulsion Energy:          %20.12lf\n",enuc_);
+    outfile->Printf("      Two-Electron Energy:               %20.12lf\n",two_electron_energy + core_active);
+    outfile->Printf("      Kinetic Energy:                    %20.12lf\n",kinetic);
+    outfile->Printf("      Electron-Nuclear Potential Energy: %20.12lf\n",potential);
+    outfile->Printf("\n");
+    outfile->Printf("    * v2RDM total energy:                %20.12lf\n",energy_primal+enuc_+efzc_);
+    outfile->Printf("\n");
+
+    Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc_+efzc_;
+    Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc_+efzc_;
+
 
     if ( options_.get_bool("SEMICANONICALIZE_ORBITALS") ) {
         if ( options_.get_str("DERTYPE") == "FIRST" ) {

@@ -58,9 +58,13 @@ namespace psi{ namespace v2rdm_casscf{
 SharedMatrix v2RDMSolver::GetOEI() {
 
     std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
-    SharedMatrix K1 (new Matrix(mints->so_potential()));
-    K1->add(mints->so_kinetic());
+    T_ = (std::shared_ptr<Matrix> ) (new Matrix(mints->so_kinetic()));
+    V_ = (std::shared_ptr<Matrix> ) (new Matrix(mints->so_potential()));
+
+    std::shared_ptr<Matrix> K1 (new Matrix(T_));
+    K1->add(V_);
     K1->transform(Ca_);
+
     return K1;
 }
 
