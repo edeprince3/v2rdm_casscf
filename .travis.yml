@@ -1,6 +1,10 @@
 language: cpp
 sudo: false
 matrix:
+  allow_failures:
+    - env:
+      - PYTHON_VER='2.7'
+    
   include:
 
   - env:
