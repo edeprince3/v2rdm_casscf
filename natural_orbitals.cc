@@ -26,6 +26,7 @@
  */
 
 #include "v2rdm_solver.h"
+#include <psi4/libmints/mintshelper.h>
 
 
 using namespace psi;
@@ -517,6 +518,15 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
             }
         }
+    }
+
+    // if dumping integrals to disk, transform these to the NO basis as well.
+
+    if ( options_.get_bool("FCIDUMP") ) {
+
+        free(Qmo_);
+        ThreeIndexIntegrals();
+
     }
 
 }

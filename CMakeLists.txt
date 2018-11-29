@@ -74,6 +74,7 @@ add_psi4_plugin(v2rdm_casscf
     d4.cc
     diis.cc
     exponentiate_step.cc
+    fcidump.cc
     g2.cc
     gpu_transform_3index_teint.cc
     integraltransform_sort_so_tpdm.cc

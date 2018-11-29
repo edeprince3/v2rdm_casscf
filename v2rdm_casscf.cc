@@ -47,7 +47,9 @@ extern "C" PSI_API
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
-        /* Do v2RDM-CASSCF gradient? !expert */
+        /* Do write fcidump files? -*/
+        options.add_bool("FCIDUMP", false);
+        /* Do v2RDM-CASSCF gradient? !expert -*/
         options.add_str("DERTYPE", "NONE", "NONE FIRST");
         /*- Do optimize orbitals? -*/
         options.add_bool("OPTIMIZE_ORBITALS",true);

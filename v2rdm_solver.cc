@@ -208,6 +208,10 @@ void  v2RDMSolver::common_init(){
         is_df_ = true;
     }
 
+    if ( options_.get_bool("FCIDUMP") && !is_df_ ) {
+        throw PsiException("FCIDUMP only works with scf_type df at present.",__FILE__,__LINE__);
+    }
+
     shallow_copy(reference_wavefunction_);
 
     escf_     = reference_wavefunction_->reference_energy();
@@ -226,6 +230,10 @@ void  v2RDMSolver::common_init(){
     nsopi_    = reference_wavefunction_->nsopi();
     molecule_ = reference_wavefunction_->molecule();
     enuc_     = molecule_->nuclear_repulsion_energy({0.0,0.0,0.0});
+
+    if ( options_.get_bool("FCIDUMP") && nirrep_ > 1 ) {
+        throw PsiException("FCIDUMP only works with symmetry c1 at present.",__FILE__,__LINE__);
+    }
 
     // need somewhere to store gradient, if required
     gradient_ =  reference_wavefunction_->matrix_factory()->create_shared_matrix("Total gradient", molecule_->natom(), 3);
@@ -1954,11 +1962,14 @@ double v2RDMSolver::compute_energy() {
     } 
 
     // compute and natural orbitals and transform 1-RDM/2-RDM to the NO basis
-    if ( options_.get_bool("NAT_ORBS") ) {
+    if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") ) {
         ComputeNaturalOrbitals();
     }
     if ( options_.get_bool("MOLDEN_WRITE") ) {
         WriteMoldenFile();
+    }
+    if ( options_.get_bool("FCIDUMP") ) {
+        FCIDUMP();
     }
 
 
@@ -1988,7 +1999,7 @@ double v2RDMSolver::compute_energy() {
     // for derivatives:
     if ( options_.get_str("DERTYPE") == "FIRST" ) {
 
-        if ( options_.get_bool("NAT_ORBS") ) {
+        if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") ) {
             throw PsiException("analytic gradients require nat_orbs false",__FILE__,__LINE__);
         }
 
@@ -2100,7 +2111,7 @@ void v2RDMSolver::CheckSpinStructure() {
 void v2RDMSolver::WriteMoldenFile() {
 
     // it is possible the 1-RDM is already in the NO basis:
-    if ( options_.get_bool("NAT_ORBS") ) {
+    if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") ) {
 
         std::shared_ptr<Vector> eigval (new Vector("Natural Orbital Occupation Numbers (spin free)",nirrep_,nmopi_));
         for (int h = 0; h < nirrep_; h++) {

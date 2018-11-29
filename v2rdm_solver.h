@@ -498,6 +498,9 @@ class v2RDMSolver: public Wavefunction{
 
     /// mo-mo transformation matrix
     SharedMatrix newMO_;
+
+    /// FCIDUMP: dump integrals and RDMs to disk
+    void FCIDUMP();
 };
 
 }}
