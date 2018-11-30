@@ -77,21 +77,61 @@ void v2RDMSolver::FCIDUMP() {
 
     int zero = 0;
 
+    // orbitals are ordered by irrep and by space within each irrep. 
+    // need a map to order by space and by irrep within each space
+    // (plus 1)
+    int * map = (int*)malloc(nmo_*sizeof(int));
+    int count = 0;
+    // core
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < frzcpi_[h] + rstcpi_[h]; i++) {
+            //printf("core    %5i -> %5i\n",i + pitzer_offset_full[h] + frzcpi_[h],count);
+            map[i + pitzer_offset_full[h]] = count + 1;
+            count++;
+        }
+    }
+    // active
+    for (int h = 0; h < nirrep_; h++) {
+        for (int t = 0; t < amopi_[h]; t++) {
+            //printf("active  %5i -> %5i\n",t + pitzer_offset_full[h] + frzcpi_[h] + rstcpi_[h],count);
+            map[t + pitzer_offset_full[h] + frzcpi_[h] + rstcpi_[h]] = count + 1;
+            count++;
+        }
+    }
+    // virtual
+    for (int h = 0; h < nirrep_; h++) {
+        for (int a = 0; a < nmopi_[h] - ( frzcpi_[h] + rstcpi_[h] + amopi_[h] ); a++) {
+            //printf("virtual %5i -> %5i\n",a + pitzer_offset_full[h] + frzcpi_[h] + rstcpi_[h] + amopi_[h],count);
+            map[a + pitzer_offset_full[h] + frzcpi_[h] + rstcpi_[h] + amopi_[h]] = count + 1;
+            count++;
+        }
+    }
+    //for (int p = 0; p < nmo_; p++) {
+    //    printf("%5i %5i %5i\n",symmetry_full[p],p,map[p]);
+    //}
+
     // two-electron integrals
     for (int p = 0; p < nmo_; p++) {
+        int hp = symmetry_really_full[p];
         for (int q = p; q < nmo_; q++) {
+            int hq = symmetry_really_full[q];
+            int hpq = hp ^ hq;
             long int pq = INDEX(p,q);
             for (int r = 0; r < nmo_; r++) {
+                int hr = symmetry_really_full[r];
                 for (int s = r; s < nmo_; s++) {
+                    int hs = symmetry_really_full[s];
+                    int hrs = hr ^ hs;
+                    if ( hpq != hrs ) continue;
                     long int rs = INDEX(r,s);
                     if ( pq > rs ) continue;
                     double dum = TEI(p,q,r,s,0);
                     if ( fabs(dum) < 1e-12 ) continue;
-                    fprintf(int_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,p+1,q+1,r+1,s+1);
-                    int pp = p+1;
-                    int qq = q+1;
-                    int rr = r+1;
-                    int ss = s+1;
+                    fprintf(int_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,map[p],map[q],map[r],map[s]);
+                    int pp = map[p];
+                    int qq = map[q];
+                    int rr = map[r];
+                    int ss = map[s];
                     fwrite (&dum , sizeof(double), 1, int_fp);
                     fwrite (&pp , sizeof(int), 1, int_fp);
                     fwrite (&qq , sizeof(int), 1, int_fp);
@@ -117,9 +157,9 @@ void v2RDMSolver::FCIDUMP() {
             for (int q = p; q < nmopi_[h]; q++) {
                 double dum = Tp[p][q] + Vp[p][q];
                 if ( fabs(dum) < 1e-12 ) continue;
-                fprintf(int_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,p + pitzer_offset[h]+1,q + pitzer_offset[h]+1,0,0);
-                int pp = p+1;
-                int qq = q+1;
+                int pp = map[p + pitzer_offset_full[h]];
+                int qq = map[q + pitzer_offset_full[h]];
+                fprintf(int_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,pp,qq,0,0);
                 fwrite (&dum , sizeof(double), 1, int_fp);
                 fwrite (&pp , sizeof(int), 1, int_fp);
                 fwrite (&qq , sizeof(int), 1, int_fp);
@@ -129,8 +169,9 @@ void v2RDMSolver::FCIDUMP() {
         }
     }
 
-    // two-electron RDM
+    // two-electron rdm
     double * x_p = x->pointer();
+    double e2 = 0.0;
     for (int h = 0; h < nirrep_; h++) {
         for (int ij = 0; ij < gems_ab[h]; ij++) {
             int i = bas_ab_sym[h][ij][0];
@@ -151,12 +192,15 @@ void v2RDMSolver::FCIDUMP() {
                     dum += sg * x_p[d2bboff[h] + ija * gems_aa[h] + kla];
 
                 }
+
+                e2 += 0.5 * dum * TEI(full_basis[i],full_basis[k],full_basis[j],full_basis[l],0);
+
                 if ( fabs(dum) < 1e-12 ) continue;
-                fprintf(rdm_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,i+1,j+1,k+1,l+1);
-                int ii = i+1;
-                int jj = j+1;
-                int kk = k+1;
-                int ll = l+1;
+                int ii = map[full_basis[i]];
+                int jj = map[full_basis[j]];
+                int kk = map[full_basis[k]];
+                int ll = map[full_basis[l]];
+                fprintf(rdm_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,ii,jj,kk,ll);
                 fwrite (&dum , sizeof(double), 1, rdm_fp);
                 fwrite (&ii , sizeof(int), 1, rdm_fp);
                 fwrite (&jj , sizeof(int), 1, rdm_fp);
@@ -165,16 +209,17 @@ void v2RDMSolver::FCIDUMP() {
             }
         }
     }
+    //printf("%20.12lf\n",e2);
 
-    // one-electron integrals
+    // one-electron rdm
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < amopi_[h]; i++) {
             for (int j = i; j < amopi_[h]; j++) {
                 double dum = x_p[d1aoff[h] + i * amopi_[h] + j] + x_p[d1boff[h] + i * amopi_[h] + j];
                 if ( fabs(dum) < 1e-12 ) continue;
-                fprintf(rdm_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,i + pitzer_offset[h]+1,j + pitzer_offset[h]+1,0,0);
-                int ii = i+1;
-                int jj = j+1;
+                int ii = map[full_basis[i + pitzer_offset[h]]];
+                int jj = map[full_basis[j + pitzer_offset[h]]];
+                fprintf(rdm_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,ii,jj,0,0);
                 fwrite (&dum , sizeof(double), 1, rdm_fp);
                 fwrite (&ii , sizeof(int), 1, rdm_fp);
                 fwrite (&jj , sizeof(int), 1, rdm_fp);

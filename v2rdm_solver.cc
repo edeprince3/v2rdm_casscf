@@ -231,9 +231,9 @@ void  v2RDMSolver::common_init(){
     molecule_ = reference_wavefunction_->molecule();
     enuc_     = molecule_->nuclear_repulsion_energy({0.0,0.0,0.0});
 
-    if ( options_.get_bool("FCIDUMP") && nirrep_ > 1 ) {
-        throw PsiException("FCIDUMP only works with symmetry c1 at present.",__FILE__,__LINE__);
-    }
+    //if ( options_.get_bool("FCIDUMP") && nirrep_ > 1 ) {
+    //    throw PsiException("FCIDUMP only works with symmetry c1 at present.",__FILE__,__LINE__);
+    //}
 
     // need somewhere to store gradient, if required
     gradient_ =  reference_wavefunction_->matrix_factory()->create_shared_matrix("Total gradient", molecule_->natom(), 3);
@@ -1904,11 +1904,13 @@ double v2RDMSolver::compute_energy() {
             two_electron_energy -= 2.0 * V_->pointer()[i][i];
         }
     }
+    double active_two_electron_energy = 0.0;
     for (int h = 0; h < nirrep_; h++) {
-        two_electron_energy += C_DDOT(gems_ab[h] * gems_ab[h], x_p + d2aboff[h],1, c->pointer() + d2aboff[h], 1);
-        two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2aaoff[h],1, c->pointer() + d2aaoff[h], 1);
-        two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2bboff[h],1, c->pointer() + d2bboff[h], 1);
+        active_two_electron_energy += C_DDOT(gems_ab[h] * gems_ab[h], x_p + d2aboff[h],1, c->pointer() + d2aboff[h], 1);
+        active_two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2aaoff[h],1, c->pointer() + d2aaoff[h], 1);
+        active_two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2bboff[h],1, c->pointer() + d2bboff[h], 1);
     }
+    two_electron_energy += active_two_electron_energy;
 
     // core-active part of two-electron energy
     double core_active = 0.0;
@@ -1930,6 +1932,7 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("\n");
     outfile->Printf("      Nuclear Repulsion Energy:          %20.12lf\n",enuc_);
     outfile->Printf("      Two-Electron Energy:               %20.12lf\n",two_electron_energy + core_active);
+    //outfile->Printf("      Two-Electron (active):             %20.12lf\n",active_two_electron_energy);
     outfile->Printf("      Kinetic Energy:                    %20.12lf\n",kinetic);
     outfile->Printf("      Electron-Nuclear Potential Energy: %20.12lf\n",potential);
     outfile->Printf("\n");
