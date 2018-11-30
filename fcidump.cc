@@ -72,8 +72,8 @@ void v2RDMSolver::FCIDUMP() {
 
     FILE * int_fp = fopen("int.dump","wb");
     FILE * rdm_fp = fopen("rdm.dump","wb");
-    //FILE * int_fp = fopen("int.txt","w");
-    //FILE * rdm_fp = fopen("rdm.txt","w");
+    FILE * int_fp_txt = fopen("int.txt","w");
+    FILE * rdm_fp_txt = fopen("rdm.txt","w");
 
     int zero = 0;
 
@@ -86,7 +86,8 @@ void v2RDMSolver::FCIDUMP() {
                     long int rs = INDEX(r,s);
                     if ( pq > rs ) continue;
                     double dum = TEI(p,q,r,s,0);
-                    //fprintf(int_fp,"%20.12lf %5i %5i %5i %5i\n",dum,p+1,q+1,r+1,s+1);
+                    if ( fabs(dum) < 1e-12 ) continue;
+                    fprintf(int_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,p+1,q+1,r+1,s+1);
                     int pp = p+1;
                     int qq = q+1;
                     int rr = r+1;
@@ -115,7 +116,8 @@ void v2RDMSolver::FCIDUMP() {
         for (int p = 0; p < nmopi_[h]; p++) {
             for (int q = p; q < nmopi_[h]; q++) {
                 double dum = Tp[p][q] + Vp[p][q];
-                //fprintf(int_fp,"%20.12lf %5i %5i %5i %5i\n",dum,p + pitzer_offset[h]+1,q + pitzer_offset[h]+1,0,0);
+                if ( fabs(dum) < 1e-12 ) continue;
+                fprintf(int_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,p + pitzer_offset[h]+1,q + pitzer_offset[h]+1,0,0);
                 int pp = p+1;
                 int qq = q+1;
                 fwrite (&dum , sizeof(double), 1, int_fp);
@@ -149,7 +151,8 @@ void v2RDMSolver::FCIDUMP() {
                     dum += sg * x_p[d2bboff[h] + ija * gems_aa[h] + kla];
 
                 }
-                //fprintf(rdm_fp,"%20.12lf %5i %5i %5i %5i\n",dum,i+1,j+1,k+1,l+1);
+                if ( fabs(dum) < 1e-12 ) continue;
+                fprintf(rdm_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,i+1,j+1,k+1,l+1);
                 int ii = i+1;
                 int jj = j+1;
                 int kk = k+1;
@@ -168,7 +171,8 @@ void v2RDMSolver::FCIDUMP() {
         for (int i = 0; i < amopi_[h]; i++) {
             for (int j = i; j < amopi_[h]; j++) {
                 double dum = x_p[d1aoff[h] + i * amopi_[h] + j] + x_p[d1boff[h] + i * amopi_[h] + j];
-                //fprintf(rdm_fp,"%20.12lf %5i %5i %5i %5i\n",dum,i + pitzer_offset[h]+1,j + pitzer_offset[h]+1,0,0);
+                if ( fabs(dum) < 1e-12 ) continue;
+                fprintf(rdm_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,i + pitzer_offset[h]+1,j + pitzer_offset[h]+1,0,0);
                 int ii = i+1;
                 int jj = j+1;
                 fwrite (&dum , sizeof(double), 1, rdm_fp);
@@ -182,6 +186,8 @@ void v2RDMSolver::FCIDUMP() {
 
     fclose(int_fp);
     fclose(rdm_fp);
+    fclose(int_fp_txt);
+    fclose(rdm_fp_txt);
 
 }
 
