@@ -126,7 +126,7 @@ void v2RDMSolver::FCIDUMP() {
                     long int rs = INDEX(r,s);
                     if ( pq > rs ) continue;
                     double dum = TEI(p,q,r,s,0);
-                    if ( fabs(dum) < 1e-12 ) continue;
+                    //if ( fabs(dum) < 1e-12 ) continue;
                     fprintf(int_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,map[p],map[q],map[r],map[s]);
                     int pp = map[p];
                     int qq = map[q];
@@ -154,9 +154,9 @@ void v2RDMSolver::FCIDUMP() {
         double ** Tp = T_->pointer(h);
         double ** Vp = V_->pointer(h);
         for (int p = 0; p < nmopi_[h]; p++) {
-            for (int q = p; q < nmopi_[h]; q++) {
+            for (int q = 0; q < nmopi_[h]; q++) {
                 double dum = Tp[p][q] + Vp[p][q];
-                if ( fabs(dum) < 1e-12 ) continue;
+                //if ( fabs(dum) < 1e-12 ) continue;
                 int pp = map[p + pitzer_offset_full[h]];
                 int qq = map[q + pitzer_offset_full[h]];
                 fprintf(int_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,pp,qq,0,0);
@@ -195,7 +195,7 @@ void v2RDMSolver::FCIDUMP() {
 
                 e2 += 0.5 * dum * TEI(full_basis[i],full_basis[k],full_basis[j],full_basis[l],0);
 
-                if ( fabs(dum) < 1e-12 ) continue;
+                //if ( fabs(dum) < 1e-12 ) continue;
                 int ii = map[full_basis[i]];
                 int jj = map[full_basis[j]];
                 int kk = map[full_basis[k]];
@@ -213,19 +213,23 @@ void v2RDMSolver::FCIDUMP() {
 
     // one-electron rdm
     for (int h = 0; h < nirrep_; h++) {
-        for (int i = 0; i < amopi_[h]; i++) {
-            for (int j = i; j < amopi_[h]; j++) {
-                double dum = x_p[d1aoff[h] + i * amopi_[h] + j] + x_p[d1boff[h] + i * amopi_[h] + j];
-                if ( fabs(dum) < 1e-12 ) continue;
-                int ii = map[full_basis[i + pitzer_offset[h]]];
-                int jj = map[full_basis[j + pitzer_offset[h]]];
-                fprintf(rdm_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,ii,jj,0,0);
-                fwrite (&dum , sizeof(double), 1, rdm_fp);
-                fwrite (&ii , sizeof(int), 1, rdm_fp);
-                fwrite (&jj , sizeof(int), 1, rdm_fp);
-                fwrite (&zero , sizeof(int), 1, rdm_fp);
-                fwrite (&zero , sizeof(int), 1, rdm_fp);
-            }
+        for (int ij = 0; ij < gems_ab[h]; ij++) {
+            int i = bas_ab_sym[h][ij][0];
+            int j = bas_ab_sym[h][ij][1];
+
+            int ii = i - pitzer_offset[h];
+            int jj = j - pitzer_offset[h];
+            double dum = x_p[d1aoff[h] + ii * amopi_[h] + jj] + x_p[d1boff[h] + ii * amopi_[h] + jj];
+
+            ii = map[full_basis[i]];
+            jj = map[full_basis[j]];
+            fprintf(rdm_fp_txt,"%20.12lf %5i %5i %5i %5i\n",dum,ii,jj,0,0);
+            fwrite (&dum , sizeof(double), 1, rdm_fp);
+            fwrite (&ii , sizeof(int), 1, rdm_fp);
+            fwrite (&jj , sizeof(int), 1, rdm_fp);
+            fwrite (&zero , sizeof(int), 1, rdm_fp);
+            fwrite (&zero , sizeof(int), 1, rdm_fp);
+
         }
     }
 
