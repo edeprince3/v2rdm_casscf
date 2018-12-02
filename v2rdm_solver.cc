@@ -231,10 +231,6 @@ void  v2RDMSolver::common_init(){
     molecule_ = reference_wavefunction_->molecule();
     enuc_     = molecule_->nuclear_repulsion_energy({0.0,0.0,0.0});
 
-    //if ( options_.get_bool("FCIDUMP") && nirrep_ > 1 ) {
-    //    throw PsiException("FCIDUMP only works with symmetry c1 at present.",__FILE__,__LINE__);
-    //}
-
     // need somewhere to store gradient, if required
     gradient_ =  reference_wavefunction_->matrix_factory()->create_shared_matrix("Total gradient", molecule_->natom(), 3);
 
