@@ -32,12 +32,12 @@
 #include<psi4/libtrans/integraltransform.h>
 #include<psi4/libtrans/mospace.h>
 
+#include <psi4/libmints/writer.h>
+#include <psi4/libmints/writer_file_prefix.h>
+#include<psi4/libmints/molecule.h>
 #include<psi4/libmints/wavefunction.h>
-//#include<psi4/libmints/mints.h>
 #include<psi4/libmints/vector.h>
 #include<psi4/libmints/matrix.h>
-//#include<../bin/fnocc/blas.h>
-#include<time.h>
 
 #include"v2rdm_solver.h"
 
@@ -70,10 +70,12 @@ void v2RDMSolver::FCIDUMP() {
         throw PsiException("FCIDUMP does not work with frozen virtual orbitals",__FILE__,__LINE__);
     }
 
-    FILE * int_fp = fopen("int.dump","wb");
-    FILE * rdm_fp = fopen("rdm.dump","wb");
-    //FILE * int_fp_txt = fopen("int.txt","w");
-    //FILE * rdm_fp_txt = fopen("rdm.txt","w");
+    std::string filename = get_writer_file_prefix(reference_wavefunction_->molecule()->name());
+    std::string rdm_filename = filename + ".rdm";
+    std::string int_filename = filename + ".int";
+
+    FILE * int_fp = fopen(int_filename.c_str(),"wb");
+    FILE * rdm_fp = fopen(rdm_filename.c_str(),"wb");
 
     int zero = 0;
 
@@ -92,7 +94,6 @@ void v2RDMSolver::FCIDUMP() {
     // core
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < frzcpi_[h] + rstcpi_[h]; i++) {
-            //printf("core    %5i -> %5i\n",i + pitzer_offset_full[h] + frzcpi_[h],count);
             map[i + pitzer_offset_full[h]] = count + 1;
             count++;
         }
@@ -100,7 +101,6 @@ void v2RDMSolver::FCIDUMP() {
     // active
     for (int h = 0; h < nirrep_; h++) {
         for (int t = 0; t < amopi_[h]; t++) {
-            //printf("active  %5i -> %5i\n",t + pitzer_offset_full[h] + frzcpi_[h] + rstcpi_[h],count);
             map[t + pitzer_offset_full[h] + frzcpi_[h] + rstcpi_[h]] = count + 1;
             count++;
         }
@@ -108,14 +108,10 @@ void v2RDMSolver::FCIDUMP() {
     // virtual
     for (int h = 0; h < nirrep_; h++) {
         for (int a = 0; a < nmopi_[h] - ( frzcpi_[h] + rstcpi_[h] + amopi_[h] ); a++) {
-            //printf("virtual %5i -> %5i\n",a + pitzer_offset_full[h] + frzcpi_[h] + rstcpi_[h] + amopi_[h],count);
             map[a + pitzer_offset_full[h] + frzcpi_[h] + rstcpi_[h] + amopi_[h]] = count + 1;
             count++;
         }
     }
-    //for (int p = 0; p < nmo_; p++) {
-    //    printf("%5i %5i %5i\n",symmetry_full[p],p,map[p]);
-    //}
 
     // two-electron integrals
     for (int p = 0; p < nmo_; p++) {
@@ -134,7 +130,6 @@ void v2RDMSolver::FCIDUMP() {
                     if ( pq > rs ) continue;
                     double dum = TEI(p,q,r,s,0);
                     //if ( fabs(dum) < 1e-12 ) continue;
-                    //fprintf(int_fp_txt,"%20.12le %5i %5i %5i %5i\n",dum,map[p],map[q],map[r],map[s]);
                     int pp = map[p];
                     int qq = map[q];
                     int rr = map[r];
@@ -166,7 +161,6 @@ void v2RDMSolver::FCIDUMP() {
                 //if ( fabs(dum) < 1e-12 ) continue;
                 int pp = map[p + pitzer_offset_full[h]];
                 int qq = map[q + pitzer_offset_full[h]];
-                //fprintf(int_fp_txt,"%20.12le %5i %5i %5i %5i\n",dum,pp,qq,0,0);
                 fwrite (&dum , sizeof(double), 1, int_fp);
                 fwrite (&pp , sizeof(int), 1, int_fp);
                 fwrite (&qq , sizeof(int), 1, int_fp);
@@ -213,7 +207,6 @@ void v2RDMSolver::FCIDUMP() {
                 int jj = map[full_basis[j]] - ninact;
                 int kk = map[full_basis[k]] - ninact;
                 int ll = map[full_basis[l]] - ninact;
-                //fprintf(rdm_fp_txt,"%20.12le %5i %5i %5i %5i\n",dum,ii,jj,kk,ll);
                 fwrite (&dum , sizeof(double), 1, rdm_fp);
                 fwrite (&ii , sizeof(int), 1, rdm_fp);
                 fwrite (&jj , sizeof(int), 1, rdm_fp);
@@ -222,7 +215,6 @@ void v2RDMSolver::FCIDUMP() {
             }
         }
     }
-    //printf("%20.12lf\n",e2);
 
     // one-electron rdm
     for (int h = 0; h < nirrep_; h++) {
@@ -243,7 +235,6 @@ void v2RDMSolver::FCIDUMP() {
             ii = map[full_basis[i]] - ninact;
             jj = map[full_basis[j]] - ninact;
 
-            //fprintf(rdm_fp_txt,"%20.12le %5i %5i %5i %5i\n",dum,ii,jj,0,0);
             fwrite (&dum , sizeof(double), 1, rdm_fp);
             fwrite (&ii , sizeof(int), 1, rdm_fp);
             fwrite (&jj , sizeof(int), 1, rdm_fp);
@@ -254,8 +245,7 @@ void v2RDMSolver::FCIDUMP() {
     }
 
     fclose(rdm_fp);
-    //fclose(int_fp_txt);
-    //fclose(rdm_fp_txt);
+
 
 }
 
