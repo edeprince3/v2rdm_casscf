@@ -128,7 +128,7 @@ void v2RDMSolver::FCIDUMP() {
                     if ( hpq != hrs ) continue;
                     long int rs = INDEX(r,s);
                     if ( pq > rs ) continue;
-                    double dum = TEI(p,q,r,s,0);
+                    double dum = TEI(p,q,r,s,hpq);
                     //if ( fabs(dum) < 1e-12 ) continue;
                     int pp = map[p];
                     int qq = map[q];
@@ -200,7 +200,10 @@ void v2RDMSolver::FCIDUMP() {
 
                 }
 
-                e2 += 0.5 * dum * TEI(full_basis[i],full_basis[k],full_basis[j],full_basis[l],0);
+                int hi  = symmetry[i];
+                int hk  = symmetry[k];
+                int hik = hi ^ hk;
+                e2 += 0.5 * dum * TEI(full_basis[i],full_basis[k],full_basis[j],full_basis[l],hik);
 
                 //if ( fabs(dum) < 1e-12 ) continue;
                 int ii = map[full_basis[i]] - ninact;

@@ -28,6 +28,9 @@
 #include "v2rdm_solver.h"
 #include <psi4/libmints/mintshelper.h>
 
+#include <psi4/libtrans/integraltransform.h>
+#include <psi4/libtrans/mospace.h>
+
 
 using namespace psi;
 //using namespace fnocc;
@@ -524,9 +527,22 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
     if ( options_.get_bool("FCIDUMP") ) {
 
-        free(Qmo_);
-        ThreeIndexIntegrals();
-
+        if ( is_df_ ) {
+            free(Qmo_);
+            ThreeIndexIntegrals();
+        }else {
+            std::vector<std::shared_ptr<MOSpace> > spaces;
+            spaces.push_back(MOSpace::all);
+            std::shared_ptr<IntegralTransform> ints(new IntegralTransform(reference_wavefunction_, spaces,
+                IntegralTransform::TransformationType::Restricted, IntegralTransform::OutputType::IWLOnly,
+                IntegralTransform::MOOrdering::PitzerOrder, IntegralTransform::FrozenOrbitals::None, false));
+            ints->set_dpd_id(0);
+            ints->set_keep_iwl_so_ints(true);
+            ints->set_keep_dpd_so_ints(true);
+            ints->initialize();
+            ints->transform_tei(MOSpace::all, MOSpace::all, MOSpace::all, MOSpace::all);
+            GetTEIFromDisk();
+        }
     }
 
 }

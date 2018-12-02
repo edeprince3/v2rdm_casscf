@@ -208,9 +208,9 @@ void  v2RDMSolver::common_init(){
         is_df_ = true;
     }
 
-    if ( options_.get_bool("FCIDUMP") && !is_df_ ) {
-        throw PsiException("FCIDUMP only works with scf_type df at present.",__FILE__,__LINE__);
-    }
+    //if ( options_.get_bool("FCIDUMP") && !is_df_ ) {
+    //    throw PsiException("FCIDUMP only works with scf_type df at present.",__FILE__,__LINE__);
+    //}
 
     shallow_copy(reference_wavefunction_);
 
