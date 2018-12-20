@@ -27,6 +27,7 @@
 
 #include "v2rdm_solver.h"
 #include <psi4/libtrans/integraltransform.h>
+#include <psi4/libmints/mintshelper.h>
 
 using namespace psi;
 
@@ -69,6 +70,16 @@ void v2RDMSolver::ExtendedKoopmans() {
             }
         }
     }
+    std::shared_ptr<Matrix> Da_save (new Matrix(Da));
+
+
+    // one-electron integrals
+
+    std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
+    std::shared_ptr<Matrix> hcore (new Matrix(mints->so_kinetic()));
+    std::shared_ptr<Matrix> potential (new Matrix(mints->so_potential()));
+    hcore->add(potential);
+    hcore->transform(Ca_);
 
     // V = < p*[H,q] >
     std::shared_ptr<Matrix> Va (new Matrix(nirrep_,noccpi,noccpi));
@@ -124,7 +135,8 @@ void v2RDMSolver::ExtendedKoopmans() {
                     toff += nmopi_[ht] - frzvpi_[ht];
                 }
 
-                Va->pointer(h)[i][j] = -oei_full_sym_[oei_off+INDEX(j,i)] - dum;
+                //Va->pointer(h)[i][j] = -oei_full_sym_[oei_off+INDEX(j,i)] - dum;
+                Va->pointer(h)[i][j] = -hcore->pointer(h)[j][i] - dum;
             }
         }
         ioff += nmopi_[h] - frzvpi_[h];
@@ -183,7 +195,8 @@ void v2RDMSolver::ExtendedKoopmans() {
                     uoff += nmopi_[hu] - frzvpi_[hu];
                 }
 
-                Va->pointer(h)[i][t + rstcpi_[h] + frzcpi_[h]] = -oei_full_sym_[oei_off+INDEX(t + rstcpi_[h] + frzcpi_[h],i)] - dum;
+                //Va->pointer(h)[i][t + rstcpi_[h] + frzcpi_[h]] = -oei_full_sym_[oei_off+INDEX(t + rstcpi_[h] + frzcpi_[h],i)] - dum;
+                Va->pointer(h)[i][t + rstcpi_[h] + frzcpi_[h]] = -hcore->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][i] - dum;
             }
         }
         ioff += nmopi_[h] - frzvpi_[h];
@@ -208,7 +221,8 @@ void v2RDMSolver::ExtendedKoopmans() {
                 // one-electron part (sum over active) 
                 // - 1D(tu) h(iu)
                 for (int u = 0; u < amopi_[h]; u++) {
-                    dum += x_p[d1aoff[h] + t * amopi_[h] + u]  * oei_full_sym_[oei_off+INDEX(i,u + rstcpi_[h] + frzcpi_[h])];
+                    //dum += x_p[d1aoff[h] + t * amopi_[h] + u]  * oei_full_sym_[oei_off+INDEX(i,u + rstcpi_[h] + frzcpi_[h])];
+                    dum += x_p[d1aoff[h] + t * amopi_[h] + u]  * hcore->pointer(h)[i][u + rstcpi_[h] + frzcpi_[h]];
                 }
 
                 // sum over core + active
@@ -320,7 +334,8 @@ void v2RDMSolver::ExtendedKoopmans() {
                 // one-electron part (sum over active) 
                 // - 1D(tv) h(uv)
                 for (int v = 0; v < amopi_[h]; v++) {
-                    dum += x_p[d1aoff[h] + t * amopi_[h] + v]  * oei_full_sym_[oei_off+INDEX(u + rstcpi_[h] + frzcpi_[h],v + rstcpi_[h] + frzcpi_[h])];
+                    //dum += x_p[d1aoff[h] + t * amopi_[h] + v]  * oei_full_sym_[oei_off+INDEX(u + rstcpi_[h] + frzcpi_[h],v + rstcpi_[h] + frzcpi_[h])];
+                    dum += x_p[d1aoff[h] + t * amopi_[h] + v]  * hcore->pointer(h)[u + rstcpi_[h] + frzcpi_[h]][v + rstcpi_[h] + frzcpi_[h]];
                 }
 
                 // sum over core + active
@@ -413,7 +428,11 @@ void v2RDMSolver::ExtendedKoopmans() {
     }
 
     // print
-    Va->print();
+    //Va->print();
+
+    outfile->Printf("\n");
+    outfile->Printf("    ==> Extended Koopman's Theorem <==\n");
+    outfile->Printf("\n");
 
     // now ... diagonalize each block using nonsymmetric eigensolver 
     for (int h = 0; h < nirrep_; h++) {
@@ -449,19 +468,31 @@ void v2RDMSolver::ExtendedKoopmans() {
         long int INFO = 0;
         INFO = C_DGGEV(JOBVL,JOBVR,N,Va->pointer(h)[0],LDA,Da->pointer(h)[0],LDB,ALPHAR,ALPHAI,BETA,VL,LDVL,VR,LDVR,WORK,LWORK);
 
-
-        printf("    Irrep: %5i\n",h);
+        outfile->Printf("    ");
+        outfile->Printf("    Irrep");
+        outfile->Printf("    State");
+        outfile->Printf("            IP");
+        outfile->Printf("     Orb. Occ.");
+        outfile->Printf("\n");
+        //printf("    Irrep: %2i\n",h);
         for (int i = 0; i < N; i++) {
             double max = 0.0;
             int jmax = -999;
             for (int j = 0; j < N; j++) {
-                if ( fabs(VR[j*N+i]) > max ) {
+                if ( fabs(VR[i*N+j]) > max ) {
                     max = fabs(VR[i*N+j]);
                     jmax = j;
                 }
             }
-            printf("    %5i %20.12lf %20.12lf ... orbital %5i (%20.12lf)\n",i,ALPHAR[i]/BETA[i],ALPHAI[i]/BETA[i],jmax,max);
+            double jocc = Da_save->pointer(h)[jmax][jmax];
+            outfile->Printf("    ");
+            outfile->Printf("    %5i",h);
+            outfile->Printf("    %5i",i);
+            outfile->Printf("%14.6lf",ALPHAR[i]/BETA[i]);
+            outfile->Printf("%14.6lf",jocc);
+            outfile->Printf("\n");
         }
+        outfile->Printf("\n");
   
         free(VR);
         free(VL);

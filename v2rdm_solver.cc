@@ -2008,7 +2008,7 @@ double v2RDMSolver::compute_energy() {
     // for derivatives:
     if ( options_.get_str("DERTYPE") == "FIRST" ) {
 
-        if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") ) {
+        if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") || options_.get_bool("EXTENDED_KOOPMANS") ) {
             throw PsiException("analytic gradients require nat_orbs false",__FILE__,__LINE__);
         }
 
@@ -2120,7 +2120,7 @@ void v2RDMSolver::CheckSpinStructure() {
 void v2RDMSolver::WriteMoldenFile() {
 
     // it is possible the 1-RDM is already in the NO basis:
-    if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") ) {
+    if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") || options_.get_bool("EXTENDED_KOOPMANS") ) {
 
         std::shared_ptr<Vector> eigval (new Vector("Natural Orbital Occupation Numbers (spin free)",nirrep_,nmopi_));
         for (int h = 0; h < nirrep_; h++) {
