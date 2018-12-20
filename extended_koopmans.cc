@@ -434,6 +434,9 @@ void v2RDMSolver::ExtendedKoopmans() {
     outfile->Printf("    ==> Extended Koopman's Theorem <==\n");
     outfile->Printf("\n");
 
+    // zero orbital energies in reference wave function
+    epsilon_a_->zero();
+
     // now ... diagonalize each block using nonsymmetric eigensolver 
     for (int h = 0; h < nirrep_; h++) {
 
@@ -537,11 +540,11 @@ printf("%5i %5i %20.12lf %20.12lf\n",i,j,VL[i*N+j],VR[i*N+j]);
 
         DGEEV(jobl,jobr,N,Va->pointer(h)[0],N,eigval,wi,vl,N,vr,N,work,lwork,info);
 
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                printf("coeffs %5i %5i %20.12lf %20.12lf %20.12lf\n",i,j,vl[i*N+j],vr[i*N+j],Da_save->pointer(h)[j][j]);
-            }
-        }
+        //for (int i = 0; i < N; i++) {
+        //    for (int j = 0; j < N; j++) {
+        //        printf("coeffs %5i %5i %20.12lf %20.12lf %20.12lf\n",i,j,vl[i*N+j],vr[i*N+j],Da_save->pointer(h)[j][j]);
+        //    }
+        //}
         // check orthonormality
         //for (int i = 0; i < N; i++) {
         //    for (int j = 0; j < N; j++) {
@@ -557,12 +560,13 @@ printf("%5i %5i %20.12lf %20.12lf\n",i,j,VL[i*N+j],VR[i*N+j]);
         //    }
         //}
 
+        int count = 0;
         for (int i = 0; i < N; i++) {
             double max = 0.0;
             int jmax = -999;
             for (int j = 0; j < N; j++) {
-                if ( fabs(vr[j*N+i]) > max ) {
-                    max = fabs(vr[j*N+i]);
+                if ( fabs(vr[i*N+j]) > max ) {
+                    max = fabs(vr[i*N+j]);
                     jmax = j;
                 }
             }
@@ -573,8 +577,14 @@ printf("%5i %5i %20.12lf %20.12lf\n",i,j,VL[i*N+j],VR[i*N+j]);
             outfile->Printf("%14.6lf",eigval[i]);
             outfile->Printf("%14.6lf",jocc);
             outfile->Printf("\n");
+
+            // occupied orbital energies
+            if ( jocc > 0.5 ) {
+                epsilon_a_->pointer(h)[count++] = -eigval[i];
+            }
         }
         outfile->Printf("\n");
+
 
         free(wi);
         free(work);
@@ -582,6 +592,10 @@ printf("%5i %5i %20.12lf %20.12lf\n",i,j,VL[i*N+j],VR[i*N+j]);
         free(vl);
         free(eigval);
     }
+
+    for (int h = 0; h < nirrep_; h++) {
+    }
+
 
 }
 
