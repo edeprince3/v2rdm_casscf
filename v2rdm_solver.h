@@ -361,6 +361,9 @@ class v2RDMSolver: public Wavefunction{
     void Update_xz();
     void Update_xz_nonsymmetric();
 
+    /// extended koopman's theorem
+    void ExtendedKoopmans();
+
     /// compute natural orbitals and transform OPDM and TPDM to natural orbital basis
     void ComputeNaturalOrbitals();
 
@@ -418,6 +421,9 @@ class v2RDMSolver: public Wavefunction{
 
     /// is this a v2RDM-DOCI computation?
     bool is_doci_;
+
+    double doci_alpha_;
+    double doci_ref_;
 
     /// are we using 3-index integrals?
     bool is_df_;

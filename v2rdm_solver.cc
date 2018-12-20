@@ -200,7 +200,9 @@ v2RDMSolver::~v2RDMSolver()
 
 void  v2RDMSolver::common_init(){
 
-    is_doci_ = false;
+    is_doci_    = false;
+    doci_alpha_ = options_.get_double("DOCI_ALPHA");//0.0;
+    doci_ref_   = 1.0;
 
     is_df_ = false;
     if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD" ) {
@@ -1845,6 +1847,15 @@ double v2RDMSolver::compute_energy() {
     outfile->Printf("      v2RDM iterations converged!\n");
     outfile->Printf("\n");
 
+    doci_alpha_ = 1.0;
+    doci_ref_   = 0.0;
+    if ( !is_df_ ) {
+        // read tei's from disk
+        GetTEIFromDisk();
+    }
+    RepackIntegrals();
+    energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
+
     // evaluate spin squared
     double s2 = 0.0;
     double * x_p = x->pointer();
@@ -1871,6 +1882,10 @@ double v2RDMSolver::compute_energy() {
 
     // push final transformation matrix onto Ca_ and Cb_
     UpdateTransformationMatrix();
+
+    if ( options_.get_bool("EXTENDED_KOOPMANS") ) {
+        ExtendedKoopmans();
+    }
 
     if ( options_.get_bool("MOLDEN_WRITE") ) {
         WriteMoldenFile();
