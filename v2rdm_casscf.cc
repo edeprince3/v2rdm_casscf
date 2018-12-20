@@ -49,9 +49,12 @@ int read_options(std::string name, Options& options)
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
         /*- do extended koopmans theorem computation? -*/
         options.add_bool("EXTENDED_KOOPMANS",false);
-        /*- -*/
+        /*- !expert -*/
         options.add_double("DOCI_ALPHA", 0.0);
         /*- Do v2RDM-CASSCF gradient? !expert -*/
+        /* Do write fcidump files? -*/
+        options.add_bool("FCIDUMP", false);
+        /* Do v2RDM-CASSCF gradient? !expert -*/
         options.add_str("DERTYPE", "NONE", "NONE FIRST");
         /*- Do optimize orbitals? -*/
         options.add_bool("OPTIMIZE_ORBITALS",true);
@@ -80,6 +83,10 @@ int read_options(std::string name, Options& options)
         options.add_int("CHECKPOINT_FREQUENCY",500);
         /*- File containing previous primal/dual solutions and integrals. -*/
         options.add_str("RESTART_FROM_CHECKPOINT_FILE","");
+        /*- A parameter introduced by Mazziotti [PRL 106, 083001 (2011)] to "increase the
+        sensitivity of y on the deviation of x from primal feasibility."  Should 
+        lie on the interval [1.0, 1.6]. -*/
+        options.add_double("TAU_PARAMETER",1.0);
         /*- Frequency with which the pentalty-parameter, mu, is updated. mu is
         updated every MU_UPDATE_FREQUENCY iterations.   -*/
         options.add_int("MU_UPDATE_FREQUENCY",500);

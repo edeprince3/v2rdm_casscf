@@ -382,6 +382,8 @@ class v2RDMSolver: public Wavefunction{
     // gidofalvi -- modified the type of tei_full_dim_ so that it is correct for large bases
     long int tei_full_dim_;
     int oei_full_dim_;
+    std::shared_ptr<Matrix> T_;
+    std::shared_ptr<Matrix> V_;
 
     /// full space D2, blocked by symmetry
     double * d2_plus_core_sym_;
@@ -502,6 +504,9 @@ class v2RDMSolver: public Wavefunction{
 
     /// mo-mo transformation matrix
     SharedMatrix newMO_;
+
+    /// FCIDUMP: dump integrals and RDMs to disk
+    void FCIDUMP();
 };
 
 }}

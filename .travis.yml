@@ -1,6 +1,10 @@
 language: cpp
 sudo: false
 matrix:
+  allow_failures:
+    - env:
+      - PYTHON_VER='2.7'
+    
   include:
 
   - env:
@@ -39,13 +43,13 @@ script:
   - cd ..
   - python -c "import v2rdm_casscf; print(v2rdm_casscf.__version__)"
   # v2 source: full test & codecov
-  - python -c "import v2rdm_casscf as v2; rc = v2.test(extras=['--cov', '--durations=5']); import sys; sys.exit(rc)"
+  - python -c "import sys, v2rdm_casscf as v2; sys.exit(v2.test(extras=['--cov', '--durations=5']))"
   # v2 install: quick test
   - cd v2rdm_casscf && make install && cd .. && rm -rf v2rdm_casscf
-  - python -c "import v2rdm_casscf as v2; rc = v2.test('quick'); import sys; sys.exit(rc)"
+  - python -c "import sys, v2rdm_casscf as v2; sys.exit(v2.test('quick'))"
 
 notifications:
-  email: false
+  email: true
 
 #after_success:
 #  - codecov

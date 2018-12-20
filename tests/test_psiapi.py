@@ -43,7 +43,7 @@ def test_v2rdm1():
 
     psi4.activate(n2)
 
-    n2.r     = 0.5
+    n2.r     = 0.5 * 0.52917721067 / 0.52917720859
     refscf   = -103.04337420425350
     refv2rdm = -103.086205379481
 
@@ -297,3 +297,111 @@ def test_v2rdm6():
     assert psi4.compare_values(refnuc, n2.nuclear_repulsion_energy(),  4, "Nuclear repulsion energy")
     assert psi4.compare_values(refscf, psi4.get_variable("SCF TOTAL ENERGY"), 5, "SCF total energy")
     assert psi4.compare_values(refv2rdm, psi4.get_variable("CURRENT ENERGY"), 4, "v2RDM-CASSCF total energy")
+
+
+def test_v2rdm7():
+    # STO-3g benzene (6,6) guess orbital rotation test DQG
+
+    print('        benzene (6,6), scf_type = PK')
+
+    import psi4
+
+    # orbital rotation needed before MCSCF calculation
+    benzene_c1 = psi4.geometry("""
+    0 1
+    symmetry c1
+     C                  0.00000000    1.38980400    0.00000000
+     C                  1.20360500    0.69490200    0.00000000
+     C                  1.20360500   -0.69490200    0.00000000
+     C                  0.00000000   -1.38980400    0.00000000
+     C                 -1.20360500   -0.69490200    0.00000000
+     C                 -1.20360500    0.69490200    0.00000000
+     H                  0.00000000    2.47523400    0.00000000
+     H                  2.14361600    1.23761700    0.00000000
+     H                  2.14361600   -1.23761700    0.00000000
+     H                  0.00000000   -2.47523400    0.00000000
+     H                 -2.14361600   -1.23761700    0.00000000
+     H                 -2.14361600    1.23761700    0.00000000
+    """)
+
+    psi4.set_options({
+      'basis': 'sto-3g',
+      'scf_type': 'pk',
+      'd_convergence': 1e-10,
+      'maxiter': 500,
+      'restricted_docc': [ 18 ],
+      'active': [ 6 ],
+    })
+
+    psi4.energy ('hf')
+
+    psi4.set_module_options('v2rdm_casscf', {
+    # Switch the 17th (index 16) and the 19th (index 18) orbitals of the 1st irrep (index 0)
+    # If more than one set of orbitals need to be rotated, use the following syntex
+    # mcscf_rotate [[irrep_1, orb1_1, orb2_1, theta_1], [irrep_2, orb1_2, orb2_2, theta2],...]
+    # Setting theta to 90 would switch the orbitals, setting it to 0 does nothing.
+      'mcscf_rotate': [[ 0, 16, 18, 90 ]],
+      'positivity': 'dq',
+      'r_convergence': 1e-5,
+      'e_convergence': 1e-6,
+      'maxiter': 20000,
+      'guess_orbitals_write': False,
+      'molden_write': False,
+    })
+
+    psi4.activate(benzene_c1)
+
+    E_c1 = psi4.energy('v2rdm-casscf')
+
+    psi4.core.clean()
+
+    # reference calculation, no need to rotate orbitals for MCSCF
+    benzene_d2h = psi4.geometry("""
+    0 1
+    symmetry d2h
+     C                  0.00000000    1.38980400    0.00000000
+     C                  1.20360500    0.69490200    0.00000000
+     C                  1.20360500   -0.69490200    0.00000000
+     C                  0.00000000   -1.38980400    0.00000000
+     C                 -1.20360500   -0.69490200    0.00000000
+     C                 -1.20360500    0.69490200    0.00000000
+     H                  0.00000000    2.47523400    0.00000000
+     H                  2.14361600    1.23761700    0.00000000
+     H                  2.14361600   -1.23761700    0.00000000
+     H                  0.00000000   -2.47523400    0.00000000
+     H                 -2.14361600   -1.23761700    0.00000000
+     H                 -2.14361600    1.23761700    0.00000000
+    """)
+
+    psi4.set_options({
+      'basis': 'sto-3g',
+      'scf_type': 'pk',
+      'd_convergence': 1e-10,
+      'maxiter': 500,
+      'restricted_docc': [ 6, 3, 0, 0, 0, 0, 5, 4 ],
+      'active':          [ 0, 0, 1, 2, 1, 2, 0, 0 ],
+    })
+
+    psi4.energy('hf')
+
+    psi4.set_module_options('v2rdm_casscf', {
+    # Note that when mcscf_rotate is set for the previous molecule, the calculations afterwards
+    #   also use this input, unless you overwrite it. A safe way to unset it is to overwrite it
+    #   with mcscf_rotate [[0, 0, 0, 0]], which should work as long as your molecule has at
+    #   least 1 orbital in the 1st irrep. This problem can also be simply avoided by calculating
+    #   the molecules that do not require orbital rotations first.
+      'mcscf_rotate': [[ 0, 0, 0, 0 ]],
+      'positivity': 'dq',
+      'r_convergence': 1e-5,
+      'e_convergence': 1e-6,
+      'maxiter': 20000,
+      'guess_orbitals_write': False,
+      'molden_write': False,
+    })
+
+    psi4.activate(benzene_d2h)
+
+    E_d2h = psi4.energy('v2rdm-casscf')
+
+    assert psi4.compare_values(E_c1, E_d2h, 4, "v2RDM-CASSCF total energy")
+
