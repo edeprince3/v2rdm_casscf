@@ -437,11 +437,36 @@ void v2RDMSolver::ExtendedKoopmans() {
     // now ... diagonalize each block using nonsymmetric eigensolver 
     for (int h = 0; h < nirrep_; h++) {
 
-        char JOBVR = 'V';
-        char JOBVL = 'V';
-
         long int N = noccpi[h];
         if ( N == 0 ) continue;
+
+        // symmetrize
+        for (int i = 0; i < N; i++) {
+            for (int j = i; j < N; j++) {
+                double dum = 0.5 * ( Va->pointer(h)[i][j] + Va->pointer(h)[j][i] );
+                Va->pointer(h)[i][j] = dum;
+                Va->pointer(h)[j][i] = dum;
+            }
+        }
+        // 1 / D * V
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                Va->pointer(h)[i][j] /= Da->pointer(h)[i][i];
+            }
+        }
+
+        outfile->Printf("    ");
+        outfile->Printf("    Irrep");
+        outfile->Printf("    State");
+        outfile->Printf("            IP");
+        outfile->Printf("     Orb. Occ.");
+        outfile->Printf("\n");
+        //printf("    Irrep: %2i\n",h);
+
+
+/*
+        char JOBVR = 'V';
+        char JOBVL = 'V';
 
         long int LDA  = N;
         long int LDB  = N;
@@ -456,31 +481,29 @@ void v2RDMSolver::ExtendedKoopmans() {
         double*VR=(double*)malloc(N*N*sizeof(double));
         double*VL=(double*)malloc(N*N*sizeof(double));
 
-        // symmetrize
-        for (int i = 0; i < N; i++) {
-            for (int j = i; j < N; j++) {
-                double dum = 0.5 * ( Va->pointer(h)[i][j] + Va->pointer(h)[j][i] );
-                Va->pointer(h)[i][j] = dum;
-                Va->pointer(h)[j][i] = dum;
-            }
-        }
-
         long int INFO = 0;
         INFO = C_DGGEV(JOBVL,JOBVR,N,Va->pointer(h)[0],LDA,Da->pointer(h)[0],LDB,ALPHAR,ALPHAI,BETA,VL,LDVL,VR,LDVR,WORK,LWORK);
 
-        outfile->Printf("    ");
-        outfile->Printf("    Irrep");
-        outfile->Printf("    State");
-        outfile->Printf("            IP");
-        outfile->Printf("     Orb. Occ.");
-        outfile->Printf("\n");
-        //printf("    Irrep: %2i\n",h);
+        // check orthonormality
+        //for (int i = 0; i < N; i++) {
+        //    for (int j = 0; j < N; j++) {
+        //        double dum1 = 0.0;
+        //        double dum2 = 0.0;
+        //        for (int k = 0; k < N; k++) {
+        //            dum1 += VL[i*N+k] * VR[k*N+j];
+        //            dum2 += VL[k*N+i] * VR[j*N+k];
+        //        }
+        //        printf("ortho %5i %5i %20.12lf %20.12lf\n",i,j,dum1,dum2);
+        //    }
+        //}
+
         for (int i = 0; i < N; i++) {
             double max = 0.0;
             int jmax = -999;
             for (int j = 0; j < N; j++) {
-                if ( fabs(VR[i*N+j]) > max ) {
-                    max = fabs(VR[i*N+j]);
+printf("%5i %5i %20.12lf %20.12lf\n",i,j,VL[i*N+j],VR[i*N+j]);
+                if ( fabs(VL[i*N+j]) > max ) {
+                    max = fabs(VL[i*N+j]);
                     jmax = j;
                 }
             }
@@ -500,6 +523,64 @@ void v2RDMSolver::ExtendedKoopmans() {
         free(ALPHAR);
         free(ALPHAI);
         free(BETA); 
+*/
+        long int info;
+        char jobl = 'V';
+        char jobr = 'V';
+
+        long int lwork = 4*N;
+        double * work  = (double*)malloc(lwork*sizeof(double));
+        double * wi = (double*)malloc(N*sizeof(double));
+        double * eigval = (double*)malloc(N*sizeof(double));
+        double * vl = (double*)malloc(N*N*sizeof(double));
+        double * vr = (double*)malloc(N*N*sizeof(double));
+
+        DGEEV(jobl,jobr,N,Va->pointer(h)[0],N,eigval,wi,vl,N,vr,N,work,lwork,info);
+
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                printf("coeffs %5i %5i %20.12lf %20.12lf %20.12lf\n",i,j,vl[i*N+j],vr[i*N+j],Da_save->pointer(h)[j][j]);
+            }
+        }
+        // check orthonormality
+        //for (int i = 0; i < N; i++) {
+        //    for (int j = 0; j < N; j++) {
+        //        double dum1 = 0.0;
+        //        double dum2 = 0.0;
+        //        for (int k = 0; k < N; k++) {
+        //            //dum1 += vl[i*N+k] * vr[j*N+k];
+        //            //dum2 += vl[k*N+i] * vr[k*N+j];
+        //            dum1 += vl[i*N+k] * vl[j*N+k];
+        //            dum2 += vr[i*N+k] * vr[j*N+k];
+        //        }
+        //        printf("ortho %5i %5i %20.12lf %20.12lf\n",i,j,dum1,dum2);
+        //    }
+        //}
+
+        for (int i = 0; i < N; i++) {
+            double max = 0.0;
+            int jmax = -999;
+            for (int j = 0; j < N; j++) {
+                if ( fabs(vr[j*N+i]) > max ) {
+                    max = fabs(vr[j*N+i]);
+                    jmax = j;
+                }
+            }
+            double jocc = Da_save->pointer(h)[jmax][jmax];
+            outfile->Printf("    ");
+            outfile->Printf("    %5i",h);
+            outfile->Printf("    %5i",i);
+            outfile->Printf("%14.6lf",eigval[i]);
+            outfile->Printf("%14.6lf",jocc);
+            outfile->Printf("\n");
+        }
+        outfile->Printf("\n");
+
+        free(wi);
+        free(work);
+        free(vr);
+        free(vl);
+        free(eigval);
     }
 
 }
