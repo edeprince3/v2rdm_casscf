@@ -61,6 +61,7 @@ void v2RDMSolver::ExtendedKoopmans() {
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < frzcpi_[h] + rstcpi_[h]; i++) {
             Da->pointer(h)[i][i] = 1.0;
+            Db->pointer(h)[i][i] = 1.0;
         }
         int off = rstcpi_[h] + frzcpi_[h];
         for (int i = 0; i < amopi_[h]; i++) {
@@ -70,8 +71,6 @@ void v2RDMSolver::ExtendedKoopmans() {
             }
         }
     }
-    std::shared_ptr<Matrix> Da_save (new Matrix(Da));
-
 
     // one-electron integrals
 
@@ -83,6 +82,7 @@ void v2RDMSolver::ExtendedKoopmans() {
 
     // V = < p*[H,q] >
     std::shared_ptr<Matrix> Va (new Matrix(nirrep_,noccpi,noccpi));
+    std::shared_ptr<Matrix> Vb (new Matrix(nirrep_,noccpi,noccpi));
 
     // core-core Vij = < i*[H,j] >
     int ioff = 0;
@@ -97,7 +97,8 @@ void v2RDMSolver::ExtendedKoopmans() {
 
                 int jfull = j + ioff;
 
-                double dum = 0.0;
+                double dum_a = 0.0;
+                double dum_b = 0.0;
 
                 long int koff = 0;
                 for (int hk = 0; hk < nirrep_; hk++) {
@@ -111,7 +112,8 @@ void v2RDMSolver::ExtendedKoopmans() {
 
                         double dum1 = TEI(jfull,ifull,kfull,kfull,0);
                         double dum2 = TEI(jfull,kfull,kfull,ifull,hik);
-                        dum += 2.0 * dum1 - dum2;
+                        dum_a += 2.0 * dum1 - dum2;
+                        dum_b += 2.0 * dum1 - dum2;
 
                     }
                     koff += nmopi_[hk] - frzvpi_[hk];
@@ -128,15 +130,19 @@ void v2RDMSolver::ExtendedKoopmans() {
 
                         double dum1 = TEI(jfull,ifull,tfull,tfull,0);
                         double dum2 = TEI(jfull,tfull,tfull,ifull,hit);
-                        dum += x_p[d1aoff[ht] + t * amopi_[ht] + t] * (dum1 - dum2);
-                        dum += x_p[d1boff[ht] + t * amopi_[ht] + t] * dum1;
+                        dum_a += x_p[d1aoff[ht] + t * amopi_[ht] + t] * (dum1 - dum2);
+                        dum_a += x_p[d1boff[ht] + t * amopi_[ht] + t] * dum1;
+
+                        dum_b += x_p[d1boff[ht] + t * amopi_[ht] + t] * (dum1 - dum2);
+                        dum_b += x_p[d1aoff[ht] + t * amopi_[ht] + t] * dum1;
 
                     }
                     toff += nmopi_[ht] - frzvpi_[ht];
                 }
 
                 //Va->pointer(h)[i][j] = -oei_full_sym_[oei_off+INDEX(j,i)] - dum;
-                Va->pointer(h)[i][j] = -hcore->pointer(h)[j][i] - dum;
+                Va->pointer(h)[i][j] = -hcore->pointer(h)[j][i] - dum_a;
+                Vb->pointer(h)[i][j] = -hcore->pointer(h)[j][i] - dum_b;
             }
         }
         ioff += nmopi_[h] - frzvpi_[h];
@@ -156,7 +162,8 @@ void v2RDMSolver::ExtendedKoopmans() {
 
                 int tfull = t + rstcpi_[h] + frzcpi_[h] + ioff;
 
-                double dum = 0.0;
+                double dum_a = 0.0;
+                double dum_b = 0.0;
 
                 long int koff = 0;
                 for (int hk = 0; hk < nirrep_; hk++) {
@@ -170,7 +177,8 @@ void v2RDMSolver::ExtendedKoopmans() {
 
                         double dum1 = TEI(tfull,ifull,kfull,kfull,0);
                         double dum2 = TEI(tfull,kfull,kfull,ifull,hki);
-                        dum += 2.0 * dum1 - dum2;
+                        dum_a += 2.0 * dum1 - dum2;
+                        dum_b += 2.0 * dum1 - dum2;
 
                     }
                     koff += nmopi_[hk] - frzvpi_[hk];
@@ -188,15 +196,19 @@ void v2RDMSolver::ExtendedKoopmans() {
 
                         double dum1 = TEI(tfull,ifull,ufull,ufull,0);
                         double dum2 = TEI(tfull,ufull,ufull,ifull,hui);
-                        dum += x_p[d1aoff[hu] + u * amopi_[hu] + u] * (dum1 - dum2);
-                        dum += x_p[d1boff[hu] + u * amopi_[hu] + u] * dum1;
+                        dum_a += x_p[d1aoff[hu] + u * amopi_[hu] + u] * (dum1 - dum2);
+                        dum_a += x_p[d1boff[hu] + u * amopi_[hu] + u] * dum1;
+
+                        dum_b += x_p[d1boff[hu] + u * amopi_[hu] + u] * (dum1 - dum2);
+                        dum_b += x_p[d1aoff[hu] + u * amopi_[hu] + u] * dum1;
 
                     }
                     uoff += nmopi_[hu] - frzvpi_[hu];
                 }
 
                 //Va->pointer(h)[i][t + rstcpi_[h] + frzcpi_[h]] = -oei_full_sym_[oei_off+INDEX(t + rstcpi_[h] + frzcpi_[h],i)] - dum;
-                Va->pointer(h)[i][t + rstcpi_[h] + frzcpi_[h]] = -hcore->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][i] - dum;
+                Va->pointer(h)[i][t + rstcpi_[h] + frzcpi_[h]] = -hcore->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][i] - dum_a;
+                Vb->pointer(h)[i][t + rstcpi_[h] + frzcpi_[h]] = -hcore->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][i] - dum_b;
             }
         }
         ioff += nmopi_[h] - frzvpi_[h];
@@ -216,13 +228,14 @@ void v2RDMSolver::ExtendedKoopmans() {
             
                 int ifull = i + toff;
 
-                double dum = 0.0;
+                double dum_a = 0.0;
+                double dum_b = 0.0;
 
                 // one-electron part (sum over active) 
                 // - 1D(tu) h(iu)
                 for (int u = 0; u < amopi_[h]; u++) {
-                    //dum += x_p[d1aoff[h] + t * amopi_[h] + u]  * oei_full_sym_[oei_off+INDEX(i,u + rstcpi_[h] + frzcpi_[h])];
-                    dum += x_p[d1aoff[h] + t * amopi_[h] + u]  * hcore->pointer(h)[i][u + rstcpi_[h] + frzcpi_[h]];
+                    dum_a += x_p[d1aoff[h] + t * amopi_[h] + u]  * hcore->pointer(h)[i][u + rstcpi_[h] + frzcpi_[h]];
+                    dum_b += x_p[d1boff[h] + t * amopi_[h] + u]  * hcore->pointer(h)[i][u + rstcpi_[h] + frzcpi_[h]];
                 }
 
                 // sum over core + active
@@ -243,7 +256,8 @@ void v2RDMSolver::ExtendedKoopmans() {
 
                             double dum1 = TEI(ifull,ufull,jfull,jfull,0);
                             double dum2 = TEI(ifull,jfull,jfull,ufull,hju);
-                            dum += x_p[d1aoff[h] + t * amopi_[h] + u] * ( 2.0 * dum1 - dum2 );
+                            dum_a += x_p[d1aoff[h] + t * amopi_[h] + u] * ( 2.0 * dum1 - dum2 );
+                            dum_b += x_p[d1boff[h] + t * amopi_[h] + u] * ( 2.0 * dum1 - dum2 );
 
                         }
 
@@ -267,10 +281,13 @@ void v2RDMSolver::ExtendedKoopmans() {
                         int uu = u + pitzer_offset[hu];
 
                         int tu_ab = ibas_ab_sym[htu][tt][uu];
+                        int ut_ab = ibas_ab_sym[htu][uu][tt];
 
                         for (int vw_ab = 0; vw_ab < gems_ab[hvw]; vw_ab++) {
                             int vv = bas_ab_sym[hvw][vw_ab][0];
                             int ww = bas_ab_sym[hvw][vw_ab][1];
+
+                            int wv_ab = ibas_ab_sym[hvw][ww][vv];
 
                             int hv = symmetry[vv];
                             int hw = symmetry[ww];
@@ -293,7 +310,8 @@ void v2RDMSolver::ExtendedKoopmans() {
                             int hiv = h ^ hv;
                             double eri = TEI(ifull,vfull,ufull,wfull,hiv);
 
-                            dum += eri * x_p[d2aboff[htu] + tu_ab * gems_ab[htu] + vw_ab];
+                            dum_a += eri * x_p[d2aboff[htu] + tu_ab * gems_ab[htu] + vw_ab];
+                            dum_b += eri * x_p[d2aboff[htu] + ut_ab * gems_ab[htu] + wv_ab];
                             
                             if ( tt != uu && vv != ww ) {
                                 int tu_aa = ibas_aa_sym[htu][tt][uu];
@@ -301,7 +319,8 @@ void v2RDMSolver::ExtendedKoopmans() {
                                 int sg = 1;
                                 if ( tt > uu ) sg = -sg;
                                 if ( ww > vv ) sg = -sg;
-                                dum += eri * sg * x_p[d2aaoff[htu] + tu_aa * gems_aa[htu] + vw_aa];
+                                dum_a += eri * sg * x_p[d2aaoff[htu] + tu_aa * gems_aa[htu] + vw_aa];
+                                dum_b += eri * sg * x_p[d2bboff[htu] + tu_aa * gems_aa[htu] + vw_aa];
                             }
 
                         }
@@ -309,7 +328,8 @@ void v2RDMSolver::ExtendedKoopmans() {
                     uoff += nmopi_[hu] - frzvpi_[hu];
                 }
 
-                Va->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][i] = -dum;
+                Va->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][i] = -dum_a;
+                Vb->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][i] = -dum_b;
             }
         }
         toff += nmopi_[h] - frzvpi_[h];
@@ -329,13 +349,14 @@ void v2RDMSolver::ExtendedKoopmans() {
             
                 int ufull = u + rstcpi_[h] + frzcpi_[h] + toff;
 
-                double dum = 0.0;
+                double dum_a = 0.0;
+                double dum_b = 0.0;
 
                 // one-electron part (sum over active) 
                 // - 1D(tv) h(uv)
                 for (int v = 0; v < amopi_[h]; v++) {
-                    //dum += x_p[d1aoff[h] + t * amopi_[h] + v]  * oei_full_sym_[oei_off+INDEX(u + rstcpi_[h] + frzcpi_[h],v + rstcpi_[h] + frzcpi_[h])];
-                    dum += x_p[d1aoff[h] + t * amopi_[h] + v]  * hcore->pointer(h)[u + rstcpi_[h] + frzcpi_[h]][v + rstcpi_[h] + frzcpi_[h]];
+                    dum_a += x_p[d1aoff[h] + t * amopi_[h] + v]  * hcore->pointer(h)[u + rstcpi_[h] + frzcpi_[h]][v + rstcpi_[h] + frzcpi_[h]];
+                    dum_b += x_p[d1boff[h] + t * amopi_[h] + v]  * hcore->pointer(h)[u + rstcpi_[h] + frzcpi_[h]][v + rstcpi_[h] + frzcpi_[h]];
                 }
 
                 // sum over core + active
@@ -354,7 +375,8 @@ void v2RDMSolver::ExtendedKoopmans() {
 
                             double dum1 = TEI(ufull,vfull,ifull,ifull,0);
                             double dum2 = TEI(ufull,ifull,ifull,vfull,hui);
-                            dum += x_p[d1aoff[h] + t * amopi_[h] + v] * ( 2.0 * dum1 - dum2 );
+                            dum_a += x_p[d1aoff[h] + t * amopi_[h] + v] * ( 2.0 * dum1 - dum2 );
+                            dum_b += x_p[d1boff[h] + t * amopi_[h] + v] * ( 2.0 * dum1 - dum2 );
 
                         }
 
@@ -378,10 +400,13 @@ void v2RDMSolver::ExtendedKoopmans() {
                         int vv = v + pitzer_offset[hv];
 
                         int tv_ab = ibas_ab_sym[htv][tt][vv];
+                        int vt_ab = ibas_ab_sym[htv][vv][tt];
 
                         for (int wx_ab = 0; wx_ab < gems_ab[hwx]; wx_ab++) {
                             int ww = bas_ab_sym[hwx][wx_ab][0];
                             int xx = bas_ab_sym[hwx][wx_ab][1];
+
+                            int xw_ab = ibas_ab_sym[hwx][xx][ww];
 
                             int hw = symmetry[ww];
                             int hx = symmetry[xx];
@@ -404,7 +429,8 @@ void v2RDMSolver::ExtendedKoopmans() {
                             int huw = h ^ hw;
                             double eri = TEI(ufull,wfull,vfull,xfull,huw);
 
-                            dum += eri * x_p[d2aboff[htv] + tv_ab * gems_ab[htv] + wx_ab];
+                            dum_a += eri * x_p[d2aboff[htv] + tv_ab * gems_ab[htv] + wx_ab];
+                            dum_b += eri * x_p[d2aboff[htv] + vt_ab * gems_ab[htv] + xw_ab];
                             
                             if ( tt != vv && ww != xx ) {
                                 int wx_aa = ibas_aa_sym[hwx][ww][xx];
@@ -412,7 +438,8 @@ void v2RDMSolver::ExtendedKoopmans() {
                                 int sg = 1;
                                 if ( tt > vv ) sg = -sg;
                                 if ( ww > xx ) sg = -sg;
-                                dum += eri * sg * x_p[d2aaoff[htv] + tv_aa * gems_aa[htv] + wx_aa];
+                                dum_a += eri * sg * x_p[d2aaoff[htv] + tv_aa * gems_aa[htv] + wx_aa];
+                                dum_b += eri * sg * x_p[d2bboff[htv] + tv_aa * gems_aa[htv] + wx_aa];
                             }
 
                         }
@@ -420,24 +447,49 @@ void v2RDMSolver::ExtendedKoopmans() {
                     voff += nmopi_[hv] - frzvpi_[hv];
                 }
 
-                Va->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][u + rstcpi_[h] + frzcpi_[h]] = -dum;
+                Va->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][u + rstcpi_[h] + frzcpi_[h]] = -dum_a;
+                Vb->pointer(h)[t + rstcpi_[h] + frzcpi_[h]][u + rstcpi_[h] + frzcpi_[h]] = -dum_b;
             }
         }
         toff += nmopi_[h] - frzvpi_[h];
         oei_off += ( nmopi_[h] - frzvpi_[h] ) * ( nmopi_[h] - frzvpi_[h] + 1 ) / 2;
     }
 
-    // print
-    //Va->print();
-
     outfile->Printf("\n");
     outfile->Printf("    ==> Extended Koopman's Theorem <==\n");
     outfile->Printf("\n");
 
-    // zero orbital energies in reference wave function
-    epsilon_a_->zero();
-
     // now ... diagonalize each block using nonsymmetric eigensolver 
+
+    // alpha
+    EKTEigensolver(Va,Da,epsilon_a_,true,"alpha");
+
+    // beta
+    EKTEigensolver(Vb,Db,epsilon_b_,true,"beta");
+}
+
+void v2RDMSolver::EKTEigensolver(std::shared_ptr<Matrix> V, std::shared_ptr<Matrix> D, std::shared_ptr<Vector> epsilon, bool use_dggev,std::string spin) {
+
+    Dimension noccpi(nirrep_,"Number of occupied / partially occupied orbitals per irrep");
+    for (int h = 0; h < nirrep_; h++) {
+        noccpi[h] = frzcpi_[h] + rstcpi_[h] + amopi_[h];
+    }
+
+    epsilon->zero();
+
+    std::shared_ptr<Matrix> Dsave (new Matrix(D));
+
+    outfile->Printf("\n");
+    outfile->Printf("    ==> %s ionization potentials <==\n",spin.c_str());
+    outfile->Printf("\n");
+    outfile->Printf("    ");
+    outfile->Printf("    Irrep");
+    outfile->Printf("    State");
+    outfile->Printf("            IP");
+    outfile->Printf("     Orb. Occ.");
+    outfile->Printf("\n");
+
+
     for (int h = 0; h < nirrep_; h++) {
 
         long int N = noccpi[h];
@@ -446,131 +498,73 @@ void v2RDMSolver::ExtendedKoopmans() {
         // symmetrize
         for (int i = 0; i < N; i++) {
             for (int j = i; j < N; j++) {
-                double dum = 0.5 * ( Va->pointer(h)[i][j] + Va->pointer(h)[j][i] );
-                Va->pointer(h)[i][j] = dum;
-                Va->pointer(h)[j][i] = dum;
-            }
-        }
-        // 1 / D * V
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                Va->pointer(h)[i][j] /= Da->pointer(h)[i][i];
+                double dum = 0.5 * ( V->pointer(h)[i][j] + V->pointer(h)[j][i] );
+                V->pointer(h)[i][j] = dum;
+                V->pointer(h)[j][i] = dum;
             }
         }
 
-        outfile->Printf("    ");
-        outfile->Printf("    Irrep");
-        outfile->Printf("    State");
-        outfile->Printf("            IP");
-        outfile->Printf("     Orb. Occ.");
-        outfile->Printf("\n");
-        //printf("    Irrep: %2i\n",h);
-
-
-/*
         char JOBVR = 'V';
         char JOBVL = 'V';
+        double * eigval = (double*)malloc(N*sizeof(double));
+        double * VR     = (double*)malloc(N*N*sizeof(double));
+        double * VL     = (double*)malloc(N*N*sizeof(double));
+        long int info   = 0;
 
-        long int LDA  = N;
-        long int LDB  = N;
-        long int LDVR = N;
-        long int LDVL = N;
-        long int LWORK = 8*N;
+        if ( use_dggev ) {
 
-        double*WORK=(double*)malloc(LWORK*sizeof(double));
-        double*ALPHAR=(double*)malloc(N*sizeof(double));
-        double*ALPHAI=(double*)malloc(N*sizeof(double));
-        double*BETA=(double*)malloc(N*sizeof(double));
-        double*VR=(double*)malloc(N*N*sizeof(double));
-        double*VL=(double*)malloc(N*N*sizeof(double));
+            long int LDA  = N;
+            long int LDB  = N;
+            long int LDVR = N;
+            long int LDVL = N;
+            long int LWORK = 8*N;
 
-        long int INFO = 0;
-        INFO = C_DGGEV(JOBVL,JOBVR,N,Va->pointer(h)[0],LDA,Da->pointer(h)[0],LDB,ALPHAR,ALPHAI,BETA,VL,LDVL,VR,LDVR,WORK,LWORK);
+            double*WORK=(double*)malloc(LWORK*sizeof(double));
+            double*ALPHAR=(double*)malloc(N*sizeof(double));
+            double*ALPHAI=(double*)malloc(N*sizeof(double));
+            double*BETA=(double*)malloc(N*sizeof(double));
 
-        // check orthonormality
-        //for (int i = 0; i < N; i++) {
-        //    for (int j = 0; j < N; j++) {
-        //        double dum1 = 0.0;
-        //        double dum2 = 0.0;
-        //        for (int k = 0; k < N; k++) {
-        //            dum1 += VL[i*N+k] * VR[k*N+j];
-        //            dum2 += VL[k*N+i] * VR[j*N+k];
-        //        }
-        //        printf("ortho %5i %5i %20.12lf %20.12lf\n",i,j,dum1,dum2);
-        //    }
-        //}
+            info = C_DGGEV(JOBVL,JOBVR,N,V->pointer(h)[0],LDA,D->pointer(h)[0],LDB,ALPHAR,ALPHAI,BETA,VL,LDVL,VR,LDVR,WORK,LWORK);
 
-        for (int i = 0; i < N; i++) {
-            double max = 0.0;
-            int jmax = -999;
-            for (int j = 0; j < N; j++) {
-printf("%5i %5i %20.12lf %20.12lf\n",i,j,VL[i*N+j],VR[i*N+j]);
-                if ( fabs(VL[i*N+j]) > max ) {
-                    max = fabs(VL[i*N+j]);
-                    jmax = j;
+            for (int i = 0; i < N; i++) {
+                eigval[i] = ALPHAR[i]/BETA[i];
+            }
+  
+            free(WORK);
+            free(ALPHAR);
+            free(ALPHAI);
+            free(BETA); 
+
+        }else {
+
+            // 1 / D * V
+            for (int i = 0; i < N; i++) {
+                for (int j = 0; j < N; j++) {
+                    V->pointer(h)[i][j] /= D->pointer(h)[i][i];
                 }
             }
-            double jocc = Da_save->pointer(h)[jmax][jmax];
-            outfile->Printf("    ");
-            outfile->Printf("    %5i",h);
-            outfile->Printf("    %5i",i);
-            outfile->Printf("%14.6lf",ALPHAR[i]/BETA[i]);
-            outfile->Printf("%14.6lf",jocc);
-            outfile->Printf("\n");
+
+            long int LWORK = 4*N;
+            double * WORK  = (double*)malloc(LWORK*sizeof(double));
+            double * WI = (double*)malloc(N*sizeof(double));
+
+            DGEEV(JOBVL,JOBVR,N,V->pointer(h)[0],N,eigval,WI,VL,N,VR,N,WORK,LWORK,info);
+
+            free(WI);
+            free(WORK);
         }
-        outfile->Printf("\n");
-  
-        free(VR);
-        free(VL);
-        free(WORK);
-        free(ALPHAR);
-        free(ALPHAI);
-        free(BETA); 
-*/
-        long int info;
-        char jobl = 'V';
-        char jobr = 'V';
-
-        long int lwork = 4*N;
-        double * work  = (double*)malloc(lwork*sizeof(double));
-        double * wi = (double*)malloc(N*sizeof(double));
-        double * eigval = (double*)malloc(N*sizeof(double));
-        double * vl = (double*)malloc(N*N*sizeof(double));
-        double * vr = (double*)malloc(N*N*sizeof(double));
-
-        DGEEV(jobl,jobr,N,Va->pointer(h)[0],N,eigval,wi,vl,N,vr,N,work,lwork,info);
-
-        //for (int i = 0; i < N; i++) {
-        //    for (int j = 0; j < N; j++) {
-        //        printf("coeffs %5i %5i %20.12lf %20.12lf %20.12lf\n",i,j,vl[i*N+j],vr[i*N+j],Da_save->pointer(h)[j][j]);
-        //    }
-        //}
-        // check orthonormality
-        //for (int i = 0; i < N; i++) {
-        //    for (int j = 0; j < N; j++) {
-        //        double dum1 = 0.0;
-        //        double dum2 = 0.0;
-        //        for (int k = 0; k < N; k++) {
-        //            //dum1 += vl[i*N+k] * vr[j*N+k];
-        //            //dum2 += vl[k*N+i] * vr[k*N+j];
-        //            dum1 += vl[i*N+k] * vl[j*N+k];
-        //            dum2 += vr[i*N+k] * vr[j*N+k];
-        //        }
-        //        printf("ortho %5i %5i %20.12lf %20.12lf\n",i,j,dum1,dum2);
-        //    }
-        //}
 
         int count = 0;
         for (int i = 0; i < N; i++) {
             double max = 0.0;
             int jmax = -999;
             for (int j = 0; j < N; j++) {
-                if ( fabs(vr[i*N+j]) > max ) {
-                    max = fabs(vr[i*N+j]);
+                if ( fabs(VR[i*N+j]) > max ) {
+                    max = fabs(VR[i*N+j]);
                     jmax = j;
                 }
             }
-            double jocc = Da_save->pointer(h)[jmax][jmax];
+            double jocc = Dsave->pointer(h)[jmax][jmax];
             outfile->Printf("    ");
             outfile->Printf("    %5i",h);
             outfile->Printf("    %5i",i);
@@ -580,22 +574,14 @@ printf("%5i %5i %20.12lf %20.12lf\n",i,j,VL[i*N+j],VR[i*N+j]);
 
             // occupied orbital energies
             if ( jocc > 0.5 ) {
-                epsilon_a_->pointer(h)[count++] = -eigval[i];
+                epsilon->pointer(h)[count++] = -eigval[i];
             }
         }
-        outfile->Printf("\n");
-
-
-        free(wi);
-        free(work);
-        free(vr);
-        free(vl);
+        //outfile->Printf("\n");
+        free(VR);
+        free(VL);
         free(eigval);
     }
-
-    for (int h = 0; h < nirrep_; h++) {
-    }
-
 
 }
 

@@ -363,6 +363,8 @@ class v2RDMSolver: public Wavefunction{
 
     /// extended koopman's theorem
     void ExtendedKoopmans();
+    void EKTEigensolver(std::shared_ptr<Matrix> V, std::shared_ptr<Matrix> D, std::shared_ptr<Vector> epsilon, bool use_dggev,std::string spin);
+
 
     /// compute natural orbitals and transform OPDM and TPDM to natural orbital basis
     void ComputeNaturalOrbitals();
