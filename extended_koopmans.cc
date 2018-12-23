@@ -462,10 +462,10 @@ void v2RDMSolver::ExtendedKoopmans() {
     // now ... diagonalize each block using nonsymmetric eigensolver 
 
     // alpha
-    EKTEigensolver(Va,Da,epsilon_a_,true,"alpha");
+    EKTEigensolver(Va,Da,epsilon_a_,false,"alpha");
 
     // beta
-    EKTEigensolver(Vb,Db,epsilon_b_,true,"beta");
+    EKTEigensolver(Vb,Db,epsilon_b_,false,"beta");
 }
 
 void v2RDMSolver::EKTEigensolver(std::shared_ptr<Matrix> V, std::shared_ptr<Matrix> D, std::shared_ptr<Vector> epsilon, bool use_dggev,std::string spin) {

@@ -525,7 +525,7 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
 
     // if dumping integrals to disk, transform these to the NO basis as well.
 
-    if ( options_.get_bool("FCIDUMP") ) {
+    if ( options_.get_bool("FCIDUMP") || options_.get_bool("EXTENDED_KOOPMANS") ) {
 
         if ( is_df_ ) {
             free(Qmo_);
