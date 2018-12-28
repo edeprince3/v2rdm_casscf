@@ -55,7 +55,6 @@ endif()
 message(STATUS "Plugin module install: ${PYMOD_INSTALL_FULLDIR}")
 
 
-include(custom_cxxstandard)
 include(custom_static_library)
 
 # <<<  Build  >>>
