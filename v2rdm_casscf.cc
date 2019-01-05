@@ -50,7 +50,7 @@ int read_options(std::string name, Options& options)
         /*- do extended koopmans theorem computation? -*/
         options.add_bool("EXTENDED_KOOPMANS",false);
         /*- !expert -*/
-        options.add_double("DOCI_ALPHA", 0.0);
+        //options.add_double("DOCI_ALPHA", 0.0);
         /*- Do v2RDM-CASSCF gradient? !expert -*/
         /* Do write fcidump files? -*/
         options.add_bool("FCIDUMP", false);
