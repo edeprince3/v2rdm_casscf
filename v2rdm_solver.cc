@@ -30,6 +30,7 @@
 #include <math.h>
 
 
+#include <psi4/libmints/mintshelper.h>
 #include <psi4/libmints/writer.h>
 #include <psi4/libmints/writer_file_prefix.h>
 
@@ -1887,8 +1888,12 @@ double v2RDMSolver::compute_energy() {
 
     // break down energy into one- and two-electron components
 
-    T_->transform(Ca_);
-    V_->transform(Ca_);
+    std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
+    std::shared_ptr<Matrix> myT (new Matrix(mints->so_kinetic()));
+    std::shared_ptr<Matrix> myV (new Matrix(mints->so_potential()));
+
+    myT->transform(Ca_);
+    myV->transform(Ca_);
 
     double kinetic = 0.0;
     double potential = 0.0;
@@ -1898,11 +1903,11 @@ double v2RDMSolver::compute_energy() {
             for (int j = 0; j < amopi_[h]; j++) {
                 int jj = j + rstcpi_[h] + frzcpi_[h];
 
-                kinetic   += T_->pointer()[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j];
-                kinetic   += T_->pointer()[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j];
+                kinetic   += myT->pointer(h)[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j];
+                kinetic   += myT->pointer(h)[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j];
 
-                potential += V_->pointer()[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j];
-                potential += V_->pointer()[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j];
+                potential += myV->pointer(h)[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j];
+                potential += myV->pointer(h)[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j];
             }
         }
     }
@@ -1911,8 +1916,8 @@ double v2RDMSolver::compute_energy() {
     // remove one-electron parts of frozen core energy
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
-            two_electron_energy -= 2.0 * T_->pointer()[i][i];
-            two_electron_energy -= 2.0 * V_->pointer()[i][i];
+            two_electron_energy -= 2.0 * myT->pointer(h)[i][i];
+            two_electron_energy -= 2.0 * myV->pointer(h)[i][i];
         }
     }
     double active_two_electron_energy = 0.0;
@@ -1935,8 +1940,8 @@ double v2RDMSolver::compute_energy() {
     // lastly, don't forget core contribution to kinetic and potential energy
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
-            kinetic   += 2.0 * T_->pointer()[i][i];
-            potential += 2.0 * V_->pointer()[i][i];
+            kinetic   += 2.0 * myT->pointer(h)[i][i];
+            potential += 2.0 * myV->pointer(h)[i][i];
         }
     }
     outfile->Printf("      v2RDM total spin [S(S+1)]: %20.6lf\n", 0.5 * (na + nb) + ms*ms - s2);
