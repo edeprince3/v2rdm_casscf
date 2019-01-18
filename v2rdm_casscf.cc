@@ -50,12 +50,16 @@ int read_options(std::string name, Options& options)
         /*- do extended koopmans theorem computation? -*/
         options.add_bool("EXTENDED_KOOPMANS",false);
         /*- !expert -*/
-        //options.add_double("DOCI_ALPHA", 0.0);
+        options.add_bool("DOCI",false);
+        /*- !expert -*/
+        options.add_double("DOCI_ALPHA", 0.0);
         /*- Do v2RDM-CASSCF gradient? !expert -*/
         /* Do write fcidump files? -*/
         options.add_bool("FCIDUMP", false);
         /* Do v2RDM-CASSCF gradient? !expert -*/
         options.add_str("DERTYPE", "NONE", "NONE FIRST");
+        /*- Do localize orbitals? -*/
+        options.add_bool("LOCALIZE_ORBITALS",false);
         /*- Do optimize orbitals? -*/
         options.add_bool("OPTIMIZE_ORBITALS",true);
         /*- Rotate guess orbitals -*/

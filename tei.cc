@@ -168,17 +168,17 @@ void v2RDMSolver::RepackIntegrals(){
 
                 int hik = SymmetryPair(symmetry[i],symmetry[k]);
 
-                //if ( is_doci_ ) {
-                //    if ( i == k && j == l ) {
-                //        c_p[d2aboff[h] + ij*gems_ab[h]+kl] = TEI(ii,kk,jj,ll,hik) * doci_ref_;
-                //    }else if ( i == j && k == l ) {
-                //        c_p[d2aboff[h] + ij*gems_ab[h]+kl] = TEI(ii,kk,jj,ll,hik) * doci_ref_;
-                //    }else {
-                //        c_p[d2aboff[h] + ij*gems_ab[h]+kl] = TEI(ii,kk,jj,ll,hik) * doci_alpha_;
-                //    }
-                //}else {
+                if ( is_doci_ ) {
+                    if ( i == k && j == l ) {
+                        c_p[d2aboff[h] + ij*gems_ab[h]+kl] = TEI(ii,kk,jj,ll,hik) * doci_ref_;
+                    }else if ( i == j && k == l ) {
+                        c_p[d2aboff[h] + ij*gems_ab[h]+kl] = TEI(ii,kk,jj,ll,hik) * doci_ref_;
+                    }else {
+                        c_p[d2aboff[h] + ij*gems_ab[h]+kl] = TEI(ii,kk,jj,ll,hik) * doci_alpha_;
+                    }
+                }else {
                     c_p[d2aboff[h] + ij*gems_ab[h]+kl] = TEI(ii,kk,jj,ll,hik);
-                //}
+                }
 
             }
         }
@@ -206,21 +206,21 @@ void v2RDMSolver::RepackIntegrals(){
                 double dum1 = TEI(ii,kk,jj,ll,hik);
                 double dum2 = TEI(ii,ll,jj,kk,hil);
 
-                //if ( is_doci_ ) {
-                //    if ( i == k && j == l ) {
-                //        c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = (dum1 - dum2) * doci_ref_;
-                //        c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = (dum1 - dum2) * doci_ref_;
-                //    }else if ( i == l && j == k ) {
-                //        c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = (dum1 - dum2) * doci_ref_;
-                //        c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = (dum1 - dum2) * doci_ref_;
-                //    }else {
-                //        c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = doci_alpha_ * (dum1 - dum2);
-                //        c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = doci_alpha_ * (dum1 - dum2);
-                //    }
-                //}else {
+                if ( is_doci_ ) {
+                    if ( i == k && j == l ) {
+                        c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = (dum1 - dum2) * doci_ref_;
+                        c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = (dum1 - dum2) * doci_ref_;
+                    }else if ( i == l && j == k ) {
+                        c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = (dum1 - dum2) * doci_ref_;
+                        c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = (dum1 - dum2) * doci_ref_;
+                    }else {
+                        c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = doci_alpha_ * (dum1 - dum2);
+                        c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = doci_alpha_ * (dum1 - dum2);
+                    }
+                }else {
                     c_p[d2aaoff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
                     c_p[d2bboff[h] + ij*gems_aa[h]+kl]    = dum1 - dum2;
-                //}
+                }
             }
         }
     }
@@ -295,15 +295,15 @@ void v2RDMSolver::FrozenCoreEnergy() {
                 c_p[d1aoff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] += dum;
                 c_p[d1boff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] += dum;
 
-                //if ( is_doci_ ) {
-                //    if ( i != j ) {
-                //        c_p[d1aoff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] *= doci_alpha_;
-                //        c_p[d1boff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] *= doci_alpha_;
-                //    }else {
-                //        c_p[d1aoff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] *= doci_ref_;
-                //        c_p[d1boff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] *= doci_ref_;
-                //    }
-                //}
+                if ( is_doci_ ) {
+                    if ( i != j ) {
+                        c_p[d1aoff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] *= doci_alpha_;
+                        c_p[d1boff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] *= doci_alpha_;
+                    }else {
+                        c_p[d1aoff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] *= doci_ref_;
+                        c_p[d1boff[h] + (i-rstcpi_[h]-frzcpi_[h])*amopi_[h] + (j-rstcpi_[h]-frzcpi_[h])] *= doci_ref_;
+                    }
+                }
             }
         }
         offset += nmopi_[h] - frzvpi_[h];
