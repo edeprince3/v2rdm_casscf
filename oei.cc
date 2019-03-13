@@ -64,18 +64,12 @@ SharedMatrix v2RDMSolver::GetOEI() {
     std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
     T_ = (std::shared_ptr<Matrix> ) (new Matrix(mints->so_kinetic()));
     V_ = (std::shared_ptr<Matrix> ) (new Matrix(mints->so_potential()));
-        S_->print();
-        T_->print();
-        V_->print();
 
     if (options_.get_str("RELATIVISTIC") == "X2C") {
         X2CInt x2cint;
         std::shared_ptr<BasisSet> basisset = reference_wavefunction_->get_basisset("ORBITAL"); 
         std::shared_ptr<BasisSet> rel_basisset = reference_wavefunction_->get_basisset("BASIS_RELATIVISTIC");
         x2cint.compute(basisset, rel_basisset, S_, T_, V_); 
-        S_->print();
-        T_->print();
-        V_->print();
 
     }
 
