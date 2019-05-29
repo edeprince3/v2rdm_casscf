@@ -511,7 +511,7 @@ class v2RDMSolver: public Wavefunction{
     void FCIDUMP();
 
     /// break down energy into components
-    double EnergyByComponent(double doci_ref, double doci_alpha, double &kinetic, double &potential, double &two_electron_energy);
+    void EnergyByComponent(double doci_ref, double doci_alpha, double &kinetic, double &potential, double &two_electron_energy);
 };
 
 }}

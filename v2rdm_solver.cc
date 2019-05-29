@@ -2065,7 +2065,7 @@ double v2RDMSolver::compute_energy() {
     return energy_primal + enuc_ + efzc_;
 }
 
-double v2RDMSolver::EnergyByComponent(double doci_ref, double doci_alpha, double &kinetic, double &potential, double &two_electron_energy) {
+void v2RDMSolver::EnergyByComponent(double doci_ref, double doci_alpha, double &kinetic, double &potential, double &two_electron_energy) {
 
     double * x_p = x->pointer();
     double * c_p = c->pointer();
@@ -2076,7 +2076,6 @@ double v2RDMSolver::EnergyByComponent(double doci_ref, double doci_alpha, double
 
     myT->transform(Ca_);
     myV->transform(Ca_);
-
     kinetic = 0.0;
     potential = 0.0;
 

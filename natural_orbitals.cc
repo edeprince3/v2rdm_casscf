@@ -39,8 +39,21 @@ namespace psi{ namespace v2rdm_casscf {
 
 void v2RDMSolver::ComputeNaturalOrbitals() {
 
+    //if ( nalpha_ != nbeta_ || !constrain_spin_ ) {
+    //    throw PsiException("natural orbital transformation only implemented for closed-shell systems with spin symmetry enforced",__FILE__,__LINE__);
+    //}
+
     if ( nalpha_ != nbeta_ || !constrain_spin_ ) {
-        throw PsiException("natural orbital transformation only implemented for closed-shell systems with spin symmetry enforced",__FILE__,__LINE__);
+
+        outfile->Printf("\n");
+        outfile->Printf("    ==> Warning <==\n");
+        outfile->Printf("\n");
+        outfile->Printf("        The natural orbitals computed here for EKT and FCIDUMP are\n");
+        outfile->Printf("        the natural orbitals of the spin-free 1-RDM. On the other\n");
+        outfile->Printf("        hand, the natural orbital occupation numbers printed below\n");
+        outfile->Printf("        correspond to natural spin orbitals.\n");
+        outfile->Printf("\n");
+
     }
 
     SharedMatrix D (new Matrix(nirrep_,amopi_,amopi_));
