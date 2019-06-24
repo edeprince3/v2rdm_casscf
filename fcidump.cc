@@ -219,6 +219,8 @@ void v2RDMSolver::FCIDUMP() {
         }
     }
 
+    double e1 = 0.0;
+
     // one-electron rdm
     for (int h = 0; h < nirrep_; h++) {
         for (int ij = 0; ij < gems_ab[h]; ij++) {
@@ -235,6 +237,13 @@ void v2RDMSolver::FCIDUMP() {
 
             double dum = x_p[d1aoff[hi] + ii * amopi_[hi] + jj] + x_p[d1boff[hi] + ii * amopi_[hi] + jj];
 
+            //double ** Tp = T->pointer(hi);
+            //double ** Vp = V->pointer(hi);
+
+            //ii += rstcpi_[hi];
+            //jj += rstcpi_[hi];
+            //e1 += dum * (Tp[ii][jj] + Vp[ii][jj]);
+
             ii = map[full_basis[i]] - ninact;
             jj = map[full_basis[j]] - ninact;
 
@@ -246,6 +255,15 @@ void v2RDMSolver::FCIDUMP() {
 
         }
     }
+
+    //for (int h = 0; h < nirrep_; h++) {
+    //    double ** Tp = T->pointer(h);
+    //    double ** Vp = V->pointer(h);
+    //    for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
+    //        e1 += 2.0 * (Tp[i][i] + Vp[i][i]);
+    //    }
+    //}
+    //printf("%20.12lf\n",e1);
 
     fclose(rdm_fp);
 

@@ -1951,11 +1951,8 @@ double v2RDMSolver::compute_energy() {
         outfile->Printf("      W2(%20.12lf):          %20.12lf\n",options_.get_double("DOCI_ALPHA"),two_electron_energy);
     }
 
-
-
     Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc_+efzc_;
     Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc_+efzc_;
-
 
     if ( options_.get_bool("SEMICANONICALIZE_ORBITALS") ) {
         if ( options_.get_str("DERTYPE") == "FIRST" ) {
@@ -2087,19 +2084,19 @@ void v2RDMSolver::EnergyByComponent(double doci_ref, double doci_alpha, double &
 
                 if ( ii == jj ) continue;
                 
-                kinetic   += myT->pointer(h)[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j] * doci_alpha_;
-                kinetic   += myT->pointer(h)[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j] * doci_alpha_;
+                kinetic   += myT->pointer(h)[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j] * doci_alpha;
+                kinetic   += myT->pointer(h)[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j] * doci_alpha;
                 
-                potential += myV->pointer(h)[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j] * doci_alpha_;
-                potential += myV->pointer(h)[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j] * doci_alpha_;
+                potential += myV->pointer(h)[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j] * doci_alpha;
+                potential += myV->pointer(h)[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j] * doci_alpha;
             
             }
 
-            kinetic   += myT->pointer(h)[ii][ii] * x_p[d1aoff[h] + i * amopi_[h] + i] * doci_ref_;
-            kinetic   += myT->pointer(h)[ii][ii] * x_p[d1boff[h] + i * amopi_[h] + i] * doci_ref_;
+            kinetic   += myT->pointer(h)[ii][ii] * x_p[d1aoff[h] + i * amopi_[h] + i] * doci_ref;
+            kinetic   += myT->pointer(h)[ii][ii] * x_p[d1boff[h] + i * amopi_[h] + i] * doci_ref;
             
-            potential += myV->pointer(h)[ii][ii] * x_p[d1aoff[h] + i * amopi_[h] + i] * doci_ref_;
-            potential += myV->pointer(h)[ii][ii] * x_p[d1boff[h] + i * amopi_[h] + i] * doci_ref_;
+            potential += myV->pointer(h)[ii][ii] * x_p[d1aoff[h] + i * amopi_[h] + i] * doci_ref;
+            potential += myV->pointer(h)[ii][ii] * x_p[d1boff[h] + i * amopi_[h] + i] * doci_ref;
             
         }
     }
@@ -2108,8 +2105,8 @@ void v2RDMSolver::EnergyByComponent(double doci_ref, double doci_alpha, double &
     // remove one-electron parts of frozen core energy
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
-            two_electron_energy -= 2.0 * myT->pointer(h)[i][i] * doci_ref_;
-            two_electron_energy -= 2.0 * myV->pointer(h)[i][i] * doci_ref_;
+            two_electron_energy -= 2.0 * myT->pointer(h)[i][i] * doci_ref;
+            two_electron_energy -= 2.0 * myV->pointer(h)[i][i] * doci_ref;
         }
     }
     double active_two_electron_energy = 0.0;
@@ -2134,8 +2131,8 @@ void v2RDMSolver::EnergyByComponent(double doci_ref, double doci_alpha, double &
     // lastly, don't forget core contribution to kinetic and potential energy
     for (int h = 0; h < nirrep_; h++) {
         for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
-            kinetic   += 2.0 * myT->pointer(h)[i][i] * doci_ref_;
-            potential += 2.0 * myV->pointer(h)[i][i] * doci_ref_;
+            kinetic   += 2.0 * myT->pointer(h)[i][i] * doci_ref;
+            potential += 2.0 * myV->pointer(h)[i][i] * doci_ref;
         }
     }
 }
