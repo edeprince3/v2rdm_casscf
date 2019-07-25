@@ -183,10 +183,18 @@ void v2RDMSolver::FCIDUMP() {
         for (int ij = 0; ij < gems_ab[h]; ij++) {
             int i = bas_ab_sym[h][ij][0];
             int j = bas_ab_sym[h][ij][1];
+
+            int ji = ibas_ab_sym[h][j][i];
+
             for (int kl = 0; kl < gems_ab[h]; kl++) {
                 int k = bas_ab_sym[h][kl][0];
                 int l = bas_ab_sym[h][kl][1];
-                double dum = 2.0 * x_p[d2aboff[h] + ij * gems_ab[h] + kl];
+
+                int lk = ibas_ab_sym[h][l][k];
+
+                double dum = x_p[d2aboff[h] + ij * gems_ab[h] + kl]
+                           + x_p[d2aboff[h] + ji * gems_ab[h] + lk];
+
                 if ( i != j && k != l ) {
 
                     int ija = ibas_aa_sym[h][i][j];
