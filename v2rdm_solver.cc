@@ -231,13 +231,6 @@ void  v2RDMSolver::common_init(){
     nalpha_   = reference_wavefunction_->nalpha();
     nbeta_    = reference_wavefunction_->nbeta();
 
-    double fractional_charge = options_.get_double("FRACTIONAL_CHARGE");
-    if ( fractional_charge > 0.0 ) { 
-        nalpha_ -= options_.get_double("FRACTIONAL_CHARGE");
-    }else {
-        nbeta_ -= options_.get_double("FRACTIONAL_CHARGE");
-    }
-
     nalphapi_ = reference_wavefunction_->nalphapi();
     nbetapi_  = reference_wavefunction_->nbetapi();
     doccpi_   = reference_wavefunction_->doccpi();
@@ -400,12 +393,20 @@ void  v2RDMSolver::common_init(){
         std::shared_ptr<BoysLocalizer> boys_vir (new BoysLocalizer(reference_wavefunction_->basisset(),reference_wavefunction_->Ca_subset("SO","VIR")));
         boys_vir->localize();
         for (int mu = 0; mu < nso_; mu++) {
-            for (int i = nalpha_; i < nso_; i++) {
-                Ca_->pointer()[mu][i] = boys_vir->L()->pointer()[mu][i - nalpha_];
-                Cb_->pointer()[mu][i] = boys_vir->L()->pointer()[mu][i - nalpha_];
+            for (int i = (int)nalpha_; i < nso_; i++) {
+                Ca_->pointer()[mu][i] = boys_vir->L()->pointer()[mu][i - (int)nalpha_];
+                Cb_->pointer()[mu][i] = boys_vir->L()->pointer()[mu][i - (int)nalpha_];
             }
         }
     }
+
+    double fractional_charge = options_.get_double("FRACTIONAL_CHARGE");
+    if ( fractional_charge > 0.0 ) { 
+        nalpha_ -= options_.get_double("FRACTIONAL_CHARGE");
+    }else {
+        nbeta_ -= options_.get_double("FRACTIONAL_CHARGE");
+    }
+
 
     S_  = (SharedMatrix)(new Matrix(reference_wavefunction_->S()));
 
