@@ -213,6 +213,14 @@ void  v2RDMSolver::common_init(){
     escf_     = reference_wavefunction_->reference_energy();
     nalpha_   = reference_wavefunction_->nalpha();
     nbeta_    = reference_wavefunction_->nbeta();
+
+    double fractional_charge = options_.get_double("FRACTIONAL_CHARGE");
+    if ( fractional_charge > 0.0 ) { 
+        nalpha_ -= options_.get_double("FRACTIONAL_CHARGE");
+    }else {
+        nbeta_ -= options_.get_double("FRACTIONAL_CHARGE");
+    }
+
     nalphapi_ = reference_wavefunction_->nalphapi();
     nbetapi_  = reference_wavefunction_->nbetapi();
     doccpi_   = reference_wavefunction_->doccpi();
@@ -833,9 +841,15 @@ void  v2RDMSolver::common_init(){
     // constraints:
     nconstraints_ = 0;
 
-    nconstraints_ += 1;                   // Tr(D2ab)
-    nconstraints_ += 1;                   // Tr(D2aa)
-    nconstraints_ += 1;                   // Tr(D2bb)
+    constrain_sz_ = options_.get_bool("CONSTRAIN_SZ");
+
+    if ( constrain_sz_ ) {
+        nconstraints_ += 1;                   // Tr(D2ab)
+        nconstraints_ += 1;                   // Tr(D2aa)
+        nconstraints_ += 1;                   // Tr(D2bb)
+    }else{
+        nconstraints_ += 1;                   // Tr(D2ab + D2aa + D2bb)
+    }
 
     //for ( int h = 0; h < nirrep_; h++) {
     //    nconstraints_ += gems_ab[h]*gems_ab[h]; // D2ab hermiticity
@@ -849,17 +863,26 @@ void  v2RDMSolver::common_init(){
     for ( int h = 0; h < nirrep_; h++) {
         nconstraints_ += amopi_[h]*amopi_[h]; // D1b <-> Q1b
     }
-    for ( int h = 0; h < nirrep_; h++) {
-        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2ab        -> D1 a
-    }
-    for ( int h = 0; h < nirrep_; h++) {
-        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2ab        -> D1 b
-    }
-    for ( int h = 0; h < nirrep_; h++) {
-        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2aa        -> D1 a
-    }
-    for ( int h = 0; h < nirrep_; h++) {
-        nconstraints_ += amopi_[h]*amopi_[h]; // contract D2bb        -> D1 b
+    if ( constrain_sz_ ) {
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += amopi_[h]*amopi_[h]; // contract D2ab        -> D1 a
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += amopi_[h]*amopi_[h]; // contract D2ab        -> D1 b
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += amopi_[h]*amopi_[h]; // contract D2aa        -> D1 a
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += amopi_[h]*amopi_[h]; // contract D2bb        -> D1 b
+        }
+    }else {
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += amopi_[h]*amopi_[h]; // contract D2aa + D2ab        -> D1 a
+        }
+        for ( int h = 0; h < nirrep_; h++) {
+            nconstraints_ += amopi_[h]*amopi_[h]; // contract D2bb + D2ab        -> D1 b
+        }
     }
 
     if ( constrain_spin_ ) {
@@ -1857,8 +1880,8 @@ double v2RDMSolver::compute_energy() {
             s2 += x_p[d2aboff[h] + ij*gems_ab[h]+ji];
         }
     }
-    int na = nalpha_ - nfrzc_ - nrstc_;
-    int nb = nbeta_ - nfrzc_ - nrstc_;
+    double na = nalpha_ - nfrzc_ - nrstc_;
+    double nb = nbeta_ - nfrzc_ - nrstc_;
     double ms = (multiplicity_ - 1.0)/2.0;
 
     // set energy for wavefunction
@@ -1918,6 +1941,8 @@ double v2RDMSolver::compute_energy() {
             potential += 2.0 * V_->pointer()[i][i];
         }
     }
+    outfile->Printf("      na:                        %20.6lf\n", na);
+    outfile->Printf("      nb:                        %20.6lf\n", nb);
     outfile->Printf("      v2RDM total spin [S(S+1)]: %20.6lf\n", 0.5 * (na + nb) + ms*ms - s2);
     outfile->Printf("\n");
     outfile->Printf("      Nuclear Repulsion Energy:          %20.12lf\n",enuc_);
@@ -2387,13 +2412,15 @@ void v2RDMSolver::BuildConstraints(){
 
     //constraint on the Trace of D2(s=0,ms=0)
 
-    int na = nalpha_ - nfrzc_ - nrstc_;
-    int nb = nbeta_ - nfrzc_ - nrstc_;
+    double na = nalpha_ - nfrzc_ - nrstc_;
+    double nb = nbeta_ - nfrzc_ - nrstc_;
     double trdab = na * nb;
 
     //constraint on the Trace of D2(s=1,ms=0)
     double trdaa  = na*(na-1.0);
     double trdbb  = nb*(nb-1.0);
+    double n = na + nb;
+    double trd    = n*(n-1.0);
 
     b->zero();
     double* b_p = b->pointer();
@@ -2401,9 +2428,13 @@ void v2RDMSolver::BuildConstraints(){
     offset = 0;
 
     ///Trace of D2(s=0,ms=0) and D2(s=1,ms=0)
-    b_p[offset++] = trdab;
-    b_p[offset++] = trdaa;
-    b_p[offset++] = trdbb;
+    if ( constrain_sz_ ) {
+        b_p[offset++] = trdab;
+        b_p[offset++] = trdaa;
+        b_p[offset++] = trdbb;
+    }else{
+        b_p[offset++] = trd;
+    }
 
     // d1 / q1 a
     for (int h = 0; h < nirrep_; h++) {
@@ -2425,45 +2456,65 @@ void v2RDMSolver::BuildConstraints(){
         offset += amopi_[h]*amopi_[h];
     }
 
-    //contract D2ab -> D1a
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                b_p[offset + i*amopi_[h]+j] = 0.0;
+    if ( constrain_sz_ ) {
+        //contract D2ab -> D1a
+        for (int h = 0; h < nirrep_; h++) {
+            for(int i = 0; i < amopi_[h]; i++){
+                for(int j = 0; j < amopi_[h]; j++){
+                    b_p[offset + i*amopi_[h]+j] = 0.0;
+                }
             }
+            offset += amopi_[h]*amopi_[h];
         }
-        offset += amopi_[h]*amopi_[h];
-    }
 
-    //contract D2ab -> D1b
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                b_p[offset + i*amopi_[h]+j] = 0.0;
+        //contract D2ab -> D1b
+        for (int h = 0; h < nirrep_; h++) {
+            for(int i = 0; i < amopi_[h]; i++){
+                for(int j = 0; j < amopi_[h]; j++){
+                    b_p[offset + i*amopi_[h]+j] = 0.0;
+                }
             }
+            offset += amopi_[h]*amopi_[h];
         }
-        offset += amopi_[h]*amopi_[h];
-    }
+        //contract D2aa -> D1a
+        for (int h = 0; h < nirrep_; h++) {
+            for(int i = 0; i < amopi_[h]; i++){
+                for(int j = 0; j < amopi_[h]; j++){
+                    b_p[offset + i*amopi_[h]+j] = 0.0;
+                }
+            }
+            offset += amopi_[h]*amopi_[h];
+        }
+        //contract D2bb -> D1b
+        for (int h = 0; h < nirrep_; h++) {
+            for(int i = 0; i < amopi_[h]; i++){
+                for(int j = 0; j < amopi_[h]; j++){
+                    b_p[offset + i*amopi_[h]+j] = 0.0;
+                }
+            }
+            offset += amopi_[h]*amopi_[h];
+        }
+    }else {
+        //contract D2aa + D2ab -> D1a
+        for (int h = 0; h < nirrep_; h++) {
+            for(int i = 0; i < amopi_[h]; i++){
+                for(int j = 0; j < amopi_[h]; j++){
+                    b_p[offset + i*amopi_[h]+j] = 0.0;
+                }
+            }
+            offset += amopi_[h]*amopi_[h];
+        }
 
-    //contract D2aa -> D1a
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                b_p[offset + i*amopi_[h]+j] = 0.0;
+        //contract D2bb + D2ab -> D1b
+        for (int h = 0; h < nirrep_; h++) {
+            for(int i = 0; i < amopi_[h]; i++){
+                for(int j = 0; j < amopi_[h]; j++){
+                    b_p[offset + i*amopi_[h]+j] = 0.0;
+                }
             }
+            offset += amopi_[h]*amopi_[h];
         }
-        offset += amopi_[h]*amopi_[h];
     }
-    //contract D2bb -> D1b
-    for (int h = 0; h < nirrep_; h++) {
-        for(int i = 0; i < amopi_[h]; i++){
-            for(int j = 0; j < amopi_[h]; j++){
-                b_p[offset + i*amopi_[h]+j] = 0.0;
-            }
-        }
-        offset += amopi_[h]*amopi_[h];
-    }
-
 
     if ( constrain_spin_ ) {
 

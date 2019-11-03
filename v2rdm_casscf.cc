@@ -47,7 +47,9 @@ extern "C" PSI_API
 int read_options(std::string name, Options& options)
 {
     if (name == "V2RDM_CASSCF"|| options.read_globals()) {
-        /* Do v2RDM-CASSCF gradient? !expert */
+        /*- fractional charge -*/
+        options.add_double("FRACTIONAL_CHARGE", 0.0);
+        /*- Do v2RDM-CASSCF gradient? !expert -*/
         options.add_str("DERTYPE", "NONE", "NONE FIRST");
         /*- Do optimize orbitals? -*/
         options.add_bool("OPTIMIZE_ORBITALS",true);
@@ -95,6 +97,8 @@ int read_options(std::string name, Options& options)
         options.add_bool("SPIN_ADAPT_Q2", false);
         /*- Do constrain spin squared? -*/
         options.add_bool("CONSTRAIN_SPIN", true);
+        /*- Do constrain sz? -*/
+        options.add_bool("CONSTRAIN_SZ", true);
         /*- convergence in the primal/dual energy gap -*/
         options.add_double("E_CONVERGENCE", 1e-4);
         /*- convergence in the primal error -*/

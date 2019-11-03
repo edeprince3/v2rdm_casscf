@@ -75,6 +75,9 @@ class v2RDMSolver: public Wavefunction{
 
   protected:
 
+    double nalpha_;
+    double nbeta_;
+
     /// constrain Q2 to be positive semidefinite?
     bool constrain_q2_;
 
@@ -101,6 +104,9 @@ class v2RDMSolver: public Wavefunction{
 
     /// constrain spin?
     bool constrain_spin_;
+
+    /// constrain sz?
+    bool constrain_sz_;
 
     /// symmetry product table:
     int * table;
