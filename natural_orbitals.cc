@@ -26,6 +26,10 @@
  */
 
 #include "v2rdm_solver.h"
+#include <psi4/libmints/mintshelper.h>
+
+#include <psi4/libtrans/integraltransform.h>
+#include <psi4/libtrans/mospace.h>
 
 
 using namespace psi;
@@ -35,8 +39,21 @@ namespace psi{ namespace v2rdm_casscf {
 
 void v2RDMSolver::ComputeNaturalOrbitals() {
 
+    //if ( nalpha_ != nbeta_ || !constrain_spin_ ) {
+    //    throw PsiException("natural orbital transformation only implemented for closed-shell systems with spin symmetry enforced",__FILE__,__LINE__);
+    //}
+
     if ( nalpha_ != nbeta_ || !constrain_spin_ ) {
-        throw PsiException("natural orbital transformation only implemented for closed-shell systems with spin symmetry enforced",__FILE__,__LINE__);
+
+        outfile->Printf("\n");
+        outfile->Printf("    ==> Warning <==\n");
+        outfile->Printf("\n");
+        outfile->Printf("        The natural orbitals computed here for EKT and FCIDUMP are\n");
+        outfile->Printf("        the natural orbitals of the spin-free 1-RDM. On the other\n");
+        outfile->Printf("        hand, the natural orbital occupation numbers printed below\n");
+        outfile->Printf("        correspond to natural spin orbitals.\n");
+        outfile->Printf("\n");
+
     }
 
     SharedMatrix D (new Matrix(nirrep_,amopi_,amopi_));
@@ -516,6 +533,28 @@ void v2RDMSolver::ComputeNaturalOrbitals() {
                 x->pointer()[d2bboff[h] + ij*gems_aa[h] + kl] = tempx2->pointer()[q2aboff[h]+ij_ab*gems_ab[h]+kl_ab];
 
             }
+        }
+    }
+
+    // if dumping integrals to disk, transform these to the NO basis as well.
+
+    if ( options_.get_bool("FCIDUMP") || options_.get_bool("EXTENDED_KOOPMANS") ) {
+
+        if ( is_df_ ) {
+            free(Qmo_);
+            ThreeIndexIntegrals();
+        }else {
+            std::vector<std::shared_ptr<MOSpace> > spaces;
+            spaces.push_back(MOSpace::all);
+            std::shared_ptr<IntegralTransform> ints(new IntegralTransform(reference_wavefunction_, spaces,
+                IntegralTransform::TransformationType::Restricted, IntegralTransform::OutputType::IWLOnly,
+                IntegralTransform::MOOrdering::PitzerOrder, IntegralTransform::FrozenOrbitals::None, false));
+            ints->set_dpd_id(0);
+            ints->set_keep_iwl_so_ints(true);
+            ints->set_keep_dpd_so_ints(true);
+            ints->initialize();
+            ints->transform_tei(MOSpace::all, MOSpace::all, MOSpace::all, MOSpace::all);
+            GetTEIFromDisk();
         }
     }
 

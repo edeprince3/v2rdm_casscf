@@ -1,6 +1,5 @@
 sys.path.insert(0, '../../..')
-import v2rdm_casscf
-
+import v2rdm_casscf 
 # job description
 print('        1,4-phenylenedinitrene/(10,10)/cc-pVDZ')
 

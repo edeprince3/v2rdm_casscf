@@ -367,6 +367,11 @@ class v2RDMSolver: public Wavefunction{
     void Update_xz();
     void Update_xz_nonsymmetric();
 
+    /// extended koopman's theorem
+    void ExtendedKoopmans();
+    void EKTEigensolver(std::shared_ptr<Matrix> V, std::shared_ptr<Matrix> D, std::shared_ptr<Vector> epsilon, bool use_dggev,std::string spin);
+
+
     /// compute natural orbitals and transform OPDM and TPDM to natural orbital basis
     void ComputeNaturalOrbitals();
 
@@ -426,6 +431,9 @@ class v2RDMSolver: public Wavefunction{
 
     /// is this a v2RDM-DOCI computation?
     bool is_doci_;
+
+    double doci_alpha_;
+    double doci_ref_;
 
     /// are we using 3-index integrals?
     bool is_df_;
@@ -504,6 +512,12 @@ class v2RDMSolver: public Wavefunction{
 
     /// mo-mo transformation matrix
     SharedMatrix newMO_;
+
+    /// FCIDUMP: dump integrals and RDMs to disk
+    void FCIDUMP();
+
+    /// break down energy into components
+    void EnergyByComponent(double doci_ref, double doci_alpha, double &kinetic, double &potential, double &two_electron_energy);
 };
 
 }}

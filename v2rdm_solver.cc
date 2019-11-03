@@ -30,6 +30,7 @@
 #include <math.h>
 
 
+#include <psi4/libmints/mintshelper.h>
 #include <psi4/libmints/writer.h>
 #include <psi4/libmints/writer_file_prefix.h>
 
@@ -52,6 +53,9 @@
 #include <psi4/libiwl/iwl.h>
 
 #include "blas.h"
+
+// boys localization
+#include "psi4/libmints/local.h"
 
 
 // JWM: Added to avoid error messages
@@ -201,12 +205,25 @@ v2RDMSolver::~v2RDMSolver()
 
 void  v2RDMSolver::common_init(){
 
-    is_doci_ = false;
+    is_doci_    = options_.get_bool("DOCI");
+    doci_alpha_ = options_.get_double("DOCI_ALPHA");
+    doci_ref_   = 1.0;
 
     is_df_ = false;
     if ( options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD" ) {
         is_df_ = true;
     }
+
+    //if ( !is_df_ && is_doci_ ) {
+    //    throw PsiException("toy doci code only works with scf_type df",__FILE__,__LINE__);
+    //}
+
+    //if ( options_.get_bool("EXTENDED_KOOPMANS") && options_.get_bool("NAT_ORBS") ) {
+    //    throw PsiException("EKT does not work with natural orbitals",__FILE__,__LINE__);
+    //}
+    //if ( options_.get_bool("EXTENDED_KOOPMANS") && options_.get_bool("FCIDUMP") ) {
+    //    throw PsiException("EKT does not work with natural orbitals (triggered by FCIDUMP=true)",__FILE__,__LINE__);
+    //}
 
     shallow_copy(reference_wavefunction_);
 
@@ -369,6 +386,27 @@ void  v2RDMSolver::common_init(){
     Ca_ = SharedMatrix(reference_wavefunction_->Ca());
     Cb_ = SharedMatrix(reference_wavefunction_->Cb());
 
+    if ( options_.get_bool("LOCALIZE_ORBITALS") ) {
+        // localize orbitals:
+        std::shared_ptr<BoysLocalizer> boys (new BoysLocalizer(reference_wavefunction_->basisset(),reference_wavefunction_->Ca_subset("SO","OCC")));
+        boys->localize();
+        for (int mu = 0; mu < nso_; mu++) {
+            for (int i = 0; i < nalpha_; i++) {
+                Ca_->pointer()[mu][i] = boys->L()->pointer()[mu][i];
+                Cb_->pointer()[mu][i] = boys->L()->pointer()[mu][i];
+            }
+        }
+        // localize orbitals (virtual):
+        std::shared_ptr<BoysLocalizer> boys_vir (new BoysLocalizer(reference_wavefunction_->basisset(),reference_wavefunction_->Ca_subset("SO","VIR")));
+        boys_vir->localize();
+        for (int mu = 0; mu < nso_; mu++) {
+            for (int i = nalpha_; i < nso_; i++) {
+                Ca_->pointer()[mu][i] = boys_vir->L()->pointer()[mu][i - nalpha_];
+                Cb_->pointer()[mu][i] = boys_vir->L()->pointer()[mu][i - nalpha_];
+            }
+        }
+    }
+
     S_  = (SharedMatrix)(new Matrix(reference_wavefunction_->S()));
 
     Fa_  = (SharedMatrix)(new Matrix(reference_wavefunction_->Fa()));
@@ -401,6 +439,13 @@ void  v2RDMSolver::common_init(){
         amo_   += nmopi_[h]-frzcpi_[h]-rstcpi_[h]-rstvpi_[h]-frzvpi_[h];
         ndocc    += doccpi_[h];
         amopi_[h] = nmopi_[h]-frzcpi_[h]-rstcpi_[h]-rstvpi_[h]-frzvpi_[h];
+    }
+
+    // make sure toy doci computations are done in the full space
+    if ( is_doci_ ) {
+        if ( amo_ != nmo_ ) {
+            throw PsiException("all orbitals must be active for doci computaitons",__FILE__,__LINE__);
+        }
     }
 
     int ndoccact = ndocc - nfrzc_ - nrstc_;
@@ -1890,72 +1935,49 @@ double v2RDMSolver::compute_energy() {
     // push final transformation matrix onto Ca_ and Cb_
     UpdateTransformationMatrix();
 
+    energy_primal = C_DDOT(dimx_,c->pointer(),1,x->pointer(),1);
+
     // break down energy into one- and two-electron components
 
-    T_->transform(Ca_);
-    V_->transform(Ca_);
+    double kinetic, potential, two_electron_energy;
+    EnergyByComponent(1.0,1.0,kinetic,potential,two_electron_energy);
 
-    double kinetic = 0.0;
-    double potential = 0.0;
-    for (int h = 0; h < nirrep_; h++) {
-        for (int i = 0; i < amopi_[h]; i++) {
-            int ii = i + rstcpi_[h] + frzcpi_[h];
-            for (int j = 0; j < amopi_[h]; j++) {
-                int jj = j + rstcpi_[h] + frzcpi_[h];
-
-                kinetic   += T_->pointer()[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j];
-                kinetic   += T_->pointer()[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j];
-
-                potential += V_->pointer()[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j];
-                potential += V_->pointer()[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j];
-            }
-        }
-    }
-    double two_electron_energy = efzc_;
-    // remove one-electron parts of frozen core energy
-    for (int h = 0; h < nirrep_; h++) {
-        for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
-            two_electron_energy -= 2.0 * T_->pointer()[i][i];
-            two_electron_energy -= 2.0 * V_->pointer()[i][i];
-        }
-    }
-    for (int h = 0; h < nirrep_; h++) {
-        two_electron_energy += C_DDOT(gems_ab[h] * gems_ab[h], x_p + d2aboff[h],1, c->pointer() + d2aboff[h], 1);
-        two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2aaoff[h],1, c->pointer() + d2aaoff[h], 1);
-        two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2bboff[h],1, c->pointer() + d2bboff[h], 1);
-    }
-
-    // core-active part of two-electron energy
-    double core_active = 0.0;
-    for (int h = 0; h < nirrep_; h++) {
-        core_active += C_DDOT(amopi_[h] * amopi_[h], x_p + d1aoff[h],1, c->pointer() + d1aoff[h], 1);
-        core_active += C_DDOT(amopi_[h] * amopi_[h], x_p + d1boff[h],1, c->pointer() + d1boff[h], 1);
-    }
-    core_active -= kinetic;
-    core_active -= potential;
-
-    // lastly, don't forget core contribution to kinetic and potential energy
-    for (int h = 0; h < nirrep_; h++) {
-        for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
-            kinetic   += 2.0 * T_->pointer()[i][i];
-            potential += 2.0 * V_->pointer()[i][i];
-        }
-    }
     outfile->Printf("      na:                        %20.6lf\n", na);
     outfile->Printf("      nb:                        %20.6lf\n", nb);
     outfile->Printf("      v2RDM total spin [S(S+1)]: %20.6lf\n", 0.5 * (na + nb) + ms*ms - s2);
     outfile->Printf("\n");
     outfile->Printf("      Nuclear Repulsion Energy:          %20.12lf\n",enuc_);
-    outfile->Printf("      Two-Electron Energy:               %20.12lf\n",two_electron_energy + core_active);
+    outfile->Printf("      Two-Electron Energy:               %20.12lf\n",two_electron_energy);
+    //outfile->Printf("      Two-Electron (active):             %20.12lf\n",active_two_electron_energy);
     outfile->Printf("      Kinetic Energy:                    %20.12lf\n",kinetic);
     outfile->Printf("      Electron-Nuclear Potential Energy: %20.12lf\n",potential);
+
     outfile->Printf("\n");
     outfile->Printf("    * v2RDM total energy:                %20.12lf\n",energy_primal+enuc_+efzc_);
     outfile->Printf("\n");
 
+    // if DOCI or alpha DOCI, print W(alpha) by component
+    if ( is_doci_ ) {
+        doci_alpha_ = 1.0;
+        doci_ref_   = 0.0;
+        if ( !is_df_ && is_doci_ ) {
+            throw PsiException("toy doci code only works with scf_type df",__FILE__,__LINE__);
+            // read tei's from disk
+            GetTEIFromDisk();
+        }
+        RepackIntegrals();
+        EnergyByComponent(doci_ref_,doci_alpha_,kinetic,potential,two_electron_energy);
+        
+        outfile->Printf("\n");
+        outfile->Printf("    ==> DOCI-alpha <==\n");
+        outfile->Printf("\n");
+        outfile->Printf("      alpha:                             %20.12lf\n",options_.get_double("DOCI_ALPHA"));
+        outfile->Printf("      W1(%20.12lf):          %20.12lf\n",options_.get_double("DOCI_ALPHA"),kinetic + potential);
+        outfile->Printf("      W2(%20.12lf):          %20.12lf\n",options_.get_double("DOCI_ALPHA"),two_electron_energy);
+    }
+
     Process::environment.globals["CURRENT ENERGY"]     = energy_primal+enuc_+efzc_;
     Process::environment.globals["v2RDM TOTAL ENERGY"] = energy_primal+enuc_+efzc_;
-
 
     if ( options_.get_bool("SEMICANONICALIZE_ORBITALS") ) {
         if ( options_.get_str("DERTYPE") == "FIRST" ) {
@@ -1979,13 +2001,18 @@ double v2RDMSolver::compute_energy() {
     } 
 
     // compute and natural orbitals and transform 1-RDM/2-RDM to the NO basis
-    if ( options_.get_bool("NAT_ORBS") ) {
+    if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") || options_.get_bool("EXTENDED_KOOPMANS") ) {
         ComputeNaturalOrbitals();
     }
     if ( options_.get_bool("MOLDEN_WRITE") ) {
         WriteMoldenFile();
     }
-
+    if ( options_.get_bool("EXTENDED_KOOPMANS") ) {
+        ExtendedKoopmans();
+    }
+    if ( options_.get_bool("FCIDUMP") ) {
+        FCIDUMP();
+    }
 
     // compute and print natural orbital occupation numbers 
     PrintNaturalOrbitalOccupations();
@@ -2013,7 +2040,7 @@ double v2RDMSolver::compute_energy() {
     // for derivatives:
     if ( options_.get_str("DERTYPE") == "FIRST" ) {
 
-        if ( options_.get_bool("NAT_ORBS") ) {
+        if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") || options_.get_bool("EXTENDED_KOOPMANS") ) {
             throw PsiException("analytic gradients require nat_orbs false",__FILE__,__LINE__);
         }
 
@@ -2058,6 +2085,81 @@ double v2RDMSolver::compute_energy() {
     //CheckSpinStructure();
 
     return energy_primal + enuc_ + efzc_;
+}
+
+void v2RDMSolver::EnergyByComponent(double doci_ref, double doci_alpha, double &kinetic, double &potential, double &two_electron_energy) {
+
+    double * x_p = x->pointer();
+    double * c_p = c->pointer();
+
+    std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
+    std::shared_ptr<Matrix> myT (new Matrix(mints->so_kinetic()));
+    std::shared_ptr<Matrix> myV (new Matrix(mints->so_potential()));
+
+    myT->transform(Ca_);
+    myV->transform(Ca_);
+    kinetic = 0.0;
+    potential = 0.0;
+
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < amopi_[h]; i++) {
+            int ii = i + rstcpi_[h] + frzcpi_[h];
+            for (int j = 0; j < amopi_[h]; j++) {
+                int jj = j + rstcpi_[h] + frzcpi_[h];
+
+                if ( ii == jj ) continue;
+                
+                kinetic   += myT->pointer(h)[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j] * doci_alpha;
+                kinetic   += myT->pointer(h)[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j] * doci_alpha;
+                
+                potential += myV->pointer(h)[ii][jj] * x_p[d1aoff[h] + i * amopi_[h] + j] * doci_alpha;
+                potential += myV->pointer(h)[ii][jj] * x_p[d1boff[h] + i * amopi_[h] + j] * doci_alpha;
+            
+            }
+
+            kinetic   += myT->pointer(h)[ii][ii] * x_p[d1aoff[h] + i * amopi_[h] + i] * doci_ref;
+            kinetic   += myT->pointer(h)[ii][ii] * x_p[d1boff[h] + i * amopi_[h] + i] * doci_ref;
+            
+            potential += myV->pointer(h)[ii][ii] * x_p[d1aoff[h] + i * amopi_[h] + i] * doci_ref;
+            potential += myV->pointer(h)[ii][ii] * x_p[d1boff[h] + i * amopi_[h] + i] * doci_ref;
+            
+        }
+    }
+
+    two_electron_energy = efzc_;
+    // remove one-electron parts of frozen core energy
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
+            two_electron_energy -= 2.0 * myT->pointer(h)[i][i] * doci_ref;
+            two_electron_energy -= 2.0 * myV->pointer(h)[i][i] * doci_ref;
+        }
+    }
+    double active_two_electron_energy = 0.0;
+    for (int h = 0; h < nirrep_; h++) {
+        active_two_electron_energy += C_DDOT(gems_ab[h] * gems_ab[h], x_p + d2aboff[h],1, c->pointer() + d2aboff[h], 1);
+        active_two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2aaoff[h],1, c->pointer() + d2aaoff[h], 1);
+        active_two_electron_energy += C_DDOT(gems_aa[h] * gems_aa[h], x_p + d2bboff[h],1, c->pointer() + d2bboff[h], 1);
+    }
+    two_electron_energy += active_two_electron_energy;
+
+    // core-active part of two-electron energy
+    double core_active = 0.0;
+    for (int h = 0; h < nirrep_; h++) {
+        core_active += C_DDOT(amopi_[h] * amopi_[h], x_p + d1aoff[h],1, c->pointer() + d1aoff[h], 1);
+        core_active += C_DDOT(amopi_[h] * amopi_[h], x_p + d1boff[h],1, c->pointer() + d1boff[h], 1);
+    }
+    core_active -= kinetic;
+    core_active -= potential;
+
+    two_electron_energy += core_active;
+
+    // lastly, don't forget core contribution to kinetic and potential energy
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < rstcpi_[h] + frzcpi_[h]; i++) {
+            kinetic   += 2.0 * myT->pointer(h)[i][i] * doci_ref;
+            potential += 2.0 * myV->pointer(h)[i][i] * doci_ref;
+        }
+    }
 }
 
 void v2RDMSolver::CheckSpinStructure() {
@@ -2125,7 +2227,7 @@ void v2RDMSolver::CheckSpinStructure() {
 void v2RDMSolver::WriteMoldenFile() {
 
     // it is possible the 1-RDM is already in the NO basis:
-    if ( options_.get_bool("NAT_ORBS") ) {
+    if ( options_.get_bool("NAT_ORBS") || options_.get_bool("FCIDUMP") || options_.get_bool("EXTENDED_KOOPMANS") ) {
 
         std::shared_ptr<Vector> eigval (new Vector("Natural Orbital Occupation Numbers (spin free)",nirrep_,nmopi_));
         for (int h = 0; h < nirrep_; h++) {

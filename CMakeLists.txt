@@ -55,7 +55,6 @@ endif()
 message(STATUS "Plugin module install: ${PYMOD_INSTALL_FULLDIR}")
 
 
-include(custom_cxxstandard)
 include(custom_static_library)
 
 # <<<  Build  >>>
@@ -74,6 +73,8 @@ add_psi4_plugin(v2rdm_casscf
     d4.cc
     diis.cc
     exponentiate_step.cc
+    extended_koopmans.cc
+    fcidump.cc
     g2.cc
     gpu_transform_3index_teint.cc
     integraltransform_sort_so_tpdm.cc
