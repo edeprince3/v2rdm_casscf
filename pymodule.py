@@ -32,6 +32,9 @@ import psi4
 from psi4.driver.procrouting import proc_util
 import psi4.driver.p4util as p4util
 
+from psi4.driver.p4util import solvers
+
+import v2rdm_casscf
 
 def run_v2rdm_casscf(name, **kwargs):
     r"""Function encoding sequence of PSI module and plugin calls so that
@@ -163,3 +166,259 @@ psi4.driver.procedures['gradient']['v2rdm-casscf'] = run_v2rdm_casscf_gradient
 def exampleFN():
     # Your Python code goes here
     pass
+
+def test_py(ref_wfn):
+
+    #print('hi')
+    v2rdm = psi4.core.v2RDMSolver(ref_wfn)
+
+
+def print_iteration(mtype, niter, energy, de, orb_rms, ci_rms, nci, norb, stype):
+    psi4.core.print_out("%s %2d:  % 18.12f   % 1.4e  %1.2e  %1.2e  %3d  %3d  %s\n" %
+                    (mtype, niter, energy, de, orb_rms, ci_rms, nci, norb, stype))
+
+def v2rdm_scf_solver(ref_wfn):
+
+    # AED
+    psi4.core.set_local_option('DETCI', 'WFN', 'CASSCF')
+
+    # Build CIWavefunction
+    psi4.core.prepare_options_for_module("DETCI")
+    ciwfn = psi4.core.CIWavefunction(ref_wfn)
+
+    # Hush a lot of CI output
+    ciwfn.set_print(0)
+
+    # Begin with a normal two-step
+    step_type = 'Initial CI'
+    total_step = psi4.core.Matrix("Total step", ciwfn.get_dimension('OA'), ciwfn.get_dimension('AV'))
+    start_orbs = ciwfn.get_orbitals("ROT").clone()
+    ciwfn.set_orbitals("ROT", start_orbs)
+
+    # Grab da options
+    mcscf_orb_grad_conv = psi4.core.get_option("DETCI", "MCSCF_R_CONVERGENCE")
+    mcscf_e_conv = psi4.core.get_option("DETCI", "MCSCF_E_CONVERGENCE")
+    mcscf_max_macroiteration = psi4.core.get_option("DETCI", "MCSCF_MAXITER")
+    mcscf_type = psi4.core.get_option("DETCI", "MCSCF_TYPE")
+    mcscf_d_file = psi4.core.get_option("DETCI", "CI_FILE_START") + 3
+    mcscf_nroots = psi4.core.get_option("DETCI", "NUM_ROOTS")
+    mcscf_wavefunction_type = psi4.core.get_option("DETCI", "WFN")
+    mcscf_ndet = ciwfn.ndet()
+    mcscf_nuclear_energy = ciwfn.molecule().nuclear_repulsion_energy()
+    mcscf_steplimit = psi4.core.get_option("DETCI", "MCSCF_MAX_ROT")
+    mcscf_rotate = psi4.core.get_option("DETCI", "MCSCF_ROTATE")
+
+    # DIIS info
+    mcscf_diis_start = psi4.core.get_option("DETCI", "MCSCF_DIIS_START")
+    mcscf_diis_freq = psi4.core.get_option("DETCI", "MCSCF_DIIS_FREQ")
+    mcscf_diis_error_type = psi4.core.get_option("DETCI", "MCSCF_DIIS_ERROR_TYPE")
+    mcscf_diis_max_vecs = psi4.core.get_option("DETCI", "MCSCF_DIIS_MAX_VECS")
+
+    # One-step info
+    mcscf_target_conv_type = psi4.core.get_option("DETCI", "MCSCF_ALGORITHM")
+    mcscf_so_start_grad = psi4.core.get_option("DETCI", "MCSCF_SO_START_GRAD")
+    mcscf_so_start_e = psi4.core.get_option("DETCI", "MCSCF_SO_START_E")
+    mcscf_current_step_type = 'Initial CI'
+
+    # Start with SCF energy and other params
+    scf_energy = ciwfn.variable("HF TOTAL ENERGY")
+    eold = scf_energy
+    norb_iter = 1
+    converged = False
+    ah_step = False
+    qc_step = False
+    approx_integrals_only = True
+
+    # Fake info to start with the initial diagonalization
+    ediff = 1.e-4
+    orb_grad_rms = 1.e-3
+
+    # Grab needed objects
+    diis_obj = solvers.DIIS(mcscf_diis_max_vecs)
+    mcscf_obj = ciwfn.mcscf_object()
+
+    # Execute the rotate command
+    for rot in mcscf_rotate:
+        if len(rot) != 4:
+            raise p4util.PsiException("Each element of the MCSCF rotate command requires 4 arguements (irrep, orb1, orb2, theta).")
+
+        irrep, orb1, orb2, theta = rot
+        if irrep > ciwfn.Ca().nirrep():
+            raise p4util.PsiException("MCSCF_ROTATE: Expression %s irrep number is larger than the number of irreps" %
+                                    (str(rot)))
+
+        if max(orb1, orb2) > ciwfn.Ca().coldim()[irrep]:
+            raise p4util.PsiException("MCSCF_ROTATE: Expression %s orbital number exceeds number of orbitals in irrep" %
+                                    (str(rot)))
+
+        theta = np.deg2rad(theta)
+
+        x = ciwfn.Ca().nph[irrep][:, orb1].copy()
+        y = ciwfn.Ca().nph[irrep][:, orb2].copy()
+
+        xp = np.cos(theta) * x - np.sin(theta) * y
+        yp = np.sin(theta) * x + np.cos(theta) * y
+
+        ciwfn.Ca().nph[irrep][:, orb1] = xp
+        ciwfn.Ca().nph[irrep][:, orb2] = yp
+
+    # Limited RAS functionality
+    if psi4.core.get_local_option("DETCI", "WFN") == "RASSCF" and mcscf_target_conv_type != "TS":
+        psi4.core.print_out("\n  Warning! Only the TS algorithm for RASSCF wavefunction is currently supported.\n")
+        psi4.core.print_out("             Switching to the TS algorithm.\n\n")
+        mcscf_target_conv_type = "TS"
+
+    # Print out headers
+    if mcscf_type == "CONV":
+        mtype = "   @MCSCF"
+        psi4.core.print_out("\n   ==> Starting MCSCF iterations <==\n\n")
+        psi4.core.print_out("        Iter         Total Energy       Delta E   Orb RMS    CI RMS  NCI NORB\n")
+    elif mcscf_type == "DF":
+        mtype = "   @DF-MCSCF"
+        psi4.core.print_out("\n   ==> Starting DF-MCSCF iterations <==\n\n")
+        psi4.core.print_out("           Iter         Total Energy       Delta E   Orb RMS    CI RMS  NCI NORB\n")
+    else:
+        mtype = "   @AO-MCSCF"
+        psi4.core.print_out("\n   ==> Starting AO-MCSCF iterations <==\n\n")
+        psi4.core.print_out("           Iter         Total Energy       Delta E   Orb RMS    CI RMS  NCI NORB\n")
+
+    # Iterate !
+    for mcscf_iter in range(1, mcscf_max_macroiteration + 1):
+
+        ## Transform integrals, diagonalize H
+        ciwfn.transform_mcscf_integrals(approx_integrals_only)
+        #nci_iter = ciwfn.diag_h(abs(ediff) * 1.e-2, orb_grad_rms * 1.e-3)
+        nci_iter = 0 #ciwfn.diag_h(abs(ediff) * 1.e-2, orb_grad_rms * 1.e-3)
+
+        ## After the first diag we need to switch to READ
+        #ciwfn.set_ci_guess("DFILE")
+
+        #ciwfn.form_opdm()
+        #ciwfn.form_tpdm()
+        #ci_grad_rms = ciwfn.variable("DETCI AVG DVEC NORM")
+        ci_grad_rms = 0.0
+
+        # set options for v2RDM module (TODO: verify this is working correctly)
+        psi4.core.set_local_option('V2RDM_CASSCF', 'OPTIMIZE_ORBITALS','FALSE')
+        options = psi4.core.get_options()
+        options.set_current_module('V2RDM_CASSCF')
+
+        v2rdm = v2rdm_casscf.v2RDMSolver(ref_wfn,options)
+        current_energy = v2rdm.compute_energy()
+        opdm = v2rdm.get_opdm()
+        tpdm = v2rdm.get_tpdm()
+
+        Cocc = v2rdm.get_orbitals("DOCC")
+        Cact = v2rdm.get_orbitals("ACTIVE")
+        Cvir = v2rdm.get_orbitals("VIRTUAL")
+
+        # END AED
+        
+        # Update MCSCF object
+        #Cocc = ciwfn.get_orbitals("DOCC")
+        #Cact = ciwfn.get_orbitals("ACT")
+        #Cvir = ciwfn.get_orbitals("VIR")
+
+        #opdm = ciwfn.get_opdm(-1, -1, "SUM", False)
+        #tpdm = ciwfn.get_tpdm("SUM", True)
+
+        Cact.print_out()
+        mcscf_obj.update(Cocc, Cact, Cvir, opdm, tpdm)
+        Cact.print_out()
+
+        #current_energy = ciwfn.variable("v2RDM TOTAL ENERGY") #v2rdm.variable("v2RDM TOTAL ENERGY")
+
+        orb_grad_rms = mcscf_obj.gradient_rms()
+        ediff = current_energy - eold
+
+        # Print iterations
+        print_iteration(mtype, mcscf_iter, current_energy, ediff, orb_grad_rms, ci_grad_rms,
+                        nci_iter, norb_iter, mcscf_current_step_type)
+        eold = current_energy
+
+        if mcscf_current_step_type == 'Initial CI':
+            mcscf_current_step_type = 'TS'
+
+        # Check convergence
+        if (orb_grad_rms < mcscf_orb_grad_conv) and (abs(ediff) < abs(mcscf_e_conv)) and\
+            (mcscf_iter > 3) and not qc_step:
+
+            psi4.core.print_out("\n       %s has converged!\n\n" % mtype);
+            converged = True
+            break
+
+        # Which orbital convergence are we doing?
+        if ah_step:
+            converged, norb_iter, step = ah_iteration(mcscf_obj, print_micro=False)
+            norb_iter += 1
+
+            if converged:
+                mcscf_current_step_type = 'AH'
+            else:
+                psi4.core.print_out("      !Warning. Augmented Hessian did not converge. Taking an approx step.\n")
+                step = mcscf_obj.approx_solve()
+                mcscf_current_step_type = 'TS, AH failure'
+
+        else:
+            step = mcscf_obj.approx_solve()
+            step_type = 'TS'
+
+        maxstep = step.absmax()
+        if maxstep > mcscf_steplimit:
+            psi4.core.print_out('      Warning! Maxstep = %4.2f, scaling to %4.2f\n' % (maxstep, mcscf_steplimit))
+            step.scale(mcscf_steplimit / maxstep)
+
+        xstep = total_step.clone()
+        total_step.add(step)
+
+        # Do or add DIIS
+        if (mcscf_iter >= mcscf_diis_start) and ("TS" in mcscf_current_step_type):
+
+            # Figure out DIIS error vector
+            if mcscf_diis_error_type == "GRAD":
+                error = psi4.core.triplet(ciwfn.get_orbitals("OA"),
+                                            mcscf_obj.gradient(),
+                                            ciwfn.get_orbitals("AV"),
+                                            False, False, True)
+            else:
+                error = step
+
+            diis_obj.add(total_step, error)
+
+            if not (mcscf_iter % mcscf_diis_freq):
+                total_step = diis_obj.extrapolate()
+                mcscf_current_step_type = 'TS, DIIS'
+
+        # Build the rotation by continuous updates
+        if mcscf_iter == 1:
+            totalU = mcscf_obj.form_rotation_matrix(total_step)
+        else:
+            xstep.axpy(-1.0, total_step)
+            xstep.scale(-1.0)
+            Ustep = mcscf_obj.form_rotation_matrix(xstep)
+            totalU = psi4.core.doublet(totalU, Ustep, False, False)
+
+        # Build the rotation directly (not recommended)
+        # orbs_mat = mcscf_obj.Ck(start_orbs, total_step)
+
+        # Finally rotate and set orbitals in both ciwfn and v2rdm
+        orbs_mat = psi4.core.doublet(start_orbs, totalU, False, False)
+        ciwfn.set_orbitals("ROT", orbs_mat)
+        v2rdm.set_orbitals("ROT", orbs_mat)
+
+        # Figure out what the next step should be
+        if (orb_grad_rms < mcscf_so_start_grad) and (abs(ediff) < abs(mcscf_so_start_e)) and\
+                (mcscf_iter >= 2):
+
+            if mcscf_target_conv_type == 'AH':
+                approx_integrals_only = False
+                ah_step = True
+            elif mcscf_target_conv_type == 'OS':
+                approx_integrals_only = False
+                mcscf_current_step_type = 'OS, Prep'
+                break
+            else:
+                continue
+        #raise p4util.PsiException("")
+
+    return current_energy

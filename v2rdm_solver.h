@@ -66,14 +66,39 @@ class v2RDMSolver: public Wavefunction{
     v2RDMSolver(SharedWavefunction reference_wavefunction,Options & options);
     ~v2RDMSolver();
     void common_init();
+
     double compute_energy();
-    virtual bool same_a_b_orbs() const { return same_a_b_orbs_; }
-    virtual bool same_a_b_dens() const { return same_a_b_dens_; }
+
+    /// return spin-free one-particle density matrix as shared matrix for python API
+    std::shared_ptr<Matrix> get_opdm();
+
+    /// return spin-free two-particle density matrix as shared matrix for python API
+    std::shared_ptr<Matrix> get_tpdm();
+
+    /// return subset of orbitals for python API
+    /**!
+     * Similar to wavefunction.Ca_subset(); however, this version knows about all of the CI
+     * subspaces in the SO basis. We stick to the definitions used by DETCI for now.
+     * @param  orbital_name fzc, drc, docc, act, ras1, ras2, ras3, ras4, pop, vir, fzv, drv, or all
+     * @return C            Returns the appropriate orbitals in the SO basis.
+     */
+    std::shared_ptr<Matrix> get_orbitals(const std::string &orbital_name);
+
+    /**!
+     * Similar to wavefunction.Ca_subset(); however, this version knows about all of the CI
+     * subspaces in the SO basis. We stick to the MCSCF definitions for now.
+     * @param  orbital_name FZC, DRC, DOCC, ACT, RAS1, RAS2, RAS3, RAS4, POP, VIR, FZV, DRV, or ALL
+     * @param  orbitals     SharedMatrix to set
+     */
+    void set_orbitals(const std::string &orbital_name, SharedMatrix orbitals);
 
     // public methods
     void cg_Ax(long int n,SharedVector A, SharedVector u);
 
   protected:
+
+    virtual bool same_a_b_orbs() const { return same_a_b_orbs_; }
+    virtual bool same_a_b_dens() const { return same_a_b_dens_; }
 
     double nalpha_;
     double nbeta_;
@@ -518,6 +543,10 @@ class v2RDMSolver: public Wavefunction{
 
     /// break down energy into components
     void EnergyByComponent(double doci_ref, double doci_alpha, double &kinetic, double &potential, double &two_electron_energy);
+
+    /// Find out which orbitals belong where
+    void orbital_locations(const std::string &orbital_name, int *start, int *end);
+
 };
 
 }}
