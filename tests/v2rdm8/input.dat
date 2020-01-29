@@ -1,4 +1,4 @@
-#! cc-pvdz N2 (6,6) active space Test DQG
+#! cc-pvdz H2 (2,2) active space Test python API for v2RDM CASSCF
 
 # job description:
 print('        H2 / cc-pVDZ / D(2,2), scf_type = DF, rHH = 1.0 A')
