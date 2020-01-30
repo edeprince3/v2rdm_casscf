@@ -37,8 +37,8 @@ before_script:
   - >
       cmake -H. -B.
       -C${HOME}/miniconda/envs/tenv/share/cmake/psi4/psi4PluginCache.cmake
-      -DCMAKE_CXX_FLAGS="-I${HOME}/miniconda/envs/tenv/include ${PYBIND_INCLUDE}"
       -DCMAKE_BUILD_TYPE=Debug
+      -DCMAKE_CXX_FLAGS="-I${HOME}/miniconda/envs/tenv/include ${PYBIND_INCLUDE}"
   - make -j2
 
 script:
