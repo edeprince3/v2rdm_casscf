@@ -150,7 +150,7 @@ void v2RDMSolver::orbital_locations(const std::string& orbitals, int* start, int
         }
     } else if (orbitals == "RESTRICTED_DOCC") {
         for (int h = 0; h < nirrep_; h++) {
-            start[h] = 
+            start[h] = frzcpi_[h];
             end[h] = frzcpi_[h] + rstcpi_[h];
         }
     } else if (orbitals == "DOCC") {
