@@ -82,7 +82,7 @@ add_psi4_plugin(v2rdm_casscf
     natural_orbitals.cc
     oei.cc
     orbital_lagrangian.cc
-    #python_api.cc
+    python_api.cc
     q2.cc
     sortintegrals.cc
     spin.cc

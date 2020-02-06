@@ -55,6 +55,7 @@ void export_v2RDMSolver(py::module& m) {
 }
 
 PYBIND11_MODULE(v2rdm_casscf, m) {
+    m.doc() = "Python API of v2rdm_casscf: a variational 2-RDM-driven CASSCF plugin to Psi4";
     export_v2RDMSolver(m);
 }
 
