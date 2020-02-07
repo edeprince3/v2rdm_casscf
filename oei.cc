@@ -27,6 +27,9 @@
 
 #include <psi4/psi4-dec.h>
 #include <psi4/liboptions/liboptions.h>
+//#include <psi4/libpsi4util/PsiOutStream.h>
+//#include <psi4/libpsio/psio.hpp>
+//#include <psi4/psi4-dec.h>
 #include <psi4/libqt/qt.h>
 
 #include<psi4/libtrans/integraltransform.h>
@@ -35,6 +38,7 @@
 #include<psi4/libmints/wavefunction.h>
 //#include<psi4/libmints/mints.h>
 #include<psi4/libmints/mintshelper.h>
+#include<psi4/libmints/x2cint.h>
 #include<psi4/libmints/vector.h>
 #include<psi4/libmints/matrix.h>
 //#include<../bin/fnocc/blas.h>
@@ -60,6 +64,14 @@ SharedMatrix v2RDMSolver::GetOEI() {
     std::shared_ptr<MintsHelper> mints(new MintsHelper(reference_wavefunction_));
     T_ = (std::shared_ptr<Matrix> ) (new Matrix(mints->so_kinetic()));
     V_ = (std::shared_ptr<Matrix> ) (new Matrix(mints->so_potential()));
+
+    if (options_.get_str("RELATIVISTIC") == "X2C") {
+        X2CInt x2cint;
+        std::shared_ptr<BasisSet> basisset = reference_wavefunction_->get_basisset("ORBITAL"); 
+        std::shared_ptr<BasisSet> rel_basisset = reference_wavefunction_->get_basisset("BASIS_RELATIVISTIC");
+        x2cint.compute(basisset, rel_basisset, S_, T_, V_); 
+
+    }
 
     std::shared_ptr<Matrix> K1 (new Matrix(T_));
     K1->add(V_);
