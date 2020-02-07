@@ -14,7 +14,7 @@ symmetry c1
 }
 
 set {
-  basis cc-pvdz #6-31g
+  basis cc-pvdz 
   mcscf_type df
   scf_type df
   d_convergence      1e-10
