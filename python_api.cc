@@ -30,20 +30,21 @@
 
 #include "v2rdm_solver.h"
 
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
-#include <pybind11/stl.h>
+//#include <pybind11/pybind11.h>
+//#include <pybind11/numpy.h>
+//#include <pybind11/stl.h>
 
 #include "psi4/libpsi4util/process.h"
 #include "psi4/libmints/wavefunction.h"
 
 using namespace psi;
 
-namespace py = pybind11;
-using namespace pybind11::literals;
+//namespace py = pybind11;
+//using namespace pybind11::literals;
 
 namespace psi { namespace v2rdm_casscf {
 
+/*
 void export_v2RDMSolver(py::module& m) {
     py::class_<v2rdm_casscf::v2RDMSolver, std::shared_ptr<v2rdm_casscf::v2RDMSolver>, Wavefunction>(m, "v2RDMSolver")
         .def(py::init<std::shared_ptr<Wavefunction>,Options &>())
@@ -58,6 +59,7 @@ PYBIND11_MODULE(v2rdm_casscf, m) {
     m.doc() = "Python API of v2rdm_casscf: a variational 2-RDM-driven CASSCF plugin to Psi4";
     export_v2RDMSolver(m);
 }
+*/
 
 std::shared_ptr<Matrix> v2RDMSolver::get_opdm() {
 

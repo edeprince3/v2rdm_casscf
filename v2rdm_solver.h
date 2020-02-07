@@ -92,6 +92,10 @@ class v2RDMSolver: public Wavefunction{
      */
     void set_orbitals(const std::string &orbital_name, SharedMatrix orbitals);
 
+    /// Find out which orbitals belong where
+    void orbital_locations(const std::string &orbital_name, int *start, int *end);
+
+
     // public methods
     void cg_Ax(long int n,SharedVector A, SharedVector u);
 
@@ -543,9 +547,6 @@ class v2RDMSolver: public Wavefunction{
 
     /// break down energy into components
     void EnergyByComponent(double doci_ref, double doci_alpha, double &kinetic, double &potential, double &two_electron_energy);
-
-    /// Find out which orbitals belong where
-    void orbital_locations(const std::string &orbital_name, int *start, int *end);
 
 };
 

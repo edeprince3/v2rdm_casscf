@@ -94,6 +94,7 @@ add_psi4_plugin(v2rdm_casscf
     update_primal.cc
     update_transformation_matrix.cc
     v2rdm_casscf.cc
+    v2rdm_helper.cc
     v2rdm_solver.cc
     write_3pdm.cc
     write_tpdm.cc

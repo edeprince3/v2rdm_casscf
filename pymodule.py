@@ -170,7 +170,7 @@ def exampleFN():
 def test_py(ref_wfn):
 
     #print('hi')
-    v2rdm = psi4.core.v2RDMSolver(ref_wfn)
+    v2rdm = psi4.core.v2RDMHelper(ref_wfn)
 
 
 def print_iteration(mtype, niter, energy, de, orb_rms, ci_rms, nci, norb, stype):
@@ -303,7 +303,7 @@ def v2rdm_scf_solver(ref_wfn):
         options = psi4.core.get_options()
         options.set_current_module('V2RDM_CASSCF')
 
-        v2rdm = v2rdm_casscf.v2RDMSolver(ref_wfn,options)
+        v2rdm = v2rdm_casscf.v2RDMHelper(ref_wfn,options)
         current_energy = v2rdm.compute_energy()
         opdm = v2rdm.get_opdm()
         tpdm = v2rdm.get_tpdm()
