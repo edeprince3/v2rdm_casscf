@@ -24,6 +24,7 @@ option_with_print(ENABLE_OPENMP "Enable threadsafe linking to OpenMP parallelize
 
 # <<<  Prepare  >>>
 
+include(custom_color_messages)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
@@ -116,6 +117,14 @@ add_psi4_plugin(v2rdm_casscf
     focas_transform_oeints.F90
     focas_transform_teints.F90
 )
+
+set(openrdm_DIR "/home/sina/MOLSSI/RDMInoles-Prototype/build/stage/share/cmake/openrdm")
+find_package(openrdm 0.2.0 CONFIG REQUIRED)
+if(openrdm_FOUND)
+        message(STATUS "${Cyan}OpenRDM (${openrdm_VERSION}) is found in${ColourReset}: ${openrdm_DIR}")
+endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE openrdm::openrdm)
 
 target_link_libraries(v2rdm_casscf PRIVATE ${LIBC_INTERJECT})
 

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+rm -rf CMakeFiles/ \
+       cmake_install.cmake \
+       CMakeCache.txt
+
+$(psi4 --plugin-compile)
+
+cmake --build . -- -j $(nproc)
