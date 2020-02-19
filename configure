@@ -5,5 +5,4 @@ rm -rf CMakeFiles/ \
        CMakeCache.txt
 
 $(psi4 --plugin-compile)
-
 cmake --build . -- -j $(nproc)
