@@ -61,6 +61,20 @@
 
 namespace psi{ namespace v2rdm_casscf{
 
+struct tpdm {
+    int i;
+    int j;
+    int k;
+    int l;
+    double val;
+};
+
+struct opdm {
+    int i;
+    int j;
+    double val;
+};
+
 class v2RDMSolver: public Wavefunction{
   public:
     v2RDMSolver(SharedWavefunction reference_wavefunction,Options & options);
@@ -68,6 +82,12 @@ class v2RDMSolver: public Wavefunction{
     void common_init();
 
     double compute_energy();
+
+    /// return spin-free one-particle density matrix. full space. sparse
+    std::vector<opdm> get_opdm_sparse(std::string type);
+
+    /// return spin-free two-particle density matrix. full space. sparse.
+    std::vector<tpdm> get_tpdm_sparse(std::string type);
 
     /// return spin-free one-particle density matrix as shared matrix for python API
     std::shared_ptr<Matrix> get_opdm();

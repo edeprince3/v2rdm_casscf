@@ -52,6 +52,8 @@ void export_v2RDMHelper(py::module& m) {
         .def("get_orbitals", &v2RDMHelper::get_orbitals)
         .def("get_opdm", &v2RDMHelper::get_opdm)
         .def("get_tpdm", &v2RDMHelper::get_tpdm)
+        .def("get_opdm_sparse", &v2RDMHelper::get_opdm_sparse)
+        .def("get_tpdm_sparse", &v2RDMHelper::get_tpdm_sparse)
         .def("compute_energy", &v2RDMHelper::compute_energy);
 }
 
@@ -84,9 +86,21 @@ std::shared_ptr<Matrix> v2RDMHelper::get_opdm() {
 
 }
 
+std::vector<opdm> v2RDMHelper::get_opdm_sparse(std::string type) {
+
+    return v2rdm->get_opdm_sparse(type);
+
+}
+
 std::shared_ptr<Matrix> v2RDMHelper::get_tpdm() {
 
     return v2rdm->get_tpdm();
+
+}
+
+std::vector<tpdm> v2RDMHelper::get_tpdm_sparse(std::string type) {
+
+    return v2rdm->get_tpdm_sparse(type);
 
 }
 

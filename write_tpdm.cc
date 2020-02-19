@@ -38,14 +38,6 @@ using namespace psi;
 
 namespace psi{namespace v2rdm_casscf{
 
-struct tpdm {
-    int i;
-    int j;
-    int k;
-    int l;
-    double val;
-};
-
 void v2RDMSolver::WriteTPDM(){
 
     double * x_p = x->pointer();

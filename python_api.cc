@@ -30,36 +30,235 @@
 
 #include "v2rdm_solver.h"
 
-//#include <pybind11/pybind11.h>
-//#include <pybind11/numpy.h>
-//#include <pybind11/stl.h>
-
 #include "psi4/libpsi4util/process.h"
 #include "psi4/libmints/wavefunction.h"
 
 using namespace psi;
 
-//namespace py = pybind11;
-//using namespace pybind11::literals;
 
 namespace psi { namespace v2rdm_casscf {
 
-/*
-void export_v2RDMSolver(py::module& m) {
-    py::class_<v2rdm_casscf::v2RDMSolver, std::shared_ptr<v2rdm_casscf::v2RDMSolver>, Wavefunction>(m, "v2RDMSolver")
-        .def(py::init<std::shared_ptr<Wavefunction>,Options &>())
-        .def("set_orbitals", &v2RDMSolver::set_orbitals)
-        .def("get_orbitals", &v2RDMSolver::get_orbitals)
-        .def("get_opdm", &v2RDMSolver::get_opdm)
-        .def("get_tpdm", &v2RDMSolver::get_tpdm)
-        .def("compute_energy", &v2RDMSolver::compute_energy);
+std::vector<opdm> v2RDMSolver::get_opdm_sparse(std::string type) {
+
+    if ( type != "A" && type != "B" && type != "SUM" ) {
+        throw PsiException("invalid opdm type.",__FILE__,__LINE__);
+    }
+
+    std::vector<opdm> my_opdm;
+
+    double * x_p = x->pointer();
+
+    // active-active part
+    for (int h = 0; h < nirrep_; h++) {
+
+        for (int i = 0; i < amopi_[h]; i++) {
+
+            int ifull = full_basis[i + pitzer_offset[h]];
+
+            for (int j = 0; j < amopi_[h]; j++) {
+
+                int jfull = full_basis[j + pitzer_offset[h]];
+
+                double vala = x_p[d1aoff[h] + i*amopi_[h] + j];
+                double valb = x_p[d1boff[h] + i*amopi_[h] + j];
+
+                opdm d1;
+
+                d1.i   = ifull;
+                d1.j   = jfull;
+
+                if ( type == "A" ) {
+                    d1.val = vala;
+                }else if ( type == "B") {
+                    d1.val = valb;
+                }else if ( type == "SUM") {
+                    d1.val = vala + valb;
+                }
+
+                my_opdm.push_back(d1);
+
+            }
+        }
+    }
+
+    // core-core
+    for (int hi = 0; hi < nirrep_; hi++) {
+
+        for (int i = 0; i < rstcpi_[hi] + frzcpi_[hi]; i++) {
+
+            int ifull      = i + pitzer_offset_full[hi];
+
+            opdm d1;
+
+            d1.i   = ifull;
+            d1.j   = ifull;
+
+            if ( type == "A" ) {
+                d1.val = 1.0;
+            }else if ( type == "B") {
+                d1.val = 1.0;
+            }else if ( type == "SUM") {
+                d1.val = 2.0;
+            }
+
+            my_opdm.push_back(d1);
+
+        }
+    }
+
+    return my_opdm;
+
 }
 
-PYBIND11_MODULE(v2rdm_casscf, m) {
-    m.doc() = "Python API of v2rdm_casscf: a variational 2-RDM-driven CASSCF plugin to Psi4";
-    export_v2RDMSolver(m);
+std::vector<tpdm> v2RDMSolver::get_tpdm_sparse(std::string type) {
+
+    if ( type != "AA" && type != "BB"  && type != "AB" &&
+         type != "BA" && type != "SUM" ) {
+        throw PsiException("invalid tpdm type.",__FILE__,__LINE__);
+    }
+
+    std::vector<tpdm> my_tpdm;
+
+    double * x_p = x->pointer();
+
+    // active-active part
+    for (int h = 0; h < nirrep_; h++) {
+
+        for (int ij = 0; ij < gems_ab[h]; ij++) {
+
+            int i     = bas_ab_sym[h][ij][0];
+            int j     = bas_ab_sym[h][ij][1];
+            int ji    = ibas_ab_sym[h][j][i];
+            int ifull = full_basis[i];
+            int jfull = full_basis[j];
+
+            for (int kl = 0; kl < gems_ab[h]; kl++) {
+
+                int k     = bas_ab_sym[h][kl][0];
+                int l     = bas_ab_sym[h][kl][1];
+                int lk    = ibas_ab_sym[h][l][k];
+                int kfull = full_basis[k];
+                int lfull = full_basis[l];
+
+                double valab = x_p[d2aboff[h] + ij*gems_ab[h] + kl];
+                double valba = x_p[d2aboff[h] + ji*gems_ab[h] + lk];
+
+                tpdm d2;
+                d2.i   = ifull;
+                d2.j   = jfull;
+                d2.k   = kfull;
+                d2.l   = lfull;
+
+                double valaa = 0.0;
+                double valbb = 0.0;
+                if ( i != j && k != l ) {
+
+                    int ija = ibas_aa_sym[h][i][j];
+                    int kla = ibas_aa_sym[h][k][l];
+
+                    int sij = i < j ? 1 : -1;
+                    int skl = k < l ? 1 : -1;
+
+                    valaa = sij * skl * x_p[d2aaoff[h] + ija*gems_aa[h] + kla];
+                    valbb = sij * skl * x_p[d2bboff[h] + ija*gems_aa[h] + kla];
+
+                }
+
+                if ( type == "AA" ) {
+                    d2.val = valaa;
+                }else if ( type == "BB" ) {
+                    d2.val = valbb;
+                }else if ( type == "AB" ) {
+                    d2.val = valab;
+                }else if ( type == "BA" ) {
+                    d2.val = valba;
+                }else if ( type == "SUM" ) {
+                    d2.val = valaa + valbb + valab + valba;
+                }
+
+                my_tpdm.push_back(d2);
+
+            }
+        }
+    }
+
+    // core-core
+    for (int hi = 0; hi < nirrep_; hi++) {
+
+        for (int i = 0; i < rstcpi_[hi] + frzcpi_[hi]; i++) {
+
+            int ifull      = i + pitzer_offset_full[hi];
+
+            for (int hj = 0; hj < nirrep_; hj++) {
+
+                for (int j = 0; j < rstcpi_[hj] + frzcpi_[hj]; j++) {
+
+                    int jfull      = j + pitzer_offset_full[hj];
+
+                    tpdm d2;
+
+                    d2.i   = ifull;
+                    d2.j   = jfull;
+                    d2.k   = ifull;
+                    d2.l   = jfull;
+
+                    // ij;ij
+
+                    double valab = 1.0;
+                    double valba = 1.0;
+                    double valaa = 0.0;
+                    double valbb = 0.0;
+
+                    if ( ifull != jfull ) {
+
+                        valaa = 1.0;
+                        valbb = 1.0;
+
+                    }
+
+                    if ( type == "AA" ) {
+                        d2.val = valaa;
+                    }else if ( type == "BB" ) {
+                        d2.val = valbb;
+                    }else if ( type == "AB" ) {
+                        d2.val = valab;
+                    }else if ( type == "BA" ) {
+                        d2.val = valba;
+                    }else if ( type == "SUM" ) {
+                        d2.val = valaa + valbb + valab + valba;
+                    }
+
+                    my_tpdm.push_back(d2);
+
+                    // ij;ji
+                    if ( ifull != jfull ) {
+
+                        d2.k   = jfull;
+                        d2.l   = ifull;
+                        valaa  = -1.0;
+                        valbb  = -1.0;
+                        if ( type == "AA" ) {
+                            d2.val = valaa;
+                        }else if ( type == "BB" ) {
+                            d2.val = valbb;
+                        }else if ( type == "AB" ) { // skip
+                        }else if ( type == "BA" ) { // skip
+                        }else if ( type == "SUM" ) {
+                            d2.val = valaa + valbb;
+                        }
+
+                        my_tpdm.push_back(d2);
+                    }
+
+                }
+            }
+        }
+    }
+
+    return my_tpdm;
+
 }
-*/
+
 
 std::shared_ptr<Matrix> v2RDMSolver::get_opdm() {
 

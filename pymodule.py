@@ -167,12 +167,6 @@ def exampleFN():
     # Your Python code goes here
     pass
 
-def test_py(ref_wfn):
-
-    #print('hi')
-    v2rdm = psi4.core.v2RDMHelper(ref_wfn)
-
-
 def print_iteration(mtype, niter, energy, de, orb_rms, ci_rms, nci, norb, stype):
     psi4.core.print_out("%s %2d:  % 18.12f   % 1.4e  %1.2e  %1.2e  %3d  %3d  %s\n" %
                     (mtype, niter, energy, de, orb_rms, ci_rms, nci, norb, stype))

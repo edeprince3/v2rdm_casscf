@@ -38,12 +38,6 @@ using namespace psi;
 
 namespace psi{namespace v2rdm_casscf{
 
-struct opdm {
-    int i;
-    int j;
-    double val;
-};
-
 void v2RDMSolver::WriteOPDM(){
 
     double * x_p = x->pointer();
