@@ -167,6 +167,24 @@ def exampleFN():
     # Your Python code goes here
     pass
 
+def test_sparse(ref_wfn):
+
+    options = psi4.core.get_options()
+    options.set_current_module('V2RDM_CASSCF')
+
+    v2rdm = v2rdm_casscf.v2RDMHelper(ref_wfn,options)
+    current_energy = v2rdm.compute_energy()
+
+    d1 = v2rdm.get_opdm_sparse("SUM")
+    d2 = v2rdm.get_tpdm_sparse("SUM")
+
+    for i in range(0,len(d1)):
+        print("D1(%i,%i) = %f" % (d1[i].i, d1[i].j, d1[i].value))
+    for i in range(0,len(d2)):
+        print("D2(%i, %i; %i ,%i) = %f" % (d2[i].i, d2[i].j, d2[i].k, d2[i].l, d2[i].value))
+
+
+
 def print_iteration(mtype, niter, energy, de, orb_rms, ci_rms, nci, norb, stype):
     psi4.core.print_out("%s %2d:  % 18.12f   % 1.4e  %1.2e  %1.2e  %3d  %3d  %s\n" %
                     (mtype, niter, energy, de, orb_rms, ci_rms, nci, norb, stype))
