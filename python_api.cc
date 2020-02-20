@@ -255,6 +255,113 @@ std::vector<tpdm> v2RDMSolver::get_tpdm_sparse(std::string type) {
         }
     }
 
+
+    // core active; core active
+    for (int hi = 0; hi < nirrep_; hi++) {
+
+        for (int i = 0; i < rstcpi_[hi] + frzcpi_[hi]; i++) {
+
+            int ifull      = i + pitzer_offset_full[hi];
+
+            // D2(ij; il) 
+            for (int hj = 0; hj < nirrep_; hj++) {
+
+                for (int j = 0; j < amopi_[hj]; j++) {
+
+                    int jfull      = full_basis[j+pitzer_offset[hj]];
+
+                    for (int l = 0; l < amopi_[hj]; l++) {
+
+                        int lfull      = full_basis[l+pitzer_offset[hj]];
+
+                        tpdm d2;
+
+                        // ij;il (aa, bb, ab, ba)
+                        d2.i   = ifull;
+                        d2.j   = jfull;
+                        d2.k   = ifull;
+                        d2.l   = lfull;
+
+                        // aa, bb, ab, ba pieces
+                        double vala = x_p[d1aoff[hj]+j*amopi_[hj]+l];
+                        double valb = x_p[d1boff[hj]+j*amopi_[hj]+l];
+
+                        if ( type == "AA" ) {
+                            d2.val = vala;
+                        }else if ( type == "BB" ) {
+                            d2.val = valb;
+                        }else if ( type == "AB" ) {
+                            d2.val = valb;
+                        }else if ( type == "BA" ) {
+                            d2.val = vala;
+                        }else if ( type == "SUM" ) {
+                            d2.val = 2.0 * vala + 2.0 * valb;
+                        }
+
+                        my_tpdm.push_back(d2);
+
+                        // ji;li (aa, bb, ab, ba)
+                        d2.i   = jfull;
+                        d2.j   = ifull;
+                        d2.k   = lfull;
+                        d2.l   = ifull;
+
+                        if ( type == "AA" ) {
+                            d2.val = vala;
+                        }else if ( type == "BB" ) {
+                            d2.val = valb;
+                        }else if ( type == "AB" ) {
+                            d2.val = vala;
+                        }else if ( type == "BA" ) {
+                            d2.val = valb;
+                        }else if ( type == "SUM" ) {
+                            d2.val = 2.0 * vala + 2.0 * valb;
+                        }
+
+                        my_tpdm.push_back(d2);
+
+                        // ij;li
+                        d2.i   = ifull;
+                        d2.j   = jfull;
+                        d2.k   = lfull;
+                        d2.l   = ifull;
+
+                        if ( type == "AA" ) {
+                            d2.val = -vala;
+                        }else if ( type == "BB" ) {
+                            d2.val = -valb;
+                        }else if ( type == "AB" ) { // skip
+                        }else if ( type == "BA" ) { // skip
+                        }else if ( type == "SUM" ) {
+                            d2.val = -vala - valb;
+                        }
+
+                        my_tpdm.push_back(d2);
+
+                        // ji;il
+                        d2.i   = jfull;
+                        d2.j   = ifull;
+                        d2.k   = ifull;
+                        d2.l   = lfull;
+
+                        if ( type == "AA" ) {
+                            d2.val = -vala;
+                        }else if ( type == "BB" ) {
+                            d2.val = -valb;
+                        }else if ( type == "AB" ) { // skip
+                        }else if ( type == "BA" ) { // skip
+                        }else if ( type == "SUM" ) {
+                            d2.val = -vala - valb;
+                        }
+
+                        my_tpdm.push_back(d2);
+
+                    }
+                }
+            }
+        }
+    }
+
     return my_tpdm;
 
 }
