@@ -68,11 +68,11 @@ std::vector<opdm> v2RDMSolver::get_opdm_sparse(std::string type) {
                 d1.j   = jfull;
 
                 if ( type == "A" ) {
-                    d1.val = vala;
+                    d1.value = vala;
                 }else if ( type == "B") {
-                    d1.val = valb;
+                    d1.value = valb;
                 }else if ( type == "SUM") {
-                    d1.val = vala + valb;
+                    d1.value = vala + valb;
                 }
 
                 my_opdm.push_back(d1);
@@ -94,11 +94,11 @@ std::vector<opdm> v2RDMSolver::get_opdm_sparse(std::string type) {
             d1.j   = ifull;
 
             if ( type == "A" ) {
-                d1.val = 1.0;
+                d1.value = 1.0;
             }else if ( type == "B") {
-                d1.val = 1.0;
+                d1.value = 1.0;
             }else if ( type == "SUM") {
-                d1.val = 2.0;
+                d1.value = 2.0;
             }
 
             my_opdm.push_back(d1);
@@ -165,15 +165,15 @@ std::vector<tpdm> v2RDMSolver::get_tpdm_sparse(std::string type) {
                 }
 
                 if ( type == "AA" ) {
-                    d2.val = valaa;
+                    d2.value = valaa;
                 }else if ( type == "BB" ) {
-                    d2.val = valbb;
+                    d2.value = valbb;
                 }else if ( type == "AB" ) {
-                    d2.val = valab;
+                    d2.value = valab;
                 }else if ( type == "BA" ) {
-                    d2.val = valba;
+                    d2.value = valba;
                 }else if ( type == "SUM" ) {
-                    d2.val = valaa + valbb + valab + valba;
+                    d2.value = valaa + valbb + valab + valba;
                 }
 
                 my_tpdm.push_back(d2);
@@ -217,15 +217,15 @@ std::vector<tpdm> v2RDMSolver::get_tpdm_sparse(std::string type) {
                     }
 
                     if ( type == "AA" ) {
-                        d2.val = valaa;
+                        d2.value = valaa;
                     }else if ( type == "BB" ) {
-                        d2.val = valbb;
+                        d2.value = valbb;
                     }else if ( type == "AB" ) {
-                        d2.val = valab;
+                        d2.value = valab;
                     }else if ( type == "BA" ) {
-                        d2.val = valba;
+                        d2.value = valba;
                     }else if ( type == "SUM" ) {
-                        d2.val = valaa + valbb + valab + valba;
+                        d2.value = valaa + valbb + valab + valba;
                     }
 
                     my_tpdm.push_back(d2);
@@ -238,15 +238,15 @@ std::vector<tpdm> v2RDMSolver::get_tpdm_sparse(std::string type) {
                         valaa  = -1.0;
                         valbb  = -1.0;
                         if ( type == "AA" ) {
-                            d2.val = valaa;
+                            d2.value = valaa;
                         }else if ( type == "BB" ) {
-                            d2.val = valbb;
+                            d2.value = valbb;
                         }else if ( type == "AB" ) { // skip
-                            d2.val = 0.0;
+                            d2.value = 0.0;
                         }else if ( type == "BA" ) { // skip
-                            d2.val = 0.0;
+                            d2.value = 0.0;
                         }else if ( type == "SUM" ) {
-                            d2.val = valaa + valbb;
+                            d2.value = valaa + valbb;
                         }
 
                         my_tpdm.push_back(d2);
@@ -289,15 +289,15 @@ std::vector<tpdm> v2RDMSolver::get_tpdm_sparse(std::string type) {
                         double valb = x_p[d1boff[hj]+j*amopi_[hj]+l];
 
                         if ( type == "AA" ) {
-                            d2.val = vala;
+                            d2.value = vala;
                         }else if ( type == "BB" ) {
-                            d2.val = valb;
+                            d2.value = valb;
                         }else if ( type == "AB" ) {
-                            d2.val = valb;
+                            d2.value = valb;
                         }else if ( type == "BA" ) {
-                            d2.val = vala;
+                            d2.value = vala;
                         }else if ( type == "SUM" ) {
-                            d2.val = 2.0 * vala + 2.0 * valb;
+                            d2.value = 2.0 * vala + 2.0 * valb;
                         }
 
                         my_tpdm.push_back(d2);
@@ -309,15 +309,15 @@ std::vector<tpdm> v2RDMSolver::get_tpdm_sparse(std::string type) {
                         d2.l   = ifull;
 
                         if ( type == "AA" ) {
-                            d2.val = vala;
+                            d2.value = vala;
                         }else if ( type == "BB" ) {
-                            d2.val = valb;
+                            d2.value = valb;
                         }else if ( type == "AB" ) {
-                            d2.val = vala;
+                            d2.value = vala;
                         }else if ( type == "BA" ) {
-                            d2.val = valb;
+                            d2.value = valb;
                         }else if ( type == "SUM" ) {
-                            d2.val = 2.0 * vala + 2.0 * valb;
+                            d2.value = 2.0 * vala + 2.0 * valb;
                         }
 
                         my_tpdm.push_back(d2);
@@ -329,15 +329,15 @@ std::vector<tpdm> v2RDMSolver::get_tpdm_sparse(std::string type) {
                         d2.l   = ifull;
 
                         if ( type == "AA" ) {
-                            d2.val = -vala;
+                            d2.value = -vala;
                         }else if ( type == "BB" ) {
-                            d2.val = -valb;
+                            d2.value = -valb;
                         }else if ( type == "AB" ) { // skip
-                            d2.val = 0.0;
+                            d2.value = 0.0;
                         }else if ( type == "BA" ) { // skip
-                            d2.val = 0.0;
+                            d2.value = 0.0;
                         }else if ( type == "SUM" ) {
-                            d2.val = -vala - valb;
+                            d2.value = -vala - valb;
                         }
 
                         my_tpdm.push_back(d2);
@@ -349,15 +349,15 @@ std::vector<tpdm> v2RDMSolver::get_tpdm_sparse(std::string type) {
                         d2.l   = lfull;
 
                         if ( type == "AA" ) {
-                            d2.val = -vala;
+                            d2.value = -vala;
                         }else if ( type == "BB" ) {
-                            d2.val = -valb;
+                            d2.value = -valb;
                         }else if ( type == "AB" ) { // skip
-                            d2.val = 0.0;
+                            d2.value = 0.0;
                         }else if ( type == "BA" ) { // skip
-                            d2.val = 0.0;
+                            d2.value = 0.0;
                         }else if ( type == "SUM" ) {
-                            d2.val = -vala - valb;
+                            d2.value = -vala - valb;
                         }
 
                         my_tpdm.push_back(d2);

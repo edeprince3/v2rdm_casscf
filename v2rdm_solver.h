@@ -66,13 +66,13 @@ struct tpdm {
     int j;
     int k;
     int l;
-    double val;
+    double value;
 };
 
 struct opdm {
     int i;
     int j;
-    double val;
+    double value;
 };
 
 class v2RDMSolver: public Wavefunction{

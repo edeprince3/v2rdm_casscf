@@ -73,11 +73,11 @@ void v2RDMSolver::WriteOPDM(){
                 d1.i   = ifull;
                 d1.j   = jfull;
 
-                d1.val = vala;
+                d1.value = vala;
                 psio->write(PSIF_V2RDM_D1A,"D1a",(char*)&d1,sizeof(opdm),addr_a,&addr_a);
                 counta++;
 
-                d1.val = valb;
+                d1.value = valb;
                 psio->write(PSIF_V2RDM_D1B,"D1b",(char*)&d1,sizeof(opdm),addr_b,&addr_b);
                 countb++;
 
@@ -97,7 +97,7 @@ void v2RDMSolver::WriteOPDM(){
             d1.i   = ifull;
             d1.j   = ifull;
 
-            d1.val = 1.0;
+            d1.value = 1.0;
 
             psio->write(PSIF_V2RDM_D1A,"D1a",(char*)&d1,sizeof(opdm),addr_a,&addr_a);
             counta++;
