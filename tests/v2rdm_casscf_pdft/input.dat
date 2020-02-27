@@ -1,0 +1,54 @@
+memory 5gb
+# PYTHONPATH must include directory above plugin directory.
+#     Define either externally or here, then import plugin.
+sys.path.insert(0, './../../..')
+import v2rdm_casscf
+#sys.path.insert(0, '/home/sina/MOLSSI/RDMInoles-Prototype/build/stage')
+import mcpdft
+
+molecule mol {
+0 1
+n
+n 1 r
+}
+
+set {
+  guess sad
+  basis sto-3g 
+  scf_type df
+  d_convergence 1e-8
+  maxiter 500
+  reference rhf
+  restricted_docc  [ 2, 0, 0, 0, 0, 2, 0, 0 ]
+  active           [ 1, 0, 1, 1, 0, 1, 1, 1 ]
+}
+set v2rdm_casscf {
+  positivity dqg
+  opdm_write_full true
+  tpdm_write_full true
+  constrain_spin true
+  constrain_d3   false
+  spin_adapt_g2  false
+  spin_adapt_q2  false
+  r_convergence  1e-4
+  e_convergence  1e-4
+  cg_convergence 1e-6
+  maxiter 100000
+}
+
+set mcpdft {
+  reference uks
+  mcpdft_reference v2rdm
+  mcpdft_type df
+  mcpdft_method 1h_mcpdft
+  mcpdft_functional pbe
+  # Make sure the nat_orbs = true in v2rdm_casscf option set
+  polyradical_analysis false
+}
+
+activate(mol)
+mol.r = 1.1
+en,wfn=energy('v2rdm-casscf',return_wfn=True)
+
+energy('mcpdft',ref_wfn=wfn)
+
