@@ -405,3 +405,47 @@ def test_v2rdm7():
 
     assert psi4.compare_values(E_c1, E_d2h, 4, "v2RDM-CASSCF total energy")
 
+
+def test_v2rdm8():
+    # H2 / cc-pVDZ / D(2,2), scf_type = DF, rHH = 1.0 A
+
+    print('        H2 / cc-pVDZ / D(2,2), scf_type = DF, rHH = 1.0 A')
+
+    import v2rdm_casscf
+    import psi4
+
+    h2 = psi4.geometry("""
+    0 1
+    h
+    h 1 r
+    symmetry c1
+    """)
+
+    psi4.set_options({
+      "basis": "cc-pvdz",
+      "mcscf_type": "df",
+      "scf_type": "df",
+      "d_convergence": 1e-10,
+      "maxiter": 500,
+      "restricted_docc": [  0 ],
+      "restricted_uocc": [  8 ],
+      "active":          [  2 ],
+    })
+    psi4.set_module_options('v2rdm_casscf', {
+      "positivity": "d",
+      "r_convergence": 1e-6,
+      "e_convergence": 1e-8,
+      "maxiter": 20000,
+    })
+
+    psi4.activate(h2)
+
+    h2.r = 1.0
+
+    psi4.set_options({"df_ints_io": "save"})
+    en,wfn = psi4.energy('scf',return_wfn = True)
+
+    en1 = v2rdm_casscf.v2rdm_scf_solver(wfn)
+    en2 = psi4.energy('casscf')
+
+    assert psi4.compare_values(en1, en2, 6, "v2RDM-CASSCF total energy")
