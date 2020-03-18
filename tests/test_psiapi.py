@@ -49,8 +49,8 @@ def test_v2rdm1():
 
     psi4.energy('v2rdm-casscf', molecule=n2)
 
-    assert psi4.compare_values(refscf, psi4.get_variable("SCF TOTAL ENERGY"), 8, "SCF total energy")
-    assert psi4.compare_values(refv2rdm, psi4.get_variable("CURRENT ENERGY"), 5, "v2RDM-CASSCF total energy")
+    assert psi4.compare_values(refscf, psi4.variable("SCF TOTAL ENERGY"), 8, "SCF total energy")
+    assert psi4.compare_values(refv2rdm, psi4.variable("CURRENT ENERGY"), 5, "v2RDM-CASSCF total energy")
 
 
 def test_v2rdm2():
@@ -89,8 +89,8 @@ def test_v2rdm2():
 
     psi4.energy('v2rdm-casscf')
 
-    assert psi4.compare_values(refscf, psi4.get_variable("SCF TOTAL ENERGY"), 8, "SCF total energy")
-    assert psi4.compare_values(refv2rdm, psi4.get_variable("CURRENT ENERGY"), 5, "v2RDM-CASSCF total energy")
+    assert psi4.compare_values(refscf, psi4.variable("SCF TOTAL ENERGY"), 8, "SCF total energy")
+    assert psi4.compare_values(refv2rdm, psi4.variable("CURRENT ENERGY"), 5, "v2RDM-CASSCF total energy")
 
 
 @pytest.mark.quick
@@ -252,8 +252,8 @@ def test_v2rdm5():
 
     psi4.energy('v2rdm-casscf')
 
-    assert psi4.compare_values(refscf, psi4.get_variable("SCF TOTAL ENERGY"), 8, "SCF total energy")
-    assert psi4.compare_values(refv2rdm, psi4.get_variable("CURRENT ENERGY"), 4, "v2RDM-CASSCF total energy")
+    assert psi4.compare_values(refscf, psi4.variable("SCF TOTAL ENERGY"), 8, "SCF total energy")
+    assert psi4.compare_values(refv2rdm, psi4.variable("CURRENT ENERGY"), 4, "v2RDM-CASSCF total energy")
 
 
 def test_v2rdm6():
@@ -295,8 +295,8 @@ def test_v2rdm6():
     refv2rdm = -109.095505119442
 
     assert psi4.compare_values(refnuc, n2.nuclear_repulsion_energy(),  4, "Nuclear repulsion energy")
-    assert psi4.compare_values(refscf, psi4.get_variable("SCF TOTAL ENERGY"), 5, "SCF total energy")
-    assert psi4.compare_values(refv2rdm, psi4.get_variable("CURRENT ENERGY"), 4, "v2RDM-CASSCF total energy")
+    assert psi4.compare_values(refscf, psi4.variable("SCF TOTAL ENERGY"), 5, "SCF total energy")
+    assert psi4.compare_values(refv2rdm, psi4.variable("CURRENT ENERGY"), 4, "v2RDM-CASSCF total energy")
 
 
 def test_v2rdm7():
