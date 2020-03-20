@@ -1,6 +1,6 @@
 cmake_policy(SET CMP0048 NEW)  # project_VERSION* variables populated from project(... VERSION x.x.x) string
 project(v2rdm_casscf
-        VERSION 0.8
+        VERSION 0.9
         LANGUAGES CXX Fortran)
 set(v2rdm_casscf_AUTHORS      "A. Eugene DePrince III")
 set(v2rdm_casscf_DESCRIPTION  "Variational 2-RDM-driven CASSCF plugin to Psi4")
