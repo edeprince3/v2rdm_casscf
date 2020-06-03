@@ -15,6 +15,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(psi4OptionsTools)
 
 option_with_print(ENABLE_OPENMP "Enable threadsafe linking to OpenMP parallelized programs." ON)
+option_with_print(ENABLE_OPENRDM "Enables connection with OpenRDM program." OFF)
 #if (APPLE AND (CMAKE_CXX_COMPILER_ID MATCHES GNU))
 #    option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" OFF)
 #else ()
@@ -120,12 +121,19 @@ add_psi4_plugin(v2rdm_casscf
 )
 
 #==================================================================
-set(openrdm_DIR "/home/sina/MOLSSI/RDMInoles-Prototype/build/stage/share/cmake/openrdm")
-find_package(openrdm 0.2.0 CONFIG REQUIRED)
-if(openrdm_FOUND)
-        message(STATUS "${Cyan}OpenRDM (${openrdm_VERSION}) is found in${ColourReset}: ${openrdm_DIR}")
+if(${ENABLE_OPENRDM})
+   string(COMPARE EQUAL "${openrdm_DIR}" "" _bool_result)
+   if(${_bool_result})
+      message(FATAL_ERROR "${Red}Please set the \"openrdm_DIR\" variable to .../build/stage/share/cmake/openrdm${ColourReset}")
+   else()
+      # set(openrdm_DIR "/home/sina/MOLSSI/RDMInoles-Prototype/build/stage/share/cmake/openrdm")
+      find_package(openrdm 0.2.0 CONFIG REQUIRED)
+      if(openrdm_FOUND)
+              message(STATUS "${Cyan}OpenRDM (${openrdm_VERSION}) is found in${ColourReset}: ${openrdm_DIR}")
+      endif()
+      target_link_libraries(${PROJECT_NAME} PRIVATE openrdm::openrdm)
+   endif()
 endif()
-target_link_libraries(${PROJECT_NAME} PRIVATE openrdm::openrdm)
 #==================================================================
 
 target_link_libraries(v2rdm_casscf PRIVATE ${LIBC_INTERJECT})

@@ -4,5 +4,11 @@ rm -rf CMakeFiles/ \
        cmake_install.cmake \
        CMakeCache.txt
 
-$(psi4 --plugin-compile)
+#$(psi4 --plugin-compile)
+cmake -C /home/sina/MySoftwares/psi4_01_09_2020/objdir/stage/share/cmake/psi4/psi4PluginCache.cmake \
+      -D CMAKE_PREFIX_PATH=/home/sina/MySoftwares/psi4_01_09_2020/objdir/stage\
+      -D ENABLE_OPENRDM=ON \
+      -D openrdm_DIR="/home/sina/MOLSSI/RDMInoles-Prototype/build/stage/share/cmake/openrdm" \
+      .
+
 cmake --build . -- -j $(nproc)
