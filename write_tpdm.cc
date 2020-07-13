@@ -310,6 +310,215 @@ void v2RDMSolver::WriteTPDM(){
     psio->close(PSIF_V2RDM_D2AB,1);
 
 }
+void v2RDMSolver::WriteTPDMSpinFree(){
+
+    double * x_p = x->pointer();
+
+    std::shared_ptr<PSIO> psio (new PSIO());
+
+    psio->open(PSIF_V2RDM_D2_SPIN_FREE,PSIO_OPEN_NEW);
+
+    psio_address addr = PSIO_ZERO;
+
+    long int count = 0;
+
+    // active-active part
+
+    for (int h = 0; h < nirrep_; h++) {
+
+        for (int ij_ab = 0; ij_ab < gems_ab[h]; ij_ab++) {
+
+            int i     = bas_ab_sym[h][ij_ab][0];
+            int j     = bas_ab_sym[h][ij_ab][1];
+
+            int ij_aa = ibas_aa_sym[h][i][j];
+            int ji_ab = ibas_ab_sym[h][j][i];
+
+            int ifull = full_basis[i];
+            int jfull = full_basis[j];
+
+            for (int kl_ab = 0; kl_ab < gems_ab[h]; kl_ab++) {
+
+                int k     = bas_ab_sym[h][kl_ab][0];
+                int l     = bas_ab_sym[h][kl_ab][1];
+
+                int kl_aa = ibas_aa_sym[h][k][l];
+                int lk_ab = ibas_ab_sym[h][l][k];
+
+                int kfull = full_basis[k];
+                int lfull = full_basis[l];
+
+                double val = 0.0;
+                
+                val += x_p[d2aboff[h] + ij_ab*gems_ab[h] + kl_ab];
+                val += x_p[d2aboff[h] + ji_ab*gems_ab[h] + lk_ab];
+
+                if ( i != j && k != l ) {
+                    int sg = 1;
+                    if ( i > j ) sg = -1;
+                    if ( k > l ) sg = -1;
+                    val += sg * x_p[d2aaoff[h] + ij_aa*gems_aa[h] + kl_aa];
+                    val += sg * x_p[d2bboff[h] + ij_aa*gems_aa[h] + kl_aa];
+                }
+
+                tpdm d2;
+                d2.i   = ifull;
+                d2.j   = jfull;
+                d2.k   = kfull;
+                d2.l   = lfull;
+                d2.value = val;
+                psio->write(PSIF_V2RDM_D2_SPIN_FREE,"D2",(char*)&d2,sizeof(tpdm),addr,&addr);
+                count++;
+
+            }
+        }
+    }
+
+    // core-core
+    for (int hi = 0; hi < nirrep_; hi++) {
+
+        for (int i = 0; i < rstcpi_[hi] + frzcpi_[hi]; i++) {
+
+            int ifull      = i + pitzer_offset_full[hi];
+
+            for (int hj = 0; hj < nirrep_; hj++) {
+
+                for (int j = 0; j < rstcpi_[hj] + frzcpi_[hj]; j++) {
+
+                    int jfull      = j + pitzer_offset_full[hj];
+
+                    tpdm d2;
+
+                    d2.i   = ifull;
+                    d2.j   = jfull;
+                    d2.k   = ifull;
+                    d2.l   = jfull;
+
+                    d2.value = 2.0;
+                    if ( ifull != jfull ) {
+                        d2.value += 2.0;
+                    }
+
+                    psio->write(PSIF_V2RDM_D2_SPIN_FREE,"D2",(char*)&d2,sizeof(tpdm),addr,&addr);
+                    count++;
+
+                    if ( ifull != jfull ) {
+
+                        // ij;ji
+
+                        d2.value = -2.0;
+                        d2.k   = jfull;
+                        d2.l   = ifull;
+
+                        psio->write(PSIF_V2RDM_D2_SPIN_FREE,"D2",(char*)&d2,sizeof(tpdm),addr,&addr);
+                        count++;
+
+                    }
+                }
+            }
+        }
+    }
+
+    // core active; core active
+    for (int hi = 0; hi < nirrep_; hi++) {
+
+        for (int i = 0; i < rstcpi_[hi] + frzcpi_[hi]; i++) {
+            int ifull      = i + pitzer_offset_full[hi];
+
+            // D2(ij; il) 
+            for (int hj = 0; hj < nirrep_; hj++) {
+
+                for (int j = 0; j < amopi_[hj]; j++) {
+
+                    int jfull      = full_basis[j+pitzer_offset[hj]];
+
+                    for (int l = 0; l < amopi_[hj]; l++) {
+
+                        int lfull      = full_basis[l+pitzer_offset[hj]];
+
+                        // aa and bb pieces
+                        double valaa = x_p[d1aoff[hj]+j*amopi_[hj]+l];
+                        double valbb = x_p[d1boff[hj]+j*amopi_[hj]+l];
+
+                        // ab (ij;il) and ba (ji;li) pieces
+                        double valab = x_p[d1boff[hj]+j*amopi_[hj]+l];
+                        double valba = x_p[d1aoff[hj]+j*amopi_[hj]+l];
+
+                        tpdm d2;
+
+                        // ij;il
+                        d2.i   = ifull;
+                        d2.j   = jfull;
+                        d2.k   = ifull;
+                        d2.l   = lfull;
+
+                        d2.value = valaa + valbb + valab + valba;
+                        psio->write(PSIF_V2RDM_D2_SPIN_FREE,"D2",(char*)&d2,sizeof(tpdm),addr,&addr);
+                        count++;
+
+                        // ij;li
+                        d2.k   = lfull;
+                        d2.l   = ifull;
+
+                        d2.value = - valaa - valbb;
+                        psio->write(PSIF_V2RDM_D2_SPIN_FREE,"D2",(char*)&d2,sizeof(tpdm),addr,&addr);
+                        count++;
+
+                        // ji;li
+                        d2.i   = jfull;
+                        d2.j   = ifull;
+
+                        d2.value = valaa + valbb + valab + valba;
+                        psio->write(PSIF_V2RDM_D2_SPIN_FREE,"D2",(char*)&d2,sizeof(tpdm),addr,&addr);
+                        count++;
+
+                        // ji;il
+                        d2.k   = ifull;
+                        d2.l   = lfull;
+
+                        d2.value = - valaa - valbb;
+                        psio->write(PSIF_V2RDM_D2_SPIN_FREE,"D2",(char*)&d2,sizeof(tpdm),addr,&addr);
+                        count++;
+
+                    }
+                }
+            }
+        }
+    }
+
+    // write the number of entries in each file
+    psio->write_entry(PSIF_V2RDM_D2_SPIN_FREE,"length",(char*)&count,sizeof(long int));
+
+    // it might be nice for post CASSCF codes to know what orbitals are active:
+
+    psio->write_entry(PSIF_V2RDM_D2_SPIN_FREE,"NUMBER ACTIVE ORBITALS",(char*)&amo_,sizeof(int));
+
+    addr = PSIO_ZERO;
+    for (int h = 0; h < nirrep_; h++) {
+        for (int i = 0; i < amopi_[h]; i++) {
+            int ifull = full_basis[i + pitzer_offset[h]];
+            psio->write(PSIF_V2RDM_D2_SPIN_FREE,"ACTIVE ORBITALS",(char*)&ifull,sizeof(int),addr,&addr);
+        }
+    }
+    
+    // it might be nice for post CASSCF codes to know what orbitals are inactive:
+
+    int inact = nfrzc_ + nrstc_;
+    psio->write_entry(PSIF_V2RDM_D2_SPIN_FREE,"NUMBER INACTIVE ORBITALS",(char*)&inact,sizeof(int));
+
+    addr = PSIO_ZERO;
+    for (int hi = 0; hi < nirrep_; hi++) {
+        for (int i = 0; i < rstcpi_[hi] + frzcpi_[hi]; i++) {
+            int ifull = i + pitzer_offset_full[hi];
+            psio->write(PSIF_V2RDM_D2_SPIN_FREE,"INACTIVE ORBITALS",(char*)&ifull,sizeof(int),addr,&addr);
+        }
+    }
+
+    // close file
+    psio->close(PSIF_V2RDM_D2_SPIN_FREE,1);
+
+}
+
 void v2RDMSolver::WriteActiveTPDM(){
 
     double * x_p = x->pointer();

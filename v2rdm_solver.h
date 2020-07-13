@@ -58,6 +58,7 @@
 #define PSIF_V2RDM_D3BBB      276
 #define PSIF_V2RDM_D1A        277
 #define PSIF_V2RDM_D1B        278
+#define PSIF_V2RDM_D2_SPIN_FREE 279
 
 namespace psi{ namespace v2rdm_casscf{
 
@@ -516,6 +517,9 @@ class v2RDMSolver: public Wavefunction{
 
     /// write full 2RDM to disk
     void WriteTPDM();
+
+    /// write full spin-free 2RDM to disk
+    void WriteTPDMSpinFree();
 
     /// write full 1RDM to disk
     void WriteOPDM();

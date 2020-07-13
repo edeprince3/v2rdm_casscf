@@ -2029,6 +2029,10 @@ double v2RDMSolver::compute_energy() {
         WriteTPDM();
         //ReadTPDM();
     }
+    if ( options_.get_bool("TPDM_WRITE_SPIN_FREE") ) {
+        WriteTPDMSpinFree();
+        //ReadTPDM();
+    }
     if ( options_.get_bool("OPDM_WRITE_FULL") ) {
         WriteOPDM();
     }
