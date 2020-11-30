@@ -176,6 +176,7 @@ def test_v2rdm4():
       'basis': 'cc-pvdz',
       'scf_type': 'df',
       'd_convergence': 1e-8,
+      'ints_tolerance': 0.0,
       'maxiter': 500,
       'reference': 'rohf',
       'restricted_docc': [   8,   3,   0,   0,   0,   0,   7,   4 ],
