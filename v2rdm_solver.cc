@@ -417,7 +417,7 @@ void  v2RDMSolver::common_init(){
     Db_  = (SharedMatrix)(new Matrix(reference_wavefunction_->Db()));
 
     // Lagrangian matrix
-    Lagrangian_ = SharedMatrix(reference_wavefunction_->Lagrangian());
+    Lagrangian_ = SharedMatrix(reference_wavefunction_->lagrangian());
 
     epsilon_a_= SharedVector(new Vector(nirrep_, nmopi_));
     epsilon_a_->copy(reference_wavefunction_->epsilon_a().get());
