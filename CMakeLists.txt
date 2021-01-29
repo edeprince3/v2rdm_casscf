@@ -7,7 +7,7 @@ set(v2rdm_casscf_DESCRIPTION  "Variational 2-RDM-driven CASSCF plugin to Psi4")
 set(v2rdm_casscf_URL          "github.com/edeprince3/v2rdm_casscf")
 set(v2rdm_casscf_LICENSE      "GPL 2+")
 
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # <<<  Options  >>>
