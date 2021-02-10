@@ -227,7 +227,7 @@ void  v2RDMSolver::common_init(){
 
     shallow_copy(reference_wavefunction_);
 
-    escf_     = reference_wavefunction_->reference_energy();
+    escf_     = reference_wavefunction_->energy();
     nalpha_   = reference_wavefunction_->nalpha();
     nbeta_    = reference_wavefunction_->nbeta();
 
@@ -417,7 +417,7 @@ void  v2RDMSolver::common_init(){
     Db_  = (SharedMatrix)(new Matrix(reference_wavefunction_->Db()));
 
     // Lagrangian matrix
-    Lagrangian_ = SharedMatrix(reference_wavefunction_->Lagrangian());
+    Lagrangian_ = SharedMatrix(reference_wavefunction_->lagrangian());
 
     epsilon_a_= SharedVector(new Vector(nirrep_, nmopi_));
     epsilon_a_->copy(reference_wavefunction_->epsilon_a().get());
