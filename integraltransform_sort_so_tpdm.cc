@@ -47,7 +47,7 @@ namespace psi{
 
 void TPDMBackTransform::setup_tpdm_buffer(const dpdbuf4 *D)
 {
-    std::shared_ptr<SOBasisSet> sobasis = wfn_->sobasisset();
+    std::shared_ptr<SOBasisSet> sobasis = sobasis_;
     std::shared_ptr<SO_PQ_Iterator> PQIter(new SO_PQ_Iterator(sobasis));
     tpdm_buffer_sizes_.clear();
     size_t max_size = 0;
@@ -139,7 +139,7 @@ void TPDMBackTransform::sort_so_tpdm(const dpdbuf4 *D, int irrep, size_t first_r
     // The buffer needs to be set up if the pointer is still null
     if(tpdm_buffer_ == 0) setup_tpdm_buffer(D);
 
-    std::shared_ptr<SOBasisSet> sobasis = wfn_->sobasisset();
+    std::shared_ptr<SOBasisSet> sobasis = sobasis_;
 
     size_t last_row = first_row + num_rows;
     size_t pq_pair_count = 0;
