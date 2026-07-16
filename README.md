@@ -12,6 +12,12 @@
 <br>
 </p>
 
+# THIS REPOSITORY IS DEPRECATED
+
+This project is no longer actively maintained or supported. We have moved development to a new and improved version.
+
+**Please use the new repository instead:** [https://github.com/edeprince3/hilbert](https://github.com/edeprince3/hilbert)
+
 # v2rdm_casscf
 A variational 2-RDM-driven CASSCF plugin to Psi4
 
